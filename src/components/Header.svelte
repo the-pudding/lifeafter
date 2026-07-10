@@ -1,6 +1,6 @@
 <script>
 	// shadow, plain, line, bubble
-	import wordmark from "$svg/wordmark-script-stacked-plain.svg";
+	import wordmark from "$svg/wordmark-bubble.svg";
 </script>
 
 <header>
@@ -12,11 +12,23 @@
 </header>
 
 <style>
+	header {
+		position: fixed;
+		top: 0px;
+		left: 0px;
+		z-index: 999;
+		height: 50px;
+	} 
 	.wordmark {
 		max-width: 10em;
-		margin: 0 auto;
+		/* margin: 0 auto; */
 		padding: 32px 0;
 		/* transform: rotate(-4deg); */
+		left: 50%;
+		position: fixed;
+		top: 0px;
+		z-index: 999;
+		transform: translateX(-50%) rotate(-4deg);
 	}
 
 	.wordmark a {
