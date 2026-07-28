@@ -8,8 +8,8 @@
 		selectedVariable = $bindable(),
 		legendData,
 		mode = $bindable(),
-		renderStyle = $bindable(),
 		positionMode = $bindable(),
+		currentAge = null,
 		loadingMessage = ""
 	} = $props();
 </script>
@@ -50,15 +50,6 @@
 		{/if}
 
 		<div class="button-row">
-			<button class="mode-toggle" onclick={() => (mode = mode === "walk" ? "topdown" : "walk")}>
-				{mode === "walk" ? "Top-down view" : "Back to walk view"}
-			</button>
-			<button
-				class="mode-toggle"
-				onclick={() => (renderStyle = renderStyle === "smooth" ? "pixel" : "smooth")}
-			>
-				{renderStyle === "smooth" ? "Pixel art mode" : "Smooth mode"}
-			</button>
 			<button
 				class="mode-toggle"
 				onclick={() => (positionMode = positionMode === "Y1" ? "Y2" : "Y1")}
@@ -68,10 +59,26 @@
 		</div>
 
 		{#if mode === "walk"}
+			{#if currentAge !== null}
+				<div class="current-age">Age {currentAge}</div>
+			{/if}
 			<div class="instructions">Drag to steer &nbsp;·&nbsp; scroll to walk</div>
 		{/if}
 	{/if}
 </div>
+
+{#if !loadingMessage}
+	<!-- Frames the live top-down minimap that Main.lifedeath.svelte renders
+	     directly onto the WebGL canvas underneath (see MINIMAP_SIZE_PX /
+	     MINIMAP_MARGIN_PX there — these px values must match). This div
+	     itself ignores pointer events so drag-to-steer/scroll-to-walk still
+	     reach the canvas underneath; only the button re-enables them. -->
+	<div class="minimap">
+		<button class="minimap-toggle" onclick={() => (mode = mode === "walk" ? "topdown" : "walk")}>
+			{mode === "walk" ? "Top-down view" : "Back to walk view"}
+		</button>
+	</div>
+{/if}
 
 <style>
 	.panel {
@@ -173,6 +180,12 @@
 		background: rgba(255, 255, 255, 0.18);
 	}
 
+	.current-age {
+		color: #eee;
+		font-size: 0.8rem;
+		font-weight: 600;
+	}
+
 	.instructions {
 		color: #a99cb8;
 		font-size: 0.7rem;
@@ -181,5 +194,40 @@
 	.loading {
 		color: #c3c2b7;
 		font-size: 0.8rem;
+	}
+
+	/* Must match MINIMAP_SIZE_PX / MINIMAP_MARGIN_PX in Main.lifedeath.svelte
+	   — this frames the live WebGL render underneath, it draws nothing
+	   itself. */
+	.minimap {
+		position: absolute;
+		right: 24px;
+		bottom: 24px;
+		width: 160px;
+		height: 160px;
+		border: 1px solid rgba(255, 255, 255, 0.25);
+		border-radius: 0.5rem;
+		pointer-events: none;
+	}
+
+	.minimap-toggle {
+		position: absolute;
+		left: 50%;
+		bottom: -1rem;
+		transform: translateX(-50%);
+		pointer-events: auto;
+		background: rgba(10, 5, 16, 0.85);
+		color: #eee;
+		border: 1px solid rgba(255, 255, 255, 0.2);
+		border-radius: 999px;
+		padding: 0.3rem 0.7rem;
+		font-size: 0.7rem;
+		white-space: nowrap;
+		cursor: pointer;
+		backdrop-filter: blur(4px);
+	}
+
+	.minimap-toggle:hover {
+		background: rgba(255, 255, 255, 0.18);
 	}
 </style>
