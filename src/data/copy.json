@@ -1,23 +1,51 @@
 {
-	"meta": { "title": "Title TK", "description": "Description tk." },
-	"body": [
-		{
-			"section": "intro",
-			"content": [
-				{ "type": "h4", "value": "An h4 element with no attributes" },
-				{
-					"type": "text",
-					"value": "Some random text here, followed by an img tag."
-				},
-				{
-					"type": "img",
-					"value": { "src": "../assets/demo/test.jpg", "alt": "A cat" }
-				},
-				{
-					"type": "Test",
-					"value": { "label": "I’m a custom component!", "value": "50" }
-				}
-			]
-		}
-	]
+  "hed": "life after death?",
+  "all": [
+    {
+      "age": "20",
+      "age_end": "25",
+      "text": "This is some text for all age 20"
+    },
+    {
+      "age": "30",
+      "age_end": "35",
+      "text": "This is some text for all age 30"
+    }
+  ],
+  "unsure": [
+    {
+      "age": "25",
+      "age_end": "30",
+      "text": "This is some text for unsure age 25"
+    },
+    {
+      "age": "35",
+      "age_end": "40",
+      "text": "This is some text for unsure age 35"
+    }
+  ],
+  "yes": [
+    {
+      "age": "25",
+      "age_end": "30",
+      "text": "This is some text for yes age 25"
+    },
+    {
+      "age": "35",
+      "age_end": "40",
+      "text": "This is some text for yes age 35"
+    }
+  ],
+  "no": [
+    {
+      "age": "25",
+      "age_end": "30",
+      "text": "This is some text for no age 25"
+    },
+    {
+      "age": "35",
+      "age_end": "40",
+      "text": "This is some text for no age 35"
+    }
+  ]
 }

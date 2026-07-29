@@ -21,8 +21,12 @@
 		<label class="field">
 			<span>Color by</span>
 			<select bind:value={selectedVariable}>
-				{#each variableOptions as option (option.key)}
-					<option value={option.key}>{option.label}</option>
+				{#each variableOptions as group (group.parent)}
+					<optgroup label={group.parent}>
+						{#each group.options as option (option.key)}
+							<option value={option.key}>{option.label}</option>
+						{/each}
+					</optgroup>
 				{/each}
 			</select>
 		</label>
@@ -35,17 +39,6 @@
 						{item.label}
 					</div>
 				{/each}
-				{#if legendData.overflow}
-					<div class="legend-overflow">+{legendData.overflow} more</div>
-				{/if}
-			</div>
-		{:else if legendData?.kind === "continuous"}
-			<div class="legend">
-				<div class="gradient-bar"></div>
-				<div class="gradient-labels">
-					<span>{legendData.min}</span>
-					<span>{legendData.max}</span>
-				</div>
 			</div>
 		{/if}
 
@@ -139,24 +132,6 @@
 		height: 0.7rem;
 		border-radius: 50%;
 		flex: none;
-	}
-
-	.legend-overflow {
-		color: #a99cb8;
-		font-size: 0.7rem;
-	}
-
-	.gradient-bar {
-		height: 0.6rem;
-		border-radius: 0.3rem;
-		background: linear-gradient(to right, #ff7a00, #9d00ff);
-	}
-
-	.gradient-labels {
-		display: flex;
-		justify-content: space-between;
-		color: #a99cb8;
-		font-size: 0.7rem;
 	}
 
 	.button-row {

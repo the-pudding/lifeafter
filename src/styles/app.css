@@ -2,7 +2,8 @@
 @import "normalize.css";
 @import "font.css";
 @import "reset.css";
-@import "ui.css"; /* optional for bits UI components */
+@import "ui.css";
+/* optional for bits UI components */
 
 /* colors defined in variables.css */
 :root {
@@ -26,7 +27,7 @@
 	--radius-sm: 0.25rem;
 	--radius-md: 0.5rem;
 	--radius-lg: 1rem;
-	
+
 	--color-bg: var(--color-white);
 	--color-fg: var(--color-gray-900);
 	--color-fg-light: var(--color-gray-500);
@@ -90,4 +91,14 @@ svg {
 	display: block;
 	width: 100%;
 	height: auto;
+}
+
+.lifedeath-room {
+	font-family: var(--font-sans);
+}
+
+.story-overlay p {
+	margin: 0 0 8px;
+	font-size: 22px;
+	line-height: 1.4;
 }

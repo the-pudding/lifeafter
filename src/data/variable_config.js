@@ -1,0 +1,5257 @@
+// Editable display config for every GFS variable used by the recolor
+// dropdown / minimap legend. One entry per BASE variable name — i.e.
+// with the "_Y1"/"_Y2" suffix stripped, since a variable's categories,
+// ranges, and colors are the same across both survey years. `columns`
+// on each entry lists the actual people.json column name(s) to pull
+// the raw value from (most have both _Y1 and _Y2; some retrospective/
+// recruit-only questions have just _Y1; GENDER/SELFID1/SELFID2 have no
+// suffix at all).
+//
+// This was auto-generated from the actual value distributions in
+// people.json (labels, groupings, and colors are all a first pass —
+// edit freely, nothing here is load-bearing elsewhere in the codebase
+// yet). Two variable shapes:
+//
+//   type: "categorical"
+//     categories: [{ key, label, color, values }, ...]
+//     `values` is the list of raw people.json strings folded into
+//     that one category — this is the "truncate multiple values into
+//     one category" knob. Every categorical variable ends with a
+//     "No Answer" catch-all for the survey's admin codes
+//     ("(Saw, skipped)", "(Refused)", "(DK)", ...).
+//
+//   type: "numeric"
+//     valueMap maps non-numeric raw strings to a number first (many
+//     0–10 scale questions render 0 and 10 as words like "Strongly
+//     disagree"/"Strongly agree" instead of digits; CIGARETTES uses
+//     "None/Do not smoke" -> 0, etc). Whatever's left over is parsed
+//     as-is. ranges: [{ key, label, color, min, max }, ...] bucket the
+//     resulting number — this is the "give ranges for each category" knob.
+//
+// A few high-cardinality nominal variables (INCOME, POLITICAL_ID,
+// SELFID1, SELFID2, REL3) are country-specific text (currency brackets,
+// party names, ethnicities, denominations) with no safe universal way
+// to auto-bucket them — those are left with `needsManualGrouping: true`
+// and a `note` explaining why, plus just the "No Answer"/obvious
+// buckets filled in. Everything else got a real first-pass grouping.
+
+export const PARENT_ORDER = [
+	"Demographics & Background",
+	"Well-Being & Life Satisfaction",
+	"Mental & Physical Health",
+	"Mental Health & Stress",
+	"Financial & Material Stability",
+	"Character & Virtue",
+	"Close Social Relationships",
+	"Religion & Spirituality",
+	"Childhood & Family Background",
+	"Personality Traits",
+	"Civic & Political Views",
+	"Health & Habits"
+];
+
+export const variableConfig =
+{
+  "GENDER": {
+    "label": "Gender",
+    "parent": "Demographics & Background",
+    "type": "categorical",
+    "categories": [
+      {
+        "key": "female",
+        "label": "Female",
+        "color": "#e91e8c",
+        "values": [
+          "Female"
+        ]
+      },
+      {
+        "key": "male",
+        "label": "Male",
+        "color": "#1e88e5",
+        "values": [
+          "Male"
+        ]
+      },
+      {
+        "key": "other",
+        "label": "Other",
+        "color": "#8e44ad",
+        "values": [
+          "Other"
+        ]
+      },
+      {
+        "key": "no_answer",
+        "label": "No Answer",
+        "color": "#55505f",
+        "values": [
+          "(Saw, skipped)",
+          "(Refused)",
+          "(DK)",
+          "Prefer not to answer"
+        ]
+      }
+    ],
+    "columns": [
+      "GENDER"
+    ]
+  },
+  "AGE": {
+    "label": "Age",
+    "parent": "Demographics & Background",
+    "type": "numeric",
+    "valueMap": {},
+    "ranges": [
+      {
+        "key": "18_29",
+        "label": "18–29",
+        "color": "#aed6f1",
+        "min": 18,
+        "max": 29
+      },
+      {
+        "key": "30_44",
+        "label": "30–44",
+        "color": "#89b5d2",
+        "min": 30,
+        "max": 44
+      },
+      {
+        "key": "45_59",
+        "label": "45–59",
+        "color": "#6494b4",
+        "min": 45,
+        "max": 59
+      },
+      {
+        "key": "60_74",
+        "label": "60–74",
+        "color": "#3f7395",
+        "min": 60,
+        "max": 74
+      },
+      {
+        "key": "75_plus",
+        "label": "75+",
+        "color": "#1a5276",
+        "min": 75,
+        "max": 120
+      }
+    ],
+    "columns": [
+      "AGE_Y1",
+      "AGE_Y2"
+    ]
+  },
+  "MARITAL_STATUS": {
+    "label": "Marital Status",
+    "parent": "Demographics & Background",
+    "type": "categorical",
+    "categories": [
+      {
+        "key": "married",
+        "label": "Married/partnered",
+        "color": "#2ecc71",
+        "values": [
+          "Married"
+        ]
+      },
+      {
+        "key": "domestic_partner",
+        "label": "Married/partnered",
+        "color": "#2ecc71",
+        "values": [
+          "Domestic partner"
+        ]
+      },
+      {
+        "key": "single",
+        "label": "Single",
+        "color": "#3498db",
+        "values": [
+          "Single/Never been married"
+        ]
+      },
+      {
+        "key": "divorced",
+        "label": "Divorced",
+        "color": "#e67e22",
+        "values": [
+          "Divorced"
+        ]
+      },
+      {
+        "key": "separated",
+        "label": "Separated",
+        "color": "#e74c3c",
+        "values": [
+          "Separated"
+        ]
+      },
+      {
+        "key": "widowed",
+        "label": "Widowed",
+        "color": "#7f8c8d",
+        "values": [
+          "Widowed"
+        ]
+      },
+      {
+        "key": "no_answer",
+        "label": "No Answer",
+        "color": "#55505f",
+        "values": [
+          "(Saw, skipped)",
+          "(Refused)",
+          "(DK)"
+        ]
+      }
+    ],
+    "columns": [
+      "MARITAL_STATUS_Y1",
+      "MARITAL_STATUS_Y2"
+    ]
+  },
+  "EDUCATION_3": {
+    "label": "Education Level",
+    "parent": "Demographics & Background",
+    "type": "categorical",
+    "categories": [
+      {
+        "key": "elementary_or_less",
+        "label": "Elementary or Less",
+        "color": "#aed6f1",
+        "values": [
+          "Completed elementary education or less (up to 8 years of basic education)"
+        ]
+      },
+      {
+        "key": "secondary_some_post_secondary",
+        "label": "Secondary / Some Post-Secondary",
+        "color": "#6494b4",
+        "values": [
+          "Some secondary education, completed secondary education, or some post-secondary"
+        ]
+      },
+      {
+        "key": "completed_4_year_degree",
+        "label": "Completed 4-Year Degree+",
+        "color": "#1a5276",
+        "values": [
+          "Completed four years of education beyond high school and/or received a 4-year co"
+        ]
+      },
+      {
+        "key": "no_answer",
+        "label": "No Answer",
+        "color": "#55505f",
+        "values": [
+          "(Saw, skipped)",
+          "(Refused)",
+          "(DK)"
+        ]
+      }
+    ],
+    "columns": [
+      "EDUCATION_3_Y1",
+      "EDUCATION_3_Y2"
+    ]
+  },
+  "EMPLOYMENT": {
+    "label": "Employment Status",
+    "parent": "Demographics & Background",
+    "type": "categorical",
+    "categories": [
+      {
+        "key": "employed",
+        "label": "Employed",
+        "color": "#2ecc71",
+        "values": [
+          "Employed for an employer"
+        ]
+      },
+      {
+        "key": "self_employed",
+        "label": "Self-Employed",
+        "color": "#16a085",
+        "values": [
+          "Self-employed"
+        ]
+      },
+      {
+        "key": "retired",
+        "label": "Retired",
+        "color": "#8e44ad",
+        "values": [
+          "Retired"
+        ]
+      },
+      {
+        "key": "homemaker",
+        "label": "Homemaker",
+        "color": "#e67e22",
+        "values": [
+          "Homemaker"
+        ]
+      },
+      {
+        "key": "student",
+        "label": "Student",
+        "color": "#3498db",
+        "values": [
+          "Student"
+        ]
+      },
+      {
+        "key": "unemployed",
+        "label": "Unemployed",
+        "color": "#e74c3c",
+        "values": [
+          "Unemployed and looking for a job"
+        ]
+      },
+      {
+        "key": "other",
+        "label": "Other",
+        "color": "#7f8c8d",
+        "values": [
+          "None of these/Other"
+        ]
+      },
+      {
+        "key": "no_answer",
+        "label": "No Answer",
+        "color": "#55505f",
+        "values": [
+          "(Saw, skipped)",
+          "(Refused)",
+          "(DK)"
+        ]
+      }
+    ],
+    "columns": [
+      "EMPLOYMENT_Y1",
+      "EMPLOYMENT_Y2"
+    ]
+  },
+  "INCOME": {
+    "label": "Household Income",
+    "parent": "Demographics & Background",
+    "type": "categorical",
+    "needsManualGrouping": true,
+    "note": "305 raw values, each a country-specific currency bracket (e.g. \"United States: $60,000 to $89,999\", \"Japan: 300,001 – 400,000 yen\"). No safe automatic bucketing across currencies — group by hand (e.g. into low/mid/high terciles per country, or convert to a common PPP-adjusted scale).",
+    "categories": [
+      {
+        "key": "no_income",
+        "label": "No Household Income",
+        "color": "#e74c3c",
+        "values": [
+          "(None/No household income)"
+        ]
+      },
+      {
+        "key": "no_answer",
+        "label": "No Answer",
+        "color": "#55505f",
+        "values": [
+          "(Saw, skipped)",
+          "(Refused)",
+          "(DK)",
+          "(Does NOT know household income)",
+          "(Refused to give household income)"
+        ]
+      }
+    ],
+    "columns": [
+      "INCOME_Y1",
+      "INCOME_Y2"
+    ]
+  },
+  "INCOME_FEELINGS": {
+    "label": "Feelings About Household Income",
+    "parent": "Demographics & Background",
+    "type": "categorical",
+    "categories": [
+      {
+        "key": "living_comfortably",
+        "label": "Living Comfortably",
+        "color": "#2ecc71",
+        "values": [
+          "Living comfortably on present income"
+        ]
+      },
+      {
+        "key": "getting_by",
+        "label": "Getting By",
+        "color": "#6ca15f",
+        "values": [
+          "Getting by on present income"
+        ]
+      },
+      {
+        "key": "finding_it_difficult",
+        "label": "Finding It Difficult",
+        "color": "#a9774e",
+        "values": [
+          "Finding it difficult on present income"
+        ]
+      },
+      {
+        "key": "finding_it_very_difficult",
+        "label": "Finding It Very Difficult",
+        "color": "#e74c3c",
+        "values": [
+          "Finding it very difficult on present income"
+        ]
+      },
+      {
+        "key": "no_answer",
+        "label": "No Answer",
+        "color": "#55505f",
+        "values": [
+          "(Saw, skipped)",
+          "(Refused)",
+          "(DK)"
+        ]
+      }
+    ],
+    "columns": [
+      "INCOME_FEELINGS_Y1",
+      "INCOME_FEELINGS_Y2"
+    ]
+  },
+  "NUM_CHILDREN": {
+    "label": "Number of Children in Household",
+    "parent": "Demographics & Background",
+    "type": "numeric",
+    "valueMap": {
+      "None": 0
+    },
+    "ranges": [
+      {
+        "key": "0",
+        "label": "0",
+        "color": "#aed6f1",
+        "min": 0,
+        "max": 0
+      },
+      {
+        "key": "1",
+        "label": "1",
+        "color": "#7daac8",
+        "min": 1,
+        "max": 1
+      },
+      {
+        "key": "2",
+        "label": "2",
+        "color": "#4b7e9f",
+        "min": 2,
+        "max": 2
+      },
+      {
+        "key": "3_plus",
+        "label": "3+",
+        "color": "#1a5276",
+        "min": 3,
+        "max": 30
+      }
+    ],
+    "columns": [
+      "NUM_CHILDREN_Y1",
+      "NUM_CHILDREN_Y2"
+    ]
+  },
+  "NUM_HOUSEHOLD": {
+    "label": "Number of Adults in Household",
+    "parent": "Demographics & Background",
+    "type": "numeric",
+    "valueMap": {
+      "96+": 96
+    },
+    "ranges": [
+      {
+        "key": "1",
+        "label": "1",
+        "color": "#aed6f1",
+        "min": 1,
+        "max": 1
+      },
+      {
+        "key": "2",
+        "label": "2",
+        "color": "#7daac8",
+        "min": 2,
+        "max": 2
+      },
+      {
+        "key": "3_4",
+        "label": "3–4",
+        "color": "#4b7e9f",
+        "min": 3,
+        "max": 4
+      },
+      {
+        "key": "5_plus",
+        "label": "5+",
+        "color": "#1a5276",
+        "min": 5,
+        "max": 100
+      }
+    ],
+    "columns": [
+      "NUM_HOUSEHOLD_Y1"
+    ]
+  },
+  "URBAN_RURAL": {
+    "label": "Urban / Rural",
+    "parent": "Demographics & Background",
+    "type": "categorical",
+    "categories": [
+      {
+        "key": "large_city",
+        "label": "Large City",
+        "color": "#616a6b",
+        "values": [
+          "A large city"
+        ]
+      },
+      {
+        "key": "suburb",
+        "label": "Suburb",
+        "color": "#7f8c8d",
+        "values": [
+          "A suburb of a large city"
+        ]
+      },
+      {
+        "key": "small_town_village",
+        "label": "Small Town / Village",
+        "color": "#82e0aa",
+        "values": [
+          "A small town or village"
+        ]
+      },
+      {
+        "key": "rural_farm",
+        "label": "Rural / Farm",
+        "color": "#229954",
+        "values": [
+          "A rural area or on a farm"
+        ]
+      },
+      {
+        "key": "no_answer",
+        "label": "No Answer",
+        "color": "#55505f",
+        "values": [
+          "(Saw, skipped)",
+          "(Refused)",
+          "(DK)"
+        ]
+      }
+    ],
+    "columns": [
+      "URBAN_RURAL_Y1",
+      "URBAN_RURAL_Y2"
+    ]
+  },
+  "BORN_COUNTRY": {
+    "label": "Born in This Country",
+    "parent": "Demographics & Background",
+    "type": "categorical",
+    "categories": [
+      {
+        "key": "born_here",
+        "label": "Born Here",
+        "color": "#2ecc71",
+        "values": [
+          "Born in this country"
+        ]
+      },
+      {
+        "key": "born_abroad",
+        "label": "Born Abroad",
+        "color": "#3498db",
+        "values": [
+          "Born in another country"
+        ]
+      },
+      {
+        "key": "no_answer",
+        "label": "No Answer",
+        "color": "#55505f",
+        "values": [
+          "(Saw, skipped)",
+          "(Refused)",
+          "(DK)"
+        ]
+      }
+    ],
+    "columns": [
+      "BORN_COUNTRY_Y1"
+    ]
+  },
+  "SELFID1": {
+    "label": "Race / Ethnicity / Nationality (First)",
+    "parent": "Demographics & Background",
+    "type": "categorical",
+    "needsManualGrouping": true,
+    "note": "101 raw values, each prefixed with country (e.g. \"United States: White\", \"Kenya: Kikuyu\") since categories are country-specific. Group by hand, likely per-country or into cross-country themes (e.g. \"White\", \"Indigenous\", \"Asian\").",
+    "categories": [
+      {
+        "key": "no_answer",
+        "label": "No Answer",
+        "color": "#55505f",
+        "values": [
+          "(Saw, skipped)",
+          "(Refused)",
+          "(DK)",
+          "Prefer not to answer"
+        ]
+      }
+    ],
+    "columns": [
+      "SELFID1"
+    ]
+  },
+  "SELFID2": {
+    "label": "Race / Ethnicity / Nationality (Second)",
+    "parent": "Demographics & Background",
+    "type": "categorical",
+    "needsManualGrouping": true,
+    "note": "48 raw values, country-specific like SELFID1. \"(No other response)\" means the respondent gave only one identity (SELFID1).",
+    "categories": [
+      {
+        "key": "none",
+        "label": "No Second Identity",
+        "color": "#95a5a6",
+        "values": [
+          "(No other response)"
+        ]
+      },
+      {
+        "key": "no_answer",
+        "label": "No Answer",
+        "color": "#55505f",
+        "values": [
+          "(Saw, skipped)",
+          "(Refused)",
+          "(DK)",
+          "Prefer not to answer"
+        ]
+      }
+    ],
+    "columns": [
+      "SELFID2"
+    ]
+  },
+  "POLITICAL_ID": {
+    "label": "Political Party Affiliation",
+    "parent": "Civic & Political Views",
+    "type": "categorical",
+    "needsManualGrouping": true,
+    "note": "172 raw values, each a country-specific party (e.g. \"United States: Democratic Party\", \"Sweden: The Moderate Party\"). Group by hand, e.g. per-country or by left/right/center lean.",
+    "categories": [
+      {
+        "key": "no_party",
+        "label": "Do Not Feel Close to Any Party",
+        "color": "#95a5a6",
+        "values": [
+          "Do not feel close to any party"
+        ]
+      },
+      {
+        "key": "no_answer",
+        "label": "No Answer",
+        "color": "#55505f",
+        "values": [
+          "(Saw, skipped)",
+          "(Refused)",
+          "(DK)",
+          "Other"
+        ]
+      }
+    ],
+    "columns": [
+      "POLITICAL_ID_Y1",
+      "POLITICAL_ID_Y2"
+    ]
+  },
+  "INCOME_DIFF": {
+    "label": "Govt. Should Reduce Income Differences",
+    "parent": "Civic & Political Views",
+    "type": "categorical",
+    "categories": [
+      {
+        "key": "strongly_disagree",
+        "label": "Strongly Disagree",
+        "color": "#d7bde2",
+        "values": [
+          "Strongly disagree"
+        ]
+      },
+      {
+        "key": "somewhat_disagree",
+        "label": "Somewhat Disagree",
+        "color": "#bc9bca",
+        "values": [
+          "Somewhat disagree"
+        ]
+      },
+      {
+        "key": "neutral",
+        "label": "Neutral",
+        "color": "#a278b2",
+        "values": [
+          "Neither agree nor disagree"
+        ]
+      },
+      {
+        "key": "somewhat_agree",
+        "label": "Somewhat Agree",
+        "color": "#87569b",
+        "values": [
+          "Somewhat agree"
+        ]
+      },
+      {
+        "key": "strongly_agree",
+        "label": "Strongly Agree",
+        "color": "#6c3483",
+        "values": [
+          "Strongly agree"
+        ]
+      },
+      {
+        "key": "no_answer",
+        "label": "No Answer",
+        "color": "#55505f",
+        "values": [
+          "(Saw, skipped)",
+          "(Refused)",
+          "(DK)"
+        ]
+      }
+    ],
+    "columns": [
+      "INCOME_DIFF_Y1"
+    ]
+  },
+  "OBEY_LAW": {
+    "label": "The Law Should Always Be Obeyed",
+    "parent": "Civic & Political Views",
+    "type": "categorical",
+    "categories": [
+      {
+        "key": "strongly_disagree",
+        "label": "Strongly Disagree",
+        "color": "#d7bde2",
+        "values": [
+          "Strongly disagree"
+        ]
+      },
+      {
+        "key": "somewhat_disagree",
+        "label": "Somewhat Disagree",
+        "color": "#bc9bca",
+        "values": [
+          "Somewhat disagree"
+        ]
+      },
+      {
+        "key": "neutral",
+        "label": "Neutral",
+        "color": "#a278b2",
+        "values": [
+          "Neither agree nor disagree"
+        ]
+      },
+      {
+        "key": "somewhat_agree",
+        "label": "Somewhat Agree",
+        "color": "#87569b",
+        "values": [
+          "Somewhat agree"
+        ]
+      },
+      {
+        "key": "strongly_agree",
+        "label": "Strongly Agree",
+        "color": "#6c3483",
+        "values": [
+          "Strongly agree"
+        ]
+      },
+      {
+        "key": "no_answer",
+        "label": "No Answer",
+        "color": "#55505f",
+        "values": [
+          "(Saw, skipped)",
+          "(Refused)",
+          "(DK)"
+        ]
+      }
+    ],
+    "columns": [
+      "OBEY_LAW_Y1"
+    ]
+  },
+  "SAY_IN_GOVT": {
+    "label": "People Like You Have a Say in Government",
+    "parent": "Civic & Political Views",
+    "type": "categorical",
+    "categories": [
+      {
+        "key": "agree",
+        "label": "Agree",
+        "color": "#2ecc71",
+        "values": [
+          "Agree"
+        ]
+      },
+      {
+        "key": "unsure",
+        "label": "Unsure",
+        "color": "#f1c40f",
+        "values": [
+          "Unsure"
+        ]
+      },
+      {
+        "key": "disagree",
+        "label": "Disagree",
+        "color": "#e74c3c",
+        "values": [
+          "Disagree"
+        ]
+      },
+      {
+        "key": "no_answer",
+        "label": "No Answer",
+        "color": "#55505f",
+        "values": [
+          "(Saw, skipped)",
+          "(Refused)",
+          "(DK)"
+        ]
+      }
+    ],
+    "columns": [
+      "SAY_IN_GOVT_Y1",
+      "SAY_IN_GOVT_Y2"
+    ]
+  },
+  "DISCRIMINATED": {
+    "label": "Feel Discriminated Against",
+    "parent": "Civic & Political Views",
+    "type": "categorical",
+    "categories": [
+      {
+        "key": "never",
+        "label": "Never",
+        "color": "#2ecc71",
+        "values": [
+          "Never"
+        ]
+      },
+      {
+        "key": "rarely",
+        "label": "Rarely",
+        "color": "#6ca15f",
+        "values": [
+          "Rarely"
+        ]
+      },
+      {
+        "key": "often",
+        "label": "Often",
+        "color": "#a9774e",
+        "values": [
+          "Often"
+        ]
+      },
+      {
+        "key": "always",
+        "label": "Always",
+        "color": "#e74c3c",
+        "values": [
+          "Always"
+        ]
+      },
+      {
+        "key": "no_answer",
+        "label": "No Answer",
+        "color": "#55505f",
+        "values": [
+          "(Saw, skipped)",
+          "(Refused)",
+          "(DK)"
+        ]
+      }
+    ],
+    "columns": [
+      "DISCRIMINATED_Y1",
+      "DISCRIMINATED_Y2"
+    ]
+  },
+  "AFTER_DEATH": {
+    "label": "Believe in Life After Death",
+    "parent": "Religion & Spirituality",
+    "type": "categorical",
+    "categories": [
+      {
+        "key": "yes",
+        "label": "Yes",
+        "color": "#ff2ec4",
+        "values": [
+          "Yes"
+        ]
+      },
+      {
+        "key": "unsure",
+        "label": "Unsure",
+        "color": "#9d00ff",
+        "values": [
+          "Unsure"
+        ]
+      },
+      {
+        "key": "no",
+        "label": "No",
+        "color": "#884b80",
+        "values": [
+          "No"
+        ]
+      },
+      {
+        "key": "no_answer",
+        "label": "No Answer",
+        "color": "#55505f",
+        "values": [
+          "(Saw, skipped)",
+          "(Refused)",
+          "(DK)"
+        ]
+      }
+    ],
+    "columns": [
+      "AFTER_DEATH_Y1",
+      "AFTER_DEATH_Y2"
+    ]
+  },
+  "ATTEND_SVCS": {
+    "label": "How Often You Attend Religious Services",
+    "parent": "Religion & Spirituality",
+    "type": "categorical",
+    "categories": [
+      {
+        "key": "never",
+        "label": "Never",
+        "color": "#aed6f1",
+        "values": [
+          "Never"
+        ]
+      },
+      {
+        "key": "a_few_times_a_year",
+        "label": "A Few Times a Year",
+        "color": "#89b5d2",
+        "values": [
+          "A few times a year"
+        ]
+      },
+      {
+        "key": "13_times_a_month",
+        "label": "1–3 Times a Month",
+        "color": "#6494b4",
+        "values": [
+          "One to three times a month"
+        ]
+      },
+      {
+        "key": "once_a_week",
+        "label": "Once a Week",
+        "color": "#3f7395",
+        "values": [
+          "Once a week"
+        ]
+      },
+      {
+        "key": "more_than_once_a_week",
+        "label": "More Than Once a Week",
+        "color": "#1a5276",
+        "values": [
+          "More than once a week"
+        ]
+      },
+      {
+        "key": "no_answer",
+        "label": "No Answer",
+        "color": "#55505f",
+        "values": [
+          "(Saw, skipped)",
+          "(Refused)",
+          "(DK)"
+        ]
+      }
+    ],
+    "columns": [
+      "ATTEND_SVCS_Y1",
+      "ATTEND_SVCS_Y2"
+    ]
+  },
+  "BELIEVE_GOD": {
+    "label": "Belief About God",
+    "parent": "Religion & Spirituality",
+    "type": "categorical",
+    "categories": [
+      {
+        "key": "one_god",
+        "label": "One God",
+        "color": "#3498db",
+        "values": [
+          "One God"
+        ]
+      },
+      {
+        "key": "more_than_one_god",
+        "label": "More Than One God",
+        "color": "#9b59b6",
+        "values": [
+          "More than one god"
+        ]
+      },
+      {
+        "key": "impersonal_spiritual_force",
+        "label": "Impersonal Spiritual Force",
+        "color": "#16a085",
+        "values": [
+          "An impersonal spiritual force"
+        ]
+      },
+      {
+        "key": "none_of_these",
+        "label": "None of These",
+        "color": "#e74c3c",
+        "values": [
+          "None of these"
+        ]
+      },
+      {
+        "key": "unsure",
+        "label": "Unsure",
+        "color": "#f1c40f",
+        "values": [
+          "Unsure"
+        ]
+      },
+      {
+        "key": "no_answer",
+        "label": "No Answer",
+        "color": "#55505f",
+        "values": [
+          "(Saw, skipped)",
+          "(Refused)",
+          "(DK)"
+        ]
+      }
+    ],
+    "columns": [
+      "BELIEVE_GOD_Y1",
+      "BELIEVE_GOD_Y2"
+    ]
+  },
+  "COMFORT_REL": {
+    "label": "Find Comfort in Religion/Spirituality",
+    "parent": "Religion & Spirituality",
+    "type": "categorical",
+    "categories": [
+      {
+        "key": "agree",
+        "label": "Agree",
+        "color": "#3498db",
+        "values": [
+          "Agree"
+        ]
+      },
+      {
+        "key": "disagree",
+        "label": "Disagree",
+        "color": "#e67e22",
+        "values": [
+          "Disagree"
+        ]
+      },
+      {
+        "key": "unsure",
+        "label": "Unsure",
+        "color": "#f1c40f",
+        "values": [
+          "Unsure"
+        ]
+      },
+      {
+        "key": "not_relevant_not_religious",
+        "label": "Not Relevant / Not Religious",
+        "color": "#95a5a6",
+        "values": [
+          "Not relevant"
+        ]
+      },
+      {
+        "key": "no_answer",
+        "label": "No Answer",
+        "color": "#55505f",
+        "values": [
+          "(Saw, skipped)",
+          "(Refused)",
+          "(DK)"
+        ]
+      }
+    ],
+    "columns": [
+      "COMFORT_REL_Y1",
+      "COMFORT_REL_Y2"
+    ]
+  },
+  "CONNECTED_REL": {
+    "label": "Feel Connected to Religion/Spirituality",
+    "parent": "Religion & Spirituality",
+    "type": "categorical",
+    "categories": [
+      {
+        "key": "never",
+        "label": "Never",
+        "color": "#aed6f1",
+        "values": [
+          "Never"
+        ]
+      },
+      {
+        "key": "rarely",
+        "label": "Rarely",
+        "color": "#7daac8",
+        "values": [
+          "Rarely"
+        ]
+      },
+      {
+        "key": "often",
+        "label": "Often",
+        "color": "#4b7e9f",
+        "values": [
+          "Often"
+        ]
+      },
+      {
+        "key": "always",
+        "label": "Always",
+        "color": "#1a5276",
+        "values": [
+          "Always"
+        ]
+      },
+      {
+        "key": "no_answer",
+        "label": "No Answer",
+        "color": "#55505f",
+        "values": [
+          "(Saw, skipped)",
+          "(Refused)",
+          "(DK)"
+        ]
+      }
+    ],
+    "columns": [
+      "CONNECTED_REL_Y1",
+      "CONNECTED_REL_Y2"
+    ]
+  },
+  "CRITICAL": {
+    "label": "Religious Community is Critical of You",
+    "parent": "Religion & Spirituality",
+    "type": "categorical",
+    "categories": [
+      {
+        "key": "agree",
+        "label": "Agree",
+        "color": "#e67e22",
+        "values": [
+          "Agree"
+        ]
+      },
+      {
+        "key": "disagree",
+        "label": "Disagree",
+        "color": "#3498db",
+        "values": [
+          "Disagree"
+        ]
+      },
+      {
+        "key": "unsure",
+        "label": "Unsure",
+        "color": "#f1c40f",
+        "values": [
+          "Unsure"
+        ]
+      },
+      {
+        "key": "not_relevant_not_religious",
+        "label": "Not Relevant / Not Religious",
+        "color": "#95a5a6",
+        "values": [
+          "Not relevant"
+        ]
+      },
+      {
+        "key": "no_answer",
+        "label": "No Answer",
+        "color": "#55505f",
+        "values": [
+          "(Saw, skipped)",
+          "(Refused)",
+          "(DK)"
+        ]
+      }
+    ],
+    "columns": [
+      "CRITICAL_Y1",
+      "CRITICAL_Y2"
+    ]
+  },
+  "GOD_PUNISH": {
+    "label": "Feel God/Spiritual Force is Punishing You",
+    "parent": "Religion & Spirituality",
+    "type": "categorical",
+    "categories": [
+      {
+        "key": "agree",
+        "label": "Agree",
+        "color": "#e67e22",
+        "values": [
+          "Agree"
+        ]
+      },
+      {
+        "key": "disagree",
+        "label": "Disagree",
+        "color": "#3498db",
+        "values": [
+          "Disagree"
+        ]
+      },
+      {
+        "key": "unsure",
+        "label": "Unsure",
+        "color": "#f1c40f",
+        "values": [
+          "Unsure"
+        ]
+      },
+      {
+        "key": "not_relevant_not_religious",
+        "label": "Not Relevant / Not Religious",
+        "color": "#95a5a6",
+        "values": [
+          "Not relevant"
+        ]
+      },
+      {
+        "key": "no_answer",
+        "label": "No Answer",
+        "color": "#55505f",
+        "values": [
+          "(Saw, skipped)",
+          "(Refused)",
+          "(DK)"
+        ]
+      }
+    ],
+    "columns": [
+      "GOD_PUNISH_Y1",
+      "GOD_PUNISH_Y2"
+    ]
+  },
+  "GROUP_NOT_REL": {
+    "label": "Participate in Non-Religious Groups",
+    "parent": "Religion & Spirituality",
+    "type": "categorical",
+    "categories": [
+      {
+        "key": "never",
+        "label": "Never",
+        "color": "#aed6f1",
+        "values": [
+          "Never"
+        ]
+      },
+      {
+        "key": "a_few_times_a_year",
+        "label": "A Few Times a Year",
+        "color": "#89b5d2",
+        "values": [
+          "A few times a year"
+        ]
+      },
+      {
+        "key": "13_times_a_month",
+        "label": "1–3 Times a Month",
+        "color": "#6494b4",
+        "values": [
+          "One to three times a month"
+        ]
+      },
+      {
+        "key": "once_a_week",
+        "label": "Once a Week",
+        "color": "#3f7395",
+        "values": [
+          "Once a week"
+        ]
+      },
+      {
+        "key": "more_than_once_a_week",
+        "label": "More Than Once a Week",
+        "color": "#1a5276",
+        "values": [
+          "More than once a week"
+        ]
+      },
+      {
+        "key": "no_answer",
+        "label": "No Answer",
+        "color": "#55505f",
+        "values": [
+          "(Saw, skipped)",
+          "(Refused)",
+          "(DK)"
+        ]
+      }
+    ],
+    "columns": [
+      "GROUP_NOT_REL_Y1",
+      "GROUP_NOT_REL_Y2"
+    ]
+  },
+  "LIFE_APPROACH": {
+    "label": "Religion Lies Behind Your Approach to Life",
+    "parent": "Religion & Spirituality",
+    "type": "categorical",
+    "categories": [
+      {
+        "key": "agree",
+        "label": "Agree",
+        "color": "#3498db",
+        "values": [
+          "Agree"
+        ]
+      },
+      {
+        "key": "disagree",
+        "label": "Disagree",
+        "color": "#e67e22",
+        "values": [
+          "Disagree"
+        ]
+      },
+      {
+        "key": "unsure",
+        "label": "Unsure",
+        "color": "#f1c40f",
+        "values": [
+          "Unsure"
+        ]
+      },
+      {
+        "key": "not_relevant_not_religious",
+        "label": "Not Relevant / Not Religious",
+        "color": "#95a5a6",
+        "values": [
+          "Not relevant"
+        ]
+      },
+      {
+        "key": "no_answer",
+        "label": "No Answer",
+        "color": "#55505f",
+        "values": [
+          "(Saw, skipped)",
+          "(Refused)",
+          "(DK)"
+        ]
+      }
+    ],
+    "columns": [
+      "LIFE_APPROACH_Y1",
+      "LIFE_APPROACH_Y2"
+    ]
+  },
+  "LOVED_BY_GOD": {
+    "label": "Feel Loved by God/Spiritual Force",
+    "parent": "Religion & Spirituality",
+    "type": "categorical",
+    "categories": [
+      {
+        "key": "agree",
+        "label": "Agree",
+        "color": "#3498db",
+        "values": [
+          "Agree"
+        ]
+      },
+      {
+        "key": "disagree",
+        "label": "Disagree",
+        "color": "#e67e22",
+        "values": [
+          "Disagree"
+        ]
+      },
+      {
+        "key": "unsure",
+        "label": "Unsure",
+        "color": "#f1c40f",
+        "values": [
+          "Unsure"
+        ]
+      },
+      {
+        "key": "not_relevant_not_religious",
+        "label": "Not Relevant / Not Religious",
+        "color": "#95a5a6",
+        "values": [
+          "Not relevant"
+        ]
+      },
+      {
+        "key": "no_answer",
+        "label": "No Answer",
+        "color": "#55505f",
+        "values": [
+          "(Saw, skipped)",
+          "(Refused)",
+          "(DK)"
+        ]
+      }
+    ],
+    "columns": [
+      "LOVED_BY_GOD_Y1",
+      "LOVED_BY_GOD_Y2"
+    ]
+  },
+  "PRAY_MEDITATE": {
+    "label": "How Often You Pray or Meditate",
+    "parent": "Religion & Spirituality",
+    "type": "categorical",
+    "categories": [
+      {
+        "key": "never",
+        "label": "Never",
+        "color": "#aed6f1",
+        "values": [
+          "Never"
+        ]
+      },
+      {
+        "key": "sometimes",
+        "label": "Sometimes",
+        "color": "#7daac8",
+        "values": [
+          "Sometimes"
+        ]
+      },
+      {
+        "key": "about_once_a_day",
+        "label": "About Once a Day",
+        "color": "#4b7e9f",
+        "values": [
+          "About once a day"
+        ]
+      },
+      {
+        "key": "more_than_once_a_day",
+        "label": "More Than Once a Day",
+        "color": "#1a5276",
+        "values": [
+          "More than once a day"
+        ]
+      },
+      {
+        "key": "no_answer",
+        "label": "No Answer",
+        "color": "#55505f",
+        "values": [
+          "(Saw, skipped)",
+          "(Refused)",
+          "(DK)"
+        ]
+      }
+    ],
+    "columns": [
+      "PRAY_MEDITATE_Y1",
+      "PRAY_MEDITATE_Y2"
+    ]
+  },
+  "REL_EXPERIENC": {
+    "label": "Had a Profound Religious/Spiritual Experience",
+    "parent": "Religion & Spirituality",
+    "type": "categorical",
+    "categories": [
+      {
+        "key": "yes",
+        "label": "Yes",
+        "color": "#3498db",
+        "values": [
+          "Yes"
+        ]
+      },
+      {
+        "key": "no",
+        "label": "No",
+        "color": "#e67e22",
+        "values": [
+          "No"
+        ]
+      },
+      {
+        "key": "no_answer",
+        "label": "No Answer",
+        "color": "#55505f",
+        "values": [
+          "(Saw, skipped)",
+          "(Refused)",
+          "(DK)"
+        ]
+      }
+    ],
+    "columns": [
+      "REL_EXPERIENC_Y1",
+      "REL_EXPERIENC_Y2"
+    ]
+  },
+  "REL_IMPORTANT": {
+    "label": "Religion is Important in Your Daily Life",
+    "parent": "Religion & Spirituality",
+    "type": "categorical",
+    "categories": [
+      {
+        "key": "yes",
+        "label": "Yes",
+        "color": "#3498db",
+        "values": [
+          "Yes"
+        ]
+      },
+      {
+        "key": "no",
+        "label": "No",
+        "color": "#e67e22",
+        "values": [
+          "No"
+        ]
+      },
+      {
+        "key": "no_answer",
+        "label": "No Answer",
+        "color": "#55505f",
+        "values": [
+          "(Saw, skipped)",
+          "(Refused)",
+          "(DK)"
+        ]
+      }
+    ],
+    "columns": [
+      "REL_IMPORTANT_Y1"
+    ]
+  },
+  "REL1": {
+    "label": "Religion at Age Twelve",
+    "parent": "Religion & Spirituality",
+    "type": "categorical",
+    "categories": [
+      {
+        "key": "christianity",
+        "label": "Christianity",
+        "color": "#3498db",
+        "values": [
+          "Christianity"
+        ]
+      },
+      {
+        "key": "islam",
+        "label": "Islam",
+        "color": "#2ecc71",
+        "values": [
+          "Islam"
+        ]
+      },
+      {
+        "key": "hinduism",
+        "label": "Hinduism",
+        "color": "#e67e22",
+        "values": [
+          "Hinduism"
+        ]
+      },
+      {
+        "key": "buddhism",
+        "label": "Buddhism",
+        "color": "#f1c40f",
+        "values": [
+          "Buddhism"
+        ]
+      },
+      {
+        "key": "judaism",
+        "label": "Judaism",
+        "color": "#9b59b6",
+        "values": [
+          "Judaism"
+        ]
+      },
+      {
+        "key": "none",
+        "label": "No Religion / Atheist / Agnostic",
+        "color": "#95a5a6",
+        "values": [
+          "No religion/Atheist/Agnostic"
+        ]
+      },
+      {
+        "key": "other",
+        "label": "Other Religion",
+        "color": "#7f8c8d",
+        "values": [
+          "Some other religion",
+          "Primal, Animist, or Folk religion",
+          "Umbanda, Candomblé, and other African-derived religions",
+          "Taoism",
+          "Spiritism",
+          "Chinese folk/traditional religion",
+          "Sikhism",
+          "Shinto",
+          "Confucianism"
+        ]
+      },
+      {
+        "key": "no_answer",
+        "label": "No Answer",
+        "color": "#55505f",
+        "values": [
+          "(Saw, skipped)",
+          "(Refused)",
+          "(DK)"
+        ]
+      }
+    ],
+    "columns": [
+      "REL1_Y1"
+    ]
+  },
+  "REL2": {
+    "label": "Current Religion",
+    "parent": "Religion & Spirituality",
+    "type": "categorical",
+    "categories": [
+      {
+        "key": "christianity",
+        "label": "Christianity",
+        "color": "#3498db",
+        "values": [
+          "Christianity"
+        ]
+      },
+      {
+        "key": "islam",
+        "label": "Islam",
+        "color": "#2ecc71",
+        "values": [
+          "Islam"
+        ]
+      },
+      {
+        "key": "hinduism",
+        "label": "Hinduism",
+        "color": "#e67e22",
+        "values": [
+          "Hinduism"
+        ]
+      },
+      {
+        "key": "buddhism",
+        "label": "Buddhism",
+        "color": "#f1c40f",
+        "values": [
+          "Buddhism"
+        ]
+      },
+      {
+        "key": "judaism",
+        "label": "Judaism",
+        "color": "#9b59b6",
+        "values": [
+          "Judaism"
+        ]
+      },
+      {
+        "key": "none",
+        "label": "No Religion / Atheist / Agnostic",
+        "color": "#95a5a6",
+        "values": [
+          "No religion/Atheist/Agnostic"
+        ]
+      },
+      {
+        "key": "other",
+        "label": "Other Religion",
+        "color": "#7f8c8d",
+        "values": [
+          "Some other religion",
+          "Primal, Animist, or Folk religion",
+          "Umbanda, Candomblé, and other African-derived religions",
+          "Taoism",
+          "Spiritism",
+          "Chinese folk/traditional religion",
+          "Sikhism",
+          "Shinto",
+          "Confucianism"
+        ]
+      },
+      {
+        "key": "no_answer",
+        "label": "No Answer",
+        "color": "#55505f",
+        "values": [
+          "(Saw, skipped)",
+          "(Refused)",
+          "(DK)"
+        ]
+      }
+    ],
+    "columns": [
+      "REL2_Y1",
+      "REL2_Y2"
+    ]
+  },
+  "REL3": {
+    "label": "Christian Denomination",
+    "parent": "Religion & Spirituality",
+    "type": "categorical",
+    "needsManualGrouping": true,
+    "note": "17 denominations (Catholic, Lutheran, Baptist, Pentecostal, etc). Only asked of Christians (REL2). Consider grouping into Catholic / Mainline Protestant / Evangelical-Pentecostal / Orthodox / Other.",
+    "categories": [
+      {
+        "key": "catholic",
+        "label": "Catholic",
+        "color": "#3498db",
+        "values": [
+          "Catholic"
+        ]
+      },
+      {
+        "key": "no_answer",
+        "label": "No Answer",
+        "color": "#55505f",
+        "values": [
+          "(Saw, skipped)",
+          "(Refused)",
+          "(DK)"
+        ]
+      }
+    ],
+    "columns": [
+      "REL3_Y1",
+      "REL3_Y2"
+    ]
+  },
+  "REL7": {
+    "label": "Atheist, Agnostic, or Neither",
+    "parent": "Religion & Spirituality",
+    "type": "categorical",
+    "categories": [
+      {
+        "key": "atheist",
+        "label": "Atheist",
+        "color": "#e74c3c",
+        "values": [
+          "Atheist – do not believe in any god"
+        ]
+      },
+      {
+        "key": "agnostic",
+        "label": "Agnostic",
+        "color": "#f1c40f",
+        "values": [
+          "Agnostic – unsure whether a God or gods exist"
+        ]
+      },
+      {
+        "key": "neither",
+        "label": "Neither",
+        "color": "#95a5a6",
+        "values": [
+          "Neither"
+        ]
+      },
+      {
+        "key": "no_answer",
+        "label": "No Answer",
+        "color": "#55505f",
+        "values": [
+          "(Saw, skipped)",
+          "(Refused)",
+          "(DK)"
+        ]
+      }
+    ],
+    "columns": [
+      "REL7_Y1"
+    ]
+  },
+  "REL8": {
+    "label": "Spiritual, Religious, Both, or Neither",
+    "parent": "Religion & Spirituality",
+    "type": "categorical",
+    "categories": [
+      {
+        "key": "religious",
+        "label": "Religious",
+        "color": "#3498db",
+        "values": [
+          "Religious"
+        ]
+      },
+      {
+        "key": "spiritual",
+        "label": "Spiritual",
+        "color": "#9b59b6",
+        "values": [
+          "Spiritual"
+        ]
+      },
+      {
+        "key": "both",
+        "label": "Both",
+        "color": "#2ecc71",
+        "values": [
+          "Both"
+        ]
+      },
+      {
+        "key": "neither",
+        "label": "Neither",
+        "color": "#95a5a6",
+        "values": [
+          "Neither"
+        ]
+      },
+      {
+        "key": "no_answer",
+        "label": "No Answer",
+        "color": "#55505f",
+        "values": [
+          "(Saw, skipped)",
+          "(Refused)",
+          "(DK)"
+        ]
+      }
+    ],
+    "columns": [
+      "REL8_Y1"
+    ]
+  },
+  "SACRED_TEXTS": {
+    "label": "Read or Listen to Sacred Texts",
+    "parent": "Religion & Spirituality",
+    "type": "categorical",
+    "categories": [
+      {
+        "key": "never",
+        "label": "Never",
+        "color": "#aed6f1",
+        "values": [
+          "Never"
+        ]
+      },
+      {
+        "key": "sometimes",
+        "label": "Sometimes",
+        "color": "#7daac8",
+        "values": [
+          "Sometimes"
+        ]
+      },
+      {
+        "key": "about_once_a_day",
+        "label": "About Once a Day",
+        "color": "#4b7e9f",
+        "values": [
+          "About once a day"
+        ]
+      },
+      {
+        "key": "more_than_once_a_day",
+        "label": "More Than Once a Day",
+        "color": "#1a5276",
+        "values": [
+          "More than once a day"
+        ]
+      },
+      {
+        "key": "no_answer",
+        "label": "No Answer",
+        "color": "#55505f",
+        "values": [
+          "(Saw, skipped)",
+          "(Refused)",
+          "(DK)"
+        ]
+      }
+    ],
+    "columns": [
+      "SACRED_TEXTS_Y1",
+      "SACRED_TEXTS_Y2"
+    ]
+  },
+  "TELL_BELIEFS": {
+    "label": "Tell Others About Your Religion/Spirituality",
+    "parent": "Religion & Spirituality",
+    "type": "categorical",
+    "categories": [
+      {
+        "key": "agree",
+        "label": "Agree",
+        "color": "#3498db",
+        "values": [
+          "Agree"
+        ]
+      },
+      {
+        "key": "disagree",
+        "label": "Disagree",
+        "color": "#e67e22",
+        "values": [
+          "Disagree"
+        ]
+      },
+      {
+        "key": "unsure",
+        "label": "Unsure",
+        "color": "#f1c40f",
+        "values": [
+          "Unsure"
+        ]
+      },
+      {
+        "key": "not_relevant_not_religious",
+        "label": "Not Relevant / Not Religious",
+        "color": "#95a5a6",
+        "values": [
+          "Not relevant"
+        ]
+      },
+      {
+        "key": "no_answer",
+        "label": "No Answer",
+        "color": "#55505f",
+        "values": [
+          "(Saw, skipped)",
+          "(Refused)",
+          "(DK)"
+        ]
+      }
+    ],
+    "columns": [
+      "TELL_BELIEFS_Y1",
+      "TELL_BELIEFS_Y2"
+    ]
+  },
+  "CNTRY_REL_BUD": {
+    "label": "Teachings of Buddhism Are Important (Country-Level)",
+    "parent": "Religion & Spirituality",
+    "type": "numeric",
+    "valueMap": {
+      "Strongly disagree": 0,
+      "Strongly agree": 10
+    },
+    "ranges": [
+      {
+        "key": "low",
+        "label": "Low (0–3)",
+        "color": "#d7bde2",
+        "min": 0,
+        "max": 3
+      },
+      {
+        "key": "mid",
+        "label": "Medium (4–6)",
+        "color": "#a278b2",
+        "min": 4,
+        "max": 6
+      },
+      {
+        "key": "high",
+        "label": "High (7–10)",
+        "color": "#6c3483",
+        "min": 7,
+        "max": 10
+      }
+    ],
+    "columns": [
+      "CNTRY_REL_BUD_Y1"
+    ]
+  },
+  "CNTRY_REL_CHI": {
+    "label": "Teachings of Chinese Folk Religion Are Important (Country-Level)",
+    "parent": "Religion & Spirituality",
+    "type": "numeric",
+    "valueMap": {
+      "Strongly disagree": 0,
+      "Strongly agree": 10
+    },
+    "ranges": [
+      {
+        "key": "low",
+        "label": "Low (0–3)",
+        "color": "#d7bde2",
+        "min": 0,
+        "max": 3
+      },
+      {
+        "key": "mid",
+        "label": "Medium (4–6)",
+        "color": "#a278b2",
+        "min": 4,
+        "max": 6
+      },
+      {
+        "key": "high",
+        "label": "High (7–10)",
+        "color": "#6c3483",
+        "min": 7,
+        "max": 10
+      }
+    ],
+    "columns": [
+      "CNTRY_REL_CHI_Y1"
+    ]
+  },
+  "CNTRY_REL_CHR": {
+    "label": "Teachings of Christianity Are Important (Country-Level)",
+    "parent": "Religion & Spirituality",
+    "type": "numeric",
+    "valueMap": {
+      "Strongly disagree": 0,
+      "Strongly agree": 10
+    },
+    "ranges": [
+      {
+        "key": "low",
+        "label": "Low (0–3)",
+        "color": "#d7bde2",
+        "min": 0,
+        "max": 3
+      },
+      {
+        "key": "mid",
+        "label": "Medium (4–6)",
+        "color": "#a278b2",
+        "min": 4,
+        "max": 6
+      },
+      {
+        "key": "high",
+        "label": "High (7–10)",
+        "color": "#6c3483",
+        "min": 7,
+        "max": 10
+      }
+    ],
+    "columns": [
+      "CNTRY_REL_CHR_Y1"
+    ]
+  },
+  "CNTRY_REL_HIN": {
+    "label": "Teachings of Hinduism Are Important (Country-Level)",
+    "parent": "Religion & Spirituality",
+    "type": "numeric",
+    "valueMap": {
+      "Strongly disagree": 0,
+      "Strongly agree": 10
+    },
+    "ranges": [
+      {
+        "key": "low",
+        "label": "Low (0–3)",
+        "color": "#d7bde2",
+        "min": 0,
+        "max": 3
+      },
+      {
+        "key": "mid",
+        "label": "Medium (4–6)",
+        "color": "#a278b2",
+        "min": 4,
+        "max": 6
+      },
+      {
+        "key": "high",
+        "label": "High (7–10)",
+        "color": "#6c3483",
+        "min": 7,
+        "max": 10
+      }
+    ],
+    "columns": [
+      "CNTRY_REL_HIN_Y1"
+    ]
+  },
+  "CNTRY_REL_ISL": {
+    "label": "Teachings of Islam Are Important (Country-Level)",
+    "parent": "Religion & Spirituality",
+    "type": "numeric",
+    "valueMap": {
+      "Strongly disagree": 0,
+      "Strongly agree": 10
+    },
+    "ranges": [
+      {
+        "key": "low",
+        "label": "Low (0–3)",
+        "color": "#d7bde2",
+        "min": 0,
+        "max": 3
+      },
+      {
+        "key": "mid",
+        "label": "Medium (4–6)",
+        "color": "#a278b2",
+        "min": 4,
+        "max": 6
+      },
+      {
+        "key": "high",
+        "label": "High (7–10)",
+        "color": "#6c3483",
+        "min": 7,
+        "max": 10
+      }
+    ],
+    "columns": [
+      "CNTRY_REL_ISL_Y1"
+    ]
+  },
+  "CNTRY_REL_JUD": {
+    "label": "Teachings of Judaism Are Important (Country-Level)",
+    "parent": "Religion & Spirituality",
+    "type": "numeric",
+    "valueMap": {
+      "Strongly disagree": 0,
+      "Strongly agree": 10
+    },
+    "ranges": [
+      {
+        "key": "low",
+        "label": "Low (0–3)",
+        "color": "#d7bde2",
+        "min": 0,
+        "max": 3
+      },
+      {
+        "key": "mid",
+        "label": "Medium (4–6)",
+        "color": "#a278b2",
+        "min": 4,
+        "max": 6
+      },
+      {
+        "key": "high",
+        "label": "High (7–10)",
+        "color": "#6c3483",
+        "min": 7,
+        "max": 10
+      }
+    ],
+    "columns": [
+      "CNTRY_REL_JUD_Y1"
+    ]
+  },
+  "CNTRY_REL_SHI": {
+    "label": "Teachings of Shinto Are Important (Country-Level)",
+    "parent": "Religion & Spirituality",
+    "type": "numeric",
+    "valueMap": {
+      "Strongly disagree": 0,
+      "Strongly agree": 10
+    },
+    "ranges": [
+      {
+        "key": "low",
+        "label": "Low (0–3)",
+        "color": "#d7bde2",
+        "min": 0,
+        "max": 3
+      },
+      {
+        "key": "mid",
+        "label": "Medium (4–6)",
+        "color": "#a278b2",
+        "min": 4,
+        "max": 6
+      },
+      {
+        "key": "high",
+        "label": "High (7–10)",
+        "color": "#6c3483",
+        "min": 7,
+        "max": 10
+      }
+    ],
+    "columns": [
+      "CNTRY_REL_SHI_Y1"
+    ]
+  },
+  "LIFE_SAT": {
+    "label": "Satisfaction With Life as a Whole",
+    "parent": "Well-Being & Life Satisfaction",
+    "type": "numeric",
+    "valueMap": {
+      "Not at all satisfied with your life": 0,
+      "Completely satisfied with your life": 10
+    },
+    "ranges": [
+      {
+        "key": "low",
+        "label": "Low (0–3)",
+        "color": "#e74c3c",
+        "min": 0,
+        "max": 3
+      },
+      {
+        "key": "mid",
+        "label": "Medium (4–6)",
+        "color": "#8a8c56",
+        "min": 4,
+        "max": 6
+      },
+      {
+        "key": "high",
+        "label": "High (7–10)",
+        "color": "#2ecc71",
+        "min": 7,
+        "max": 10
+      }
+    ],
+    "columns": [
+      "LIFE_SAT_Y1",
+      "LIFE_SAT_Y2"
+    ]
+  },
+  "HAPPY": {
+    "label": "How Happy You Usually Feel",
+    "parent": "Well-Being & Life Satisfaction",
+    "type": "numeric",
+    "valueMap": {
+      "Extremely unhappy": 0,
+      "Extremely happy": 10
+    },
+    "ranges": [
+      {
+        "key": "low",
+        "label": "Low (0–3)",
+        "color": "#e74c3c",
+        "min": 0,
+        "max": 3
+      },
+      {
+        "key": "mid",
+        "label": "Medium (4–6)",
+        "color": "#8a8c56",
+        "min": 4,
+        "max": 6
+      },
+      {
+        "key": "high",
+        "label": "High (7–10)",
+        "color": "#2ecc71",
+        "min": 7,
+        "max": 10
+      }
+    ],
+    "columns": [
+      "HAPPY_Y1",
+      "HAPPY_Y2"
+    ]
+  },
+  "WB_TODAY": {
+    "label": "Life Evaluation: Today",
+    "parent": "Well-Being & Life Satisfaction",
+    "type": "numeric",
+    "valueMap": {
+      "Worst possible": 0,
+      "Best possible": 10
+    },
+    "ranges": [
+      {
+        "key": "low",
+        "label": "Low (0–3)",
+        "color": "#e74c3c",
+        "min": 0,
+        "max": 3
+      },
+      {
+        "key": "mid",
+        "label": "Medium (4–6)",
+        "color": "#8a8c56",
+        "min": 4,
+        "max": 6
+      },
+      {
+        "key": "high",
+        "label": "High (7–10)",
+        "color": "#2ecc71",
+        "min": 7,
+        "max": 10
+      }
+    ],
+    "columns": [
+      "WB_TODAY_Y1",
+      "WB_TODAY_Y2"
+    ]
+  },
+  "WB_FIVEYRS": {
+    "label": "Life Evaluation: Five Years From Now",
+    "parent": "Well-Being & Life Satisfaction",
+    "type": "numeric",
+    "valueMap": {
+      "Worst possible": 0,
+      "Best possible": 10
+    },
+    "ranges": [
+      {
+        "key": "low",
+        "label": "Low (0–3)",
+        "color": "#e74c3c",
+        "min": 0,
+        "max": 3
+      },
+      {
+        "key": "mid",
+        "label": "Medium (4–6)",
+        "color": "#8a8c56",
+        "min": 4,
+        "max": 6
+      },
+      {
+        "key": "high",
+        "label": "High (7–10)",
+        "color": "#2ecc71",
+        "min": 7,
+        "max": 10
+      }
+    ],
+    "columns": [
+      "WB_FIVEYRS_Y1",
+      "WB_FIVEYRS_Y2"
+    ]
+  },
+  "CONTENT": {
+    "label": "Content With Friendships and Relationships",
+    "parent": "Well-Being & Life Satisfaction",
+    "type": "numeric",
+    "valueMap": {
+      "Strongly disagree": 0,
+      "Strongly agree": 10
+    },
+    "ranges": [
+      {
+        "key": "low",
+        "label": "Low (0–3)",
+        "color": "#e74c3c",
+        "min": 0,
+        "max": 3
+      },
+      {
+        "key": "mid",
+        "label": "Medium (4–6)",
+        "color": "#8a8c56",
+        "min": 4,
+        "max": 6
+      },
+      {
+        "key": "high",
+        "label": "High (7–10)",
+        "color": "#2ecc71",
+        "min": 7,
+        "max": 10
+      }
+    ],
+    "columns": [
+      "CONTENT_Y1",
+      "CONTENT_Y2"
+    ]
+  },
+  "LIFE_PURPOSE": {
+    "label": "Understand Your Purpose in Life",
+    "parent": "Well-Being & Life Satisfaction",
+    "type": "numeric",
+    "valueMap": {
+      "Strongly disagree": 0,
+      "Strongly agree": 10
+    },
+    "ranges": [
+      {
+        "key": "low",
+        "label": "Low (0–3)",
+        "color": "#e74c3c",
+        "min": 0,
+        "max": 3
+      },
+      {
+        "key": "mid",
+        "label": "Medium (4–6)",
+        "color": "#8a8c56",
+        "min": 4,
+        "max": 6
+      },
+      {
+        "key": "high",
+        "label": "High (7–10)",
+        "color": "#2ecc71",
+        "min": 7,
+        "max": 10
+      }
+    ],
+    "columns": [
+      "LIFE_PURPOSE_Y1",
+      "LIFE_PURPOSE_Y2"
+    ]
+  },
+  "WORTHWHILE": {
+    "label": "Things You Do Are Worthwhile",
+    "parent": "Well-Being & Life Satisfaction",
+    "type": "numeric",
+    "valueMap": {
+      "Not at all worthwhile": 0,
+      "Completely worthwhile": 10
+    },
+    "ranges": [
+      {
+        "key": "low",
+        "label": "Low (0–3)",
+        "color": "#e74c3c",
+        "min": 0,
+        "max": 3
+      },
+      {
+        "key": "mid",
+        "label": "Medium (4–6)",
+        "color": "#8a8c56",
+        "min": 4,
+        "max": 6
+      },
+      {
+        "key": "high",
+        "label": "High (7–10)",
+        "color": "#2ecc71",
+        "min": 7,
+        "max": 10
+      }
+    ],
+    "columns": [
+      "WORTHWHILE_Y1",
+      "WORTHWHILE_Y2"
+    ]
+  },
+  "PEACE": {
+    "label": "At Peace With Your Thoughts and Feelings",
+    "parent": "Well-Being & Life Satisfaction",
+    "type": "categorical",
+    "categories": [
+      {
+        "key": "never",
+        "label": "Never",
+        "color": "#e74c3c",
+        "values": [
+          "Never"
+        ]
+      },
+      {
+        "key": "rarely",
+        "label": "Rarely",
+        "color": "#a9774e",
+        "values": [
+          "Rarely"
+        ]
+      },
+      {
+        "key": "often",
+        "label": "Often",
+        "color": "#6ca15f",
+        "values": [
+          "Often"
+        ]
+      },
+      {
+        "key": "always",
+        "label": "Always",
+        "color": "#2ecc71",
+        "values": [
+          "Always"
+        ]
+      },
+      {
+        "key": "no_answer",
+        "label": "No Answer",
+        "color": "#55505f",
+        "values": [
+          "(Saw, skipped)",
+          "(Refused)",
+          "(DK)"
+        ]
+      }
+    ],
+    "columns": [
+      "PEACE_Y1",
+      "PEACE_Y2"
+    ]
+  },
+  "HOPE_FUTURE": {
+    "label": "Always Remain Hopeful About the Future",
+    "parent": "Well-Being & Life Satisfaction",
+    "type": "numeric",
+    "valueMap": {
+      "Strongly disagree": 0,
+      "Strongly agree": 10
+    },
+    "ranges": [
+      {
+        "key": "low",
+        "label": "Low (0–3)",
+        "color": "#e74c3c",
+        "min": 0,
+        "max": 3
+      },
+      {
+        "key": "mid",
+        "label": "Medium (4–6)",
+        "color": "#8a8c56",
+        "min": 4,
+        "max": 6
+      },
+      {
+        "key": "high",
+        "label": "High (7–10)",
+        "color": "#2ecc71",
+        "min": 7,
+        "max": 10
+      }
+    ],
+    "columns": [
+      "HOPE_FUTURE_Y1",
+      "HOPE_FUTURE_Y2"
+    ]
+  },
+  "EXPECT_GOOD": {
+    "label": "Expect More Good Things Than Bad",
+    "parent": "Well-Being & Life Satisfaction",
+    "type": "numeric",
+    "valueMap": {
+      "Strongly disagree": 0,
+      "Strongly agree": 10
+    },
+    "ranges": [
+      {
+        "key": "low",
+        "label": "Low (0–3)",
+        "color": "#e74c3c",
+        "min": 0,
+        "max": 3
+      },
+      {
+        "key": "mid",
+        "label": "Medium (4–6)",
+        "color": "#8a8c56",
+        "min": 4,
+        "max": 6
+      },
+      {
+        "key": "high",
+        "label": "High (7–10)",
+        "color": "#2ecc71",
+        "min": 7,
+        "max": 10
+      }
+    ],
+    "columns": [
+      "EXPECT_GOOD_Y1",
+      "EXPECT_GOOD_Y2"
+    ]
+  },
+  "CAPABLE": {
+    "label": "Feel Very Capable in Most Things You Do",
+    "parent": "Well-Being & Life Satisfaction",
+    "type": "categorical",
+    "categories": [
+      {
+        "key": "never",
+        "label": "Never",
+        "color": "#e74c3c",
+        "values": [
+          "Never"
+        ]
+      },
+      {
+        "key": "rarely",
+        "label": "Rarely",
+        "color": "#a9774e",
+        "values": [
+          "Rarely"
+        ]
+      },
+      {
+        "key": "often",
+        "label": "Often",
+        "color": "#6ca15f",
+        "values": [
+          "Often"
+        ]
+      },
+      {
+        "key": "always",
+        "label": "Always",
+        "color": "#2ecc71",
+        "values": [
+          "Always"
+        ]
+      },
+      {
+        "key": "no_answer",
+        "label": "No Answer",
+        "color": "#55505f",
+        "values": [
+          "(Saw, skipped)",
+          "(Refused)",
+          "(DK)"
+        ]
+      }
+    ],
+    "columns": [
+      "CAPABLE_Y1",
+      "CAPABLE_Y2"
+    ]
+  },
+  "FORGIVE": {
+    "label": "How Often You Have Forgiven Those Who Hurt You",
+    "parent": "Character & Virtue",
+    "type": "categorical",
+    "categories": [
+      {
+        "key": "never",
+        "label": "Never",
+        "color": "#e74c3c",
+        "values": [
+          "Never"
+        ]
+      },
+      {
+        "key": "rarely",
+        "label": "Rarely",
+        "color": "#a9774e",
+        "values": [
+          "Rarely"
+        ]
+      },
+      {
+        "key": "often",
+        "label": "Often",
+        "color": "#6ca15f",
+        "values": [
+          "Often"
+        ]
+      },
+      {
+        "key": "always",
+        "label": "Always",
+        "color": "#2ecc71",
+        "values": [
+          "Always"
+        ]
+      },
+      {
+        "key": "no_answer",
+        "label": "No Answer",
+        "color": "#55505f",
+        "values": [
+          "(Saw, skipped)",
+          "(Refused)",
+          "(DK)"
+        ]
+      }
+    ],
+    "columns": [
+      "FORGIVE_Y1",
+      "FORGIVE_Y2"
+    ]
+  },
+  "GIVE_UP": {
+    "label": "Give Up Happiness Now for Greater Happiness Later",
+    "parent": "Character & Virtue",
+    "type": "numeric",
+    "valueMap": {
+      "Not true of you at all": 0,
+      "Completely true of you": 10
+    },
+    "ranges": [
+      {
+        "key": "low",
+        "label": "Low (0–3)",
+        "color": "#e74c3c",
+        "min": 0,
+        "max": 3
+      },
+      {
+        "key": "mid",
+        "label": "Medium (4–6)",
+        "color": "#8a8c56",
+        "min": 4,
+        "max": 6
+      },
+      {
+        "key": "high",
+        "label": "High (7–10)",
+        "color": "#2ecc71",
+        "min": 7,
+        "max": 10
+      }
+    ],
+    "columns": [
+      "GIVE_UP_Y1",
+      "GIVE_UP_Y2"
+    ]
+  },
+  "GRATEFUL": {
+    "label": "Long List of Things You Feel Grateful For",
+    "parent": "Character & Virtue",
+    "type": "numeric",
+    "valueMap": {
+      "Strongly disagree": 0,
+      "Strongly agree": 10
+    },
+    "ranges": [
+      {
+        "key": "low",
+        "label": "Low (0–3)",
+        "color": "#e74c3c",
+        "min": 0,
+        "max": 3
+      },
+      {
+        "key": "mid",
+        "label": "Medium (4–6)",
+        "color": "#8a8c56",
+        "min": 4,
+        "max": 6
+      },
+      {
+        "key": "high",
+        "label": "High (7–10)",
+        "color": "#2ecc71",
+        "min": 7,
+        "max": 10
+      }
+    ],
+    "columns": [
+      "GRATEFUL_Y1",
+      "GRATEFUL_Y2"
+    ]
+  },
+  "PROMOTE_GOOD": {
+    "label": "Always Act to Promote Good",
+    "parent": "Character & Virtue",
+    "type": "numeric",
+    "valueMap": {
+      "Not true of you at all": 0,
+      "Completely true of you": 10
+    },
+    "ranges": [
+      {
+        "key": "low",
+        "label": "Low (0–3)",
+        "color": "#e74c3c",
+        "min": 0,
+        "max": 3
+      },
+      {
+        "key": "mid",
+        "label": "Medium (4–6)",
+        "color": "#8a8c56",
+        "min": 4,
+        "max": 6
+      },
+      {
+        "key": "high",
+        "label": "High (7–10)",
+        "color": "#2ecc71",
+        "min": 7,
+        "max": 10
+      }
+    ],
+    "columns": [
+      "PROMOTE_GOOD_Y1",
+      "PROMOTE_GOOD_Y2"
+    ]
+  },
+  "HELP_STRANGER": {
+    "label": "Helped a Stranger in the Past Month",
+    "parent": "Character & Virtue",
+    "type": "categorical",
+    "categories": [
+      {
+        "key": "yes",
+        "label": "Yes",
+        "color": "#2ecc71",
+        "values": [
+          "Yes"
+        ]
+      },
+      {
+        "key": "no",
+        "label": "No",
+        "color": "#e74c3c",
+        "values": [
+          "No"
+        ]
+      },
+      {
+        "key": "no_answer",
+        "label": "No Answer",
+        "color": "#55505f",
+        "values": [
+          "(Saw, skipped)",
+          "(Refused)",
+          "(DK)"
+        ]
+      }
+    ],
+    "columns": [
+      "HELP_STRANGER_Y1",
+      "HELP_STRANGER_Y2"
+    ]
+  },
+  "DONATED": {
+    "label": "Donated Money to Charity in Past Month",
+    "parent": "Character & Virtue",
+    "type": "categorical",
+    "categories": [
+      {
+        "key": "yes",
+        "label": "Yes",
+        "color": "#2ecc71",
+        "values": [
+          "Yes"
+        ]
+      },
+      {
+        "key": "no",
+        "label": "No",
+        "color": "#e74c3c",
+        "values": [
+          "No"
+        ]
+      },
+      {
+        "key": "no_answer",
+        "label": "No Answer",
+        "color": "#55505f",
+        "values": [
+          "(Saw, skipped)",
+          "(Refused)",
+          "(DK)"
+        ]
+      }
+    ],
+    "columns": [
+      "DONATED_Y1",
+      "DONATED_Y2"
+    ]
+  },
+  "VOLUNTEERED": {
+    "label": "Volunteered Time in Past Month",
+    "parent": "Character & Virtue",
+    "type": "categorical",
+    "categories": [
+      {
+        "key": "yes",
+        "label": "Yes",
+        "color": "#2ecc71",
+        "values": [
+          "Yes"
+        ]
+      },
+      {
+        "key": "no",
+        "label": "No",
+        "color": "#e74c3c",
+        "values": [
+          "No"
+        ]
+      },
+      {
+        "key": "no_answer",
+        "label": "No Answer",
+        "color": "#55505f",
+        "values": [
+          "(Saw, skipped)",
+          "(Refused)",
+          "(DK)"
+        ]
+      }
+    ],
+    "columns": [
+      "VOLUNTEERED_Y1",
+      "VOLUNTEERED_Y2"
+    ]
+  },
+  "MENTAL_HEALTH": {
+    "label": "Self-Rated Mental Health",
+    "parent": "Mental & Physical Health",
+    "type": "numeric",
+    "valueMap": {
+      "Poor mental health": 0,
+      "Excellent mental health": 10
+    },
+    "ranges": [
+      {
+        "key": "low",
+        "label": "Low (0–3)",
+        "color": "#e74c3c",
+        "min": 0,
+        "max": 3
+      },
+      {
+        "key": "mid",
+        "label": "Medium (4–6)",
+        "color": "#8a8c56",
+        "min": 4,
+        "max": 6
+      },
+      {
+        "key": "high",
+        "label": "High (7–10)",
+        "color": "#2ecc71",
+        "min": 7,
+        "max": 10
+      }
+    ],
+    "columns": [
+      "MENTAL_HEALTH_Y1",
+      "MENTAL_HEALTH_Y2"
+    ]
+  },
+  "PHYSICAL_HLTH": {
+    "label": "Self-Rated Physical Health",
+    "parent": "Mental & Physical Health",
+    "type": "numeric",
+    "valueMap": {
+      "Poor physical health": 0,
+      "Excellent physical health": 10
+    },
+    "ranges": [
+      {
+        "key": "low",
+        "label": "Low (0–3)",
+        "color": "#e74c3c",
+        "min": 0,
+        "max": 3
+      },
+      {
+        "key": "mid",
+        "label": "Medium (4–6)",
+        "color": "#8a8c56",
+        "min": 4,
+        "max": 6
+      },
+      {
+        "key": "high",
+        "label": "High (7–10)",
+        "color": "#2ecc71",
+        "min": 7,
+        "max": 10
+      }
+    ],
+    "columns": [
+      "PHYSICAL_HLTH_Y1",
+      "PHYSICAL_HLTH_Y2"
+    ]
+  },
+  "HEALTH_PROB": {
+    "label": "Health Problems Limit Daily Activities",
+    "parent": "Mental & Physical Health",
+    "type": "categorical",
+    "categories": [
+      {
+        "key": "yes",
+        "label": "Yes",
+        "color": "#e74c3c",
+        "values": [
+          "Yes"
+        ]
+      },
+      {
+        "key": "no",
+        "label": "No",
+        "color": "#2ecc71",
+        "values": [
+          "No"
+        ]
+      },
+      {
+        "key": "no_answer",
+        "label": "No Answer",
+        "color": "#55505f",
+        "values": [
+          "(Saw, skipped)",
+          "(Refused)",
+          "(DK)"
+        ]
+      }
+    ],
+    "columns": [
+      "HEALTH_PROB_Y1",
+      "HEALTH_PROB_Y2"
+    ]
+  },
+  "BODILY_PAIN": {
+    "label": "Bodily Pain in Past 4 Weeks",
+    "parent": "Mental & Physical Health",
+    "type": "categorical",
+    "categories": [
+      {
+        "key": "none_at_all",
+        "label": "None at All",
+        "color": "#2ecc71",
+        "values": [
+          "None at all"
+        ]
+      },
+      {
+        "key": "not_very_much",
+        "label": "Not Very Much",
+        "color": "#6ca15f",
+        "values": [
+          "Not very much"
+        ]
+      },
+      {
+        "key": "some",
+        "label": "Some",
+        "color": "#a9774e",
+        "values": [
+          "Some"
+        ]
+      },
+      {
+        "key": "a_lot",
+        "label": "A Lot",
+        "color": "#e74c3c",
+        "values": [
+          "A lot"
+        ]
+      },
+      {
+        "key": "no_answer",
+        "label": "No Answer",
+        "color": "#55505f",
+        "values": [
+          "(Saw, skipped)",
+          "(Refused)",
+          "(DK)"
+        ]
+      }
+    ],
+    "columns": [
+      "BODILY_PAIN_Y1",
+      "BODILY_PAIN_Y2"
+    ]
+  },
+  "SUFFERING": {
+    "label": "The Extent to Which You Are Suffering",
+    "parent": "Mental & Physical Health",
+    "type": "categorical",
+    "categories": [
+      {
+        "key": "not_at_all",
+        "label": "Not at All",
+        "color": "#2ecc71",
+        "values": [
+          "Not at all"
+        ]
+      },
+      {
+        "key": "not_very_much",
+        "label": "Not Very Much",
+        "color": "#6ca15f",
+        "values": [
+          "Not very much"
+        ]
+      },
+      {
+        "key": "some",
+        "label": "Some",
+        "color": "#a9774e",
+        "values": [
+          "Some"
+        ]
+      },
+      {
+        "key": "a_lot",
+        "label": "A Lot",
+        "color": "#e74c3c",
+        "values": [
+          "A lot"
+        ]
+      },
+      {
+        "key": "no_answer",
+        "label": "No Answer",
+        "color": "#55505f",
+        "values": [
+          "(Saw, skipped)",
+          "(Refused)",
+          "(DK)"
+        ]
+      }
+    ],
+    "columns": [
+      "SUFFERING_Y1",
+      "SUFFERING_Y2"
+    ]
+  },
+  "COVID_DEATH": {
+    "label": "Family/Friend Died From COVID-19",
+    "parent": "Mental & Physical Health",
+    "type": "categorical",
+    "categories": [
+      {
+        "key": "yes",
+        "label": "Yes",
+        "color": "#e74c3c",
+        "values": [
+          "Yes"
+        ]
+      },
+      {
+        "key": "no",
+        "label": "No",
+        "color": "#2ecc71",
+        "values": [
+          "No"
+        ]
+      },
+      {
+        "key": "no_answer",
+        "label": "No Answer",
+        "color": "#55505f",
+        "values": [
+          "(Saw, skipped)",
+          "(Refused)",
+          "(DK)"
+        ]
+      }
+    ],
+    "columns": [
+      "COVID_DEATH_Y1"
+    ]
+  },
+  "DEPRESSED": {
+    "label": "Feeling Down, Depressed, or Hopeless",
+    "parent": "Mental Health & Stress",
+    "type": "categorical",
+    "categories": [
+      {
+        "key": "not_at_all",
+        "label": "Not at All",
+        "color": "#2ecc71",
+        "values": [
+          "Not at all"
+        ]
+      },
+      {
+        "key": "several_days",
+        "label": "Several Days",
+        "color": "#6ca15f",
+        "values": [
+          "Several days"
+        ]
+      },
+      {
+        "key": "more_than_half_the_days",
+        "label": "More Than Half the Days",
+        "color": "#a9774e",
+        "values": [
+          "More than half the days"
+        ]
+      },
+      {
+        "key": "nearly_every_day",
+        "label": "Nearly Every Day",
+        "color": "#e74c3c",
+        "values": [
+          "Nearly every day"
+        ]
+      },
+      {
+        "key": "no_answer",
+        "label": "No Answer",
+        "color": "#55505f",
+        "values": [
+          "(Saw, skipped)",
+          "(Refused)",
+          "(DK)"
+        ]
+      }
+    ],
+    "columns": [
+      "DEPRESSED_Y1",
+      "DEPRESSED_Y2"
+    ]
+  },
+  "FEEL_ANXIOUS": {
+    "label": "Feeling Nervous, Anxious, or on Edge",
+    "parent": "Mental Health & Stress",
+    "type": "categorical",
+    "categories": [
+      {
+        "key": "not_at_all",
+        "label": "Not at All",
+        "color": "#2ecc71",
+        "values": [
+          "Not at all"
+        ]
+      },
+      {
+        "key": "several_days",
+        "label": "Several Days",
+        "color": "#6ca15f",
+        "values": [
+          "Several days"
+        ]
+      },
+      {
+        "key": "more_than_half_the_days",
+        "label": "More Than Half the Days",
+        "color": "#a9774e",
+        "values": [
+          "More than half the days"
+        ]
+      },
+      {
+        "key": "nearly_every_day",
+        "label": "Nearly Every Day",
+        "color": "#e74c3c",
+        "values": [
+          "Nearly every day"
+        ]
+      },
+      {
+        "key": "no_answer",
+        "label": "No Answer",
+        "color": "#55505f",
+        "values": [
+          "(Saw, skipped)",
+          "(Refused)",
+          "(DK)"
+        ]
+      }
+    ],
+    "columns": [
+      "FEEL_ANXIOUS_Y1",
+      "FEEL_ANXIOUS_Y2"
+    ]
+  },
+  "CONTROL_WORRY": {
+    "label": "Not Able to Stop or Control Worrying",
+    "parent": "Mental Health & Stress",
+    "type": "categorical",
+    "categories": [
+      {
+        "key": "not_at_all",
+        "label": "Not at All",
+        "color": "#2ecc71",
+        "values": [
+          "Not at all"
+        ]
+      },
+      {
+        "key": "several_days",
+        "label": "Several Days",
+        "color": "#6ca15f",
+        "values": [
+          "Several days"
+        ]
+      },
+      {
+        "key": "more_than_half_the_days",
+        "label": "More Than Half the Days",
+        "color": "#a9774e",
+        "values": [
+          "More than half the days"
+        ]
+      },
+      {
+        "key": "nearly_every_day",
+        "label": "Nearly Every Day",
+        "color": "#e74c3c",
+        "values": [
+          "Nearly every day"
+        ]
+      },
+      {
+        "key": "no_answer",
+        "label": "No Answer",
+        "color": "#55505f",
+        "values": [
+          "(Saw, skipped)",
+          "(Refused)",
+          "(DK)"
+        ]
+      }
+    ],
+    "columns": [
+      "CONTROL_WORRY_Y1",
+      "CONTROL_WORRY_Y2"
+    ]
+  },
+  "LONELY": {
+    "label": "How Often You Feel Lonely",
+    "parent": "Mental Health & Stress",
+    "type": "numeric",
+    "valueMap": {
+      "Never": 0,
+      "Always": 10
+    },
+    "ranges": [
+      {
+        "key": "low",
+        "label": "Low (0–3)",
+        "color": "#2ecc71",
+        "min": 0,
+        "max": 3
+      },
+      {
+        "key": "mid",
+        "label": "Medium (4–6)",
+        "color": "#8a8c56",
+        "min": 4,
+        "max": 6
+      },
+      {
+        "key": "high",
+        "label": "High (7–10)",
+        "color": "#e74c3c",
+        "min": 7,
+        "max": 10
+      }
+    ],
+    "columns": [
+      "LONELY_Y1",
+      "LONELY_Y2"
+    ]
+  },
+  "THREAT_LIFE": {
+    "label": "Bothered by Biggest Threat to Life Witnessed",
+    "parent": "Mental Health & Stress",
+    "type": "categorical",
+    "categories": [
+      {
+        "key": "not_at_all",
+        "label": "Not at All",
+        "color": "#2ecc71",
+        "values": [
+          "Not at all"
+        ]
+      },
+      {
+        "key": "not_very_much",
+        "label": "Not Very Much",
+        "color": "#6ca15f",
+        "values": [
+          "Not very much"
+        ]
+      },
+      {
+        "key": "some",
+        "label": "Some",
+        "color": "#a9774e",
+        "values": [
+          "Some"
+        ]
+      },
+      {
+        "key": "a_lot",
+        "label": "A Lot",
+        "color": "#e74c3c",
+        "values": [
+          "A lot"
+        ]
+      },
+      {
+        "key": "no_answer",
+        "label": "No Answer",
+        "color": "#55505f",
+        "values": [
+          "(Saw, skipped)",
+          "(Refused)",
+          "(DK)"
+        ]
+      }
+    ],
+    "columns": [
+      "THREAT_LIFE_Y1",
+      "THREAT_LIFE_Y2"
+    ]
+  },
+  "EXPENSES": {
+    "label": "Worry About Meeting Monthly Expenses",
+    "parent": "Financial & Material Stability",
+    "type": "numeric",
+    "valueMap": {
+      "Do not ever worry": 0,
+      "Worry all of the time": 10
+    },
+    "ranges": [
+      {
+        "key": "low",
+        "label": "Low (0–3)",
+        "color": "#2ecc71",
+        "min": 0,
+        "max": 3
+      },
+      {
+        "key": "mid",
+        "label": "Medium (4–6)",
+        "color": "#8a8c56",
+        "min": 4,
+        "max": 6
+      },
+      {
+        "key": "high",
+        "label": "High (7–10)",
+        "color": "#e74c3c",
+        "min": 7,
+        "max": 10
+      }
+    ],
+    "columns": [
+      "EXPENSES_Y1",
+      "EXPENSES_Y2"
+    ]
+  },
+  "WORRY_SAFETY": {
+    "label": "Worry About Safety, Food, or Housing",
+    "parent": "Financial & Material Stability",
+    "type": "numeric",
+    "valueMap": {
+      "Do not ever worry": 0,
+      "Worry all of the time": 10
+    },
+    "ranges": [
+      {
+        "key": "low",
+        "label": "Low (0–3)",
+        "color": "#2ecc71",
+        "min": 0,
+        "max": 3
+      },
+      {
+        "key": "mid",
+        "label": "Medium (4–6)",
+        "color": "#8a8c56",
+        "min": 4,
+        "max": 6
+      },
+      {
+        "key": "high",
+        "label": "High (7–10)",
+        "color": "#e74c3c",
+        "min": 7,
+        "max": 10
+      }
+    ],
+    "columns": [
+      "WORRY_SAFETY_Y1",
+      "WORRY_SAFETY_Y2"
+    ]
+  },
+  "CIGARETTES": {
+    "label": "Cigarettes Smoked Per Day",
+    "parent": "Health & Habits",
+    "type": "numeric",
+    "valueMap": {
+      "None/Do not smoke": 0
+    },
+    "ranges": [
+      {
+        "key": "0",
+        "label": "None",
+        "color": "#2ecc71",
+        "min": 0,
+        "max": 0
+      },
+      {
+        "key": "1_9",
+        "label": "1–9",
+        "color": "#f1c40f",
+        "min": 1,
+        "max": 9
+      },
+      {
+        "key": "10_19",
+        "label": "10–19",
+        "color": "#ec8826",
+        "min": 10,
+        "max": 19
+      },
+      {
+        "key": "20_plus",
+        "label": "20+",
+        "color": "#e74c3c",
+        "min": 20,
+        "max": 100
+      }
+    ],
+    "columns": [
+      "CIGARETTES_Y1",
+      "CIGARETTES_Y2"
+    ]
+  },
+  "DRINKS": {
+    "label": "Alcoholic Drinks in Past 7 Days",
+    "parent": "Health & Habits",
+    "type": "numeric",
+    "valueMap": {
+      "None/Do not drink alcoholic beverages": 0,
+      "97+": 97
+    },
+    "ranges": [
+      {
+        "key": "0",
+        "label": "None",
+        "color": "#2ecc71",
+        "min": 0,
+        "max": 0
+      },
+      {
+        "key": "1_3",
+        "label": "1–3",
+        "color": "#f1c40f",
+        "min": 1,
+        "max": 3
+      },
+      {
+        "key": "4_7",
+        "label": "4–7",
+        "color": "#ec8826",
+        "min": 4,
+        "max": 7
+      },
+      {
+        "key": "8_plus",
+        "label": "8+",
+        "color": "#e74c3c",
+        "min": 8,
+        "max": 100
+      }
+    ],
+    "columns": [
+      "DRINKS_Y1",
+      "DRINKS_Y2"
+    ]
+  },
+  "DAYS_EXERCISE": {
+    "label": "Days Exercised in Past Week",
+    "parent": "Health & Habits",
+    "type": "numeric",
+    "valueMap": {
+      "0 days": 0,
+      "1 day": 1,
+      "2 days": 2,
+      "3 days": 3,
+      "4 days": 4,
+      "5 days": 5,
+      "6 days": 6,
+      "7 days/Every day": 7
+    },
+    "ranges": [
+      {
+        "key": "0",
+        "label": "0 Days",
+        "color": "#e74c3c",
+        "min": 0,
+        "max": 0
+      },
+      {
+        "key": "1_2",
+        "label": "1–2 Days",
+        "color": "#a9774e",
+        "min": 1,
+        "max": 2
+      },
+      {
+        "key": "3_4",
+        "label": "3–4 Days",
+        "color": "#6ca15f",
+        "min": 3,
+        "max": 4
+      },
+      {
+        "key": "5_7",
+        "label": "5–7 Days",
+        "color": "#2ecc71",
+        "min": 5,
+        "max": 7
+      }
+    ],
+    "columns": [
+      "DAYS_EXERCISE_Y1",
+      "DAYS_EXERCISE_Y2"
+    ]
+  },
+  "CLOSE_TO": {
+    "label": "Know One Special Person You Feel Close To",
+    "parent": "Close Social Relationships",
+    "type": "categorical",
+    "categories": [
+      {
+        "key": "yes",
+        "label": "Yes",
+        "color": "#2ecc71",
+        "values": [
+          "Yes"
+        ]
+      },
+      {
+        "key": "no",
+        "label": "No",
+        "color": "#e74c3c",
+        "values": [
+          "No"
+        ]
+      },
+      {
+        "key": "no_answer",
+        "label": "No Answer",
+        "color": "#55505f",
+        "values": [
+          "(Saw, skipped)",
+          "(Refused)",
+          "(DK)"
+        ]
+      }
+    ],
+    "columns": [
+      "CLOSE_TO_Y1",
+      "CLOSE_TO_Y2"
+    ]
+  },
+  "SAT_RELATNSHP": {
+    "label": "Relationships Are as Satisfying as You Want",
+    "parent": "Close Social Relationships",
+    "type": "numeric",
+    "valueMap": {
+      "Strongly disagree": 0,
+      "Strongly agree": 10
+    },
+    "ranges": [
+      {
+        "key": "low",
+        "label": "Low (0–3)",
+        "color": "#e74c3c",
+        "min": 0,
+        "max": 3
+      },
+      {
+        "key": "mid",
+        "label": "Medium (4–6)",
+        "color": "#8a8c56",
+        "min": 4,
+        "max": 6
+      },
+      {
+        "key": "high",
+        "label": "High (7–10)",
+        "color": "#2ecc71",
+        "min": 7,
+        "max": 10
+      }
+    ],
+    "columns": [
+      "SAT_RELATNSHP_Y1",
+      "SAT_RELATNSHP_Y2"
+    ]
+  },
+  "SHOW_LOVE": {
+    "label": "Show Someone You Love or Care for Them",
+    "parent": "Close Social Relationships",
+    "type": "numeric",
+    "valueMap": {
+      "Never": 0,
+      "Always": 10
+    },
+    "ranges": [
+      {
+        "key": "low",
+        "label": "Low (0–3)",
+        "color": "#e74c3c",
+        "min": 0,
+        "max": 3
+      },
+      {
+        "key": "mid",
+        "label": "Medium (4–6)",
+        "color": "#8a8c56",
+        "min": 4,
+        "max": 6
+      },
+      {
+        "key": "high",
+        "label": "High (7–10)",
+        "color": "#2ecc71",
+        "min": 7,
+        "max": 10
+      }
+    ],
+    "columns": [
+      "SHOW_LOVE_Y1",
+      "SHOW_LOVE_Y2"
+    ]
+  },
+  "PEOPLE_HELP": {
+    "label": "Could Count on People to Help if in Trouble",
+    "parent": "Close Social Relationships",
+    "type": "numeric",
+    "valueMap": {
+      "Never": 0,
+      "Always": 10
+    },
+    "ranges": [
+      {
+        "key": "low",
+        "label": "Low (0–3)",
+        "color": "#e74c3c",
+        "min": 0,
+        "max": 3
+      },
+      {
+        "key": "mid",
+        "label": "Medium (4–6)",
+        "color": "#8a8c56",
+        "min": 4,
+        "max": 6
+      },
+      {
+        "key": "high",
+        "label": "High (7–10)",
+        "color": "#2ecc71",
+        "min": 7,
+        "max": 10
+      }
+    ],
+    "columns": [
+      "PEOPLE_HELP_Y1",
+      "PEOPLE_HELP_Y2"
+    ]
+  },
+  "BELONGING": {
+    "label": "Sense of Belonging in Your Country",
+    "parent": "Close Social Relationships",
+    "type": "numeric",
+    "valueMap": {
+      "Very weak": 0,
+      "Very strong": 10
+    },
+    "ranges": [
+      {
+        "key": "low",
+        "label": "Low (0–3)",
+        "color": "#e74c3c",
+        "min": 0,
+        "max": 3
+      },
+      {
+        "key": "mid",
+        "label": "Medium (4–6)",
+        "color": "#8a8c56",
+        "min": 4,
+        "max": 6
+      },
+      {
+        "key": "high",
+        "label": "High (7–10)",
+        "color": "#2ecc71",
+        "min": 7,
+        "max": 10
+      }
+    ],
+    "columns": [
+      "BELONGING_Y1",
+      "BELONGING_Y2"
+    ]
+  },
+  "TRUST_PEOPLE": {
+    "label": "People in This Country Trust One Another",
+    "parent": "Close Social Relationships",
+    "type": "categorical",
+    "categories": [
+      {
+        "key": "none",
+        "label": "None",
+        "color": "#e74c3c",
+        "values": [
+          "None"
+        ]
+      },
+      {
+        "key": "not_very_many",
+        "label": "Not Very Many",
+        "color": "#b96c49",
+        "values": [
+          "Not very many"
+        ]
+      },
+      {
+        "key": "some",
+        "label": "Some",
+        "color": "#8a8c56",
+        "values": [
+          "Some"
+        ]
+      },
+      {
+        "key": "most",
+        "label": "Most",
+        "color": "#5cac64",
+        "values": [
+          "Most"
+        ]
+      },
+      {
+        "key": "all",
+        "label": "All",
+        "color": "#2ecc71",
+        "values": [
+          "All"
+        ]
+      },
+      {
+        "key": "no_answer",
+        "label": "No Answer",
+        "color": "#55505f",
+        "values": [
+          "(Saw, skipped)",
+          "(Refused)",
+          "(DK)"
+        ]
+      }
+    ],
+    "columns": [
+      "TRUST_PEOPLE_Y1",
+      "TRUST_PEOPLE_Y2"
+    ]
+  },
+  "FATHER_LOVED": {
+    "label": "Felt Loved by Your Father Growing Up",
+    "parent": "Childhood & Family Background",
+    "type": "categorical",
+    "categories": [
+      {
+        "key": "yes",
+        "label": "Yes",
+        "color": "#2ecc71",
+        "values": [
+          "Yes"
+        ]
+      },
+      {
+        "key": "no",
+        "label": "No",
+        "color": "#e74c3c",
+        "values": [
+          "No"
+        ]
+      },
+      {
+        "key": "not_applicable",
+        "label": "Not Applicable",
+        "color": "#95a5a6",
+        "values": [
+          "(Does not apply)"
+        ]
+      },
+      {
+        "key": "no_answer",
+        "label": "No Answer",
+        "color": "#55505f",
+        "values": [
+          "(Saw, skipped)",
+          "(Refused)",
+          "(DK)"
+        ]
+      }
+    ],
+    "columns": [
+      "FATHER_LOVED_Y1"
+    ]
+  },
+  "MOTHER_LOVED": {
+    "label": "Felt Loved by Your Mother Growing Up",
+    "parent": "Childhood & Family Background",
+    "type": "categorical",
+    "categories": [
+      {
+        "key": "yes",
+        "label": "Yes",
+        "color": "#2ecc71",
+        "values": [
+          "Yes"
+        ]
+      },
+      {
+        "key": "no",
+        "label": "No",
+        "color": "#e74c3c",
+        "values": [
+          "No"
+        ]
+      },
+      {
+        "key": "not_applicable",
+        "label": "Not Applicable",
+        "color": "#95a5a6",
+        "values": [
+          "(Does not apply)"
+        ]
+      },
+      {
+        "key": "no_answer",
+        "label": "No Answer",
+        "color": "#55505f",
+        "values": [
+          "(Saw, skipped)",
+          "(Refused)",
+          "(DK)"
+        ]
+      }
+    ],
+    "columns": [
+      "MOTHER_LOVED_Y1"
+    ]
+  },
+  "FATHER_RELATN": {
+    "label": "Relationship With Your Father Growing Up",
+    "parent": "Childhood & Family Background",
+    "type": "categorical",
+    "categories": [
+      {
+        "key": "very_good",
+        "label": "Very Good",
+        "color": "#2ecc71",
+        "values": [
+          "Very good"
+        ]
+      },
+      {
+        "key": "somewhat_good",
+        "label": "Somewhat Good",
+        "color": "#6ca15f",
+        "values": [
+          "Somewhat good"
+        ]
+      },
+      {
+        "key": "somewhat_bad",
+        "label": "Somewhat Bad",
+        "color": "#a9774e",
+        "values": [
+          "Somewhat bad"
+        ]
+      },
+      {
+        "key": "very_bad",
+        "label": "Very Bad",
+        "color": "#e74c3c",
+        "values": [
+          "Very bad"
+        ]
+      },
+      {
+        "key": "not_applicable",
+        "label": "Not Applicable",
+        "color": "#95a5a6",
+        "values": [
+          "(Does not apply)"
+        ]
+      },
+      {
+        "key": "no_answer",
+        "label": "No Answer",
+        "color": "#55505f",
+        "values": [
+          "(Saw, skipped)",
+          "(Refused)",
+          "(DK)"
+        ]
+      }
+    ],
+    "columns": [
+      "FATHER_RELATN_Y1"
+    ]
+  },
+  "MOTHER_RELATN": {
+    "label": "Relationship With Your Mother Growing Up",
+    "parent": "Childhood & Family Background",
+    "type": "categorical",
+    "categories": [
+      {
+        "key": "very_good",
+        "label": "Very Good",
+        "color": "#2ecc71",
+        "values": [
+          "Very good"
+        ]
+      },
+      {
+        "key": "somewhat_good",
+        "label": "Somewhat Good",
+        "color": "#6ca15f",
+        "values": [
+          "Somewhat good"
+        ]
+      },
+      {
+        "key": "somewhat_bad",
+        "label": "Somewhat Bad",
+        "color": "#a9774e",
+        "values": [
+          "Somewhat bad"
+        ]
+      },
+      {
+        "key": "very_bad",
+        "label": "Very Bad",
+        "color": "#e74c3c",
+        "values": [
+          "Very bad"
+        ]
+      },
+      {
+        "key": "not_applicable",
+        "label": "Not Applicable",
+        "color": "#95a5a6",
+        "values": [
+          "(Does not apply)"
+        ]
+      },
+      {
+        "key": "no_answer",
+        "label": "No Answer",
+        "color": "#55505f",
+        "values": [
+          "(Saw, skipped)",
+          "(Refused)",
+          "(DK)"
+        ]
+      }
+    ],
+    "columns": [
+      "MOTHER_RELATN_Y1"
+    ]
+  },
+  "HEALTH_GROWUP": {
+    "label": "Your Health When Growing Up",
+    "parent": "Childhood & Family Background",
+    "type": "categorical",
+    "categories": [
+      {
+        "key": "excellent",
+        "label": "Excellent",
+        "color": "#2ecc71",
+        "values": [
+          "Excellent"
+        ]
+      },
+      {
+        "key": "very_good",
+        "label": "Very Good",
+        "color": "#5cac64",
+        "values": [
+          "Very good"
+        ]
+      },
+      {
+        "key": "good",
+        "label": "Good",
+        "color": "#8a8c56",
+        "values": [
+          "Good"
+        ]
+      },
+      {
+        "key": "fair",
+        "label": "Fair",
+        "color": "#b96c49",
+        "values": [
+          "Fair"
+        ]
+      },
+      {
+        "key": "poor",
+        "label": "Poor",
+        "color": "#e74c3c",
+        "values": [
+          "Poor"
+        ]
+      },
+      {
+        "key": "no_answer",
+        "label": "No Answer",
+        "color": "#55505f",
+        "values": [
+          "(Saw, skipped)",
+          "(Refused)",
+          "(DK)"
+        ]
+      }
+    ],
+    "columns": [
+      "HEALTH_GROWUP_Y1"
+    ]
+  },
+  "OUTSIDER": {
+    "label": "Felt Like an Outsider in Your Family Growing Up",
+    "parent": "Childhood & Family Background",
+    "type": "categorical",
+    "categories": [
+      {
+        "key": "yes",
+        "label": "Yes",
+        "color": "#e74c3c",
+        "values": [
+          "Yes"
+        ]
+      },
+      {
+        "key": "no",
+        "label": "No",
+        "color": "#2ecc71",
+        "values": [
+          "No"
+        ]
+      },
+      {
+        "key": "not_applicable",
+        "label": "Not Applicable",
+        "color": "#95a5a6",
+        "values": [
+          "(Does not apply)"
+        ]
+      },
+      {
+        "key": "no_answer",
+        "label": "No Answer",
+        "color": "#55505f",
+        "values": [
+          "(Saw, skipped)",
+          "(Refused)",
+          "(DK)"
+        ]
+      }
+    ],
+    "columns": [
+      "OUTSIDER_Y1"
+    ]
+  },
+  "INCOME_12YRS": {
+    "label": "Feelings About Household Income Growing Up",
+    "parent": "Childhood & Family Background",
+    "type": "categorical",
+    "categories": [
+      {
+        "key": "lived_comfortably",
+        "label": "Lived Comfortably",
+        "color": "#2ecc71",
+        "values": [
+          "Lived comfortably"
+        ]
+      },
+      {
+        "key": "got_by",
+        "label": "Got By",
+        "color": "#6ca15f",
+        "values": [
+          "Got by"
+        ]
+      },
+      {
+        "key": "found_it_difficult",
+        "label": "Found It Difficult",
+        "color": "#a9774e",
+        "values": [
+          "Found it difficult"
+        ]
+      },
+      {
+        "key": "found_it_very_difficult",
+        "label": "Found It Very Difficult",
+        "color": "#e74c3c",
+        "values": [
+          "Found it very difficult"
+        ]
+      },
+      {
+        "key": "no_answer",
+        "label": "No Answer",
+        "color": "#55505f",
+        "values": [
+          "(Saw, skipped)",
+          "(Refused)",
+          "(DK)"
+        ]
+      }
+    ],
+    "columns": [
+      "INCOME_12YRS_Y1"
+    ]
+  },
+  "SVCS_12YRS": {
+    "label": "Religious Attendance at Age Twelve",
+    "parent": "Childhood & Family Background",
+    "type": "categorical",
+    "categories": [
+      {
+        "key": "never",
+        "label": "Never",
+        "color": "#aed6f1",
+        "values": [
+          "Never"
+        ]
+      },
+      {
+        "key": "less_than_once_a_month",
+        "label": "Less Than Once a Month",
+        "color": "#7daac8",
+        "values": [
+          "Less than once a month"
+        ]
+      },
+      {
+        "key": "13_times_a_month",
+        "label": "1–3 Times a Month",
+        "color": "#4b7e9f",
+        "values": [
+          "One to three times a month"
+        ]
+      },
+      {
+        "key": "at_least_once_a_week",
+        "label": "At Least Once a Week",
+        "color": "#1a5276",
+        "values": [
+          "At least once a week"
+        ]
+      },
+      {
+        "key": "no_answer",
+        "label": "No Answer",
+        "color": "#55505f",
+        "values": [
+          "(Saw, skipped)",
+          "(Refused)",
+          "(DK)"
+        ]
+      }
+    ],
+    "columns": [
+      "SVCS_12YRS_Y1"
+    ]
+  },
+  "SVCS_FATHER": {
+    "label": "Father's Religious Attendance When You Were 12",
+    "parent": "Childhood & Family Background",
+    "type": "categorical",
+    "categories": [
+      {
+        "key": "never",
+        "label": "Never",
+        "color": "#aed6f1",
+        "values": [
+          "Never"
+        ]
+      },
+      {
+        "key": "lt_month",
+        "label": "Less Than Once a Month",
+        "color": "#7daac8",
+        "values": [
+          "Less than once a month"
+        ]
+      },
+      {
+        "key": "1_3_month",
+        "label": "1–3 Times a Month",
+        "color": "#4b7e9f",
+        "values": [
+          "One to three times a month"
+        ]
+      },
+      {
+        "key": "weekly",
+        "label": "At Least Once a Week",
+        "color": "#1a5276",
+        "values": [
+          "At least once a week"
+        ]
+      },
+      {
+        "key": "not_applicable",
+        "label": "Not Applicable",
+        "color": "#95a5a6",
+        "values": [
+          "(Does not apply)"
+        ]
+      },
+      {
+        "key": "no_answer",
+        "label": "No Answer",
+        "color": "#55505f",
+        "values": [
+          "(Saw, skipped)",
+          "(Refused)",
+          "(DK)"
+        ]
+      }
+    ],
+    "columns": [
+      "SVCS_FATHER_Y1"
+    ]
+  },
+  "SVCS_MOTHER": {
+    "label": "Mother's Religious Attendance When You Were 12",
+    "parent": "Childhood & Family Background",
+    "type": "categorical",
+    "categories": [
+      {
+        "key": "never",
+        "label": "Never",
+        "color": "#aed6f1",
+        "values": [
+          "Never"
+        ]
+      },
+      {
+        "key": "lt_month",
+        "label": "Less Than Once a Month",
+        "color": "#7daac8",
+        "values": [
+          "Less than once a month"
+        ]
+      },
+      {
+        "key": "1_3_month",
+        "label": "1–3 Times a Month",
+        "color": "#4b7e9f",
+        "values": [
+          "One to three times a month"
+        ]
+      },
+      {
+        "key": "weekly",
+        "label": "At Least Once a Week",
+        "color": "#1a5276",
+        "values": [
+          "At least once a week"
+        ]
+      },
+      {
+        "key": "not_applicable",
+        "label": "Not Applicable",
+        "color": "#95a5a6",
+        "values": [
+          "(Does not apply)"
+        ]
+      },
+      {
+        "key": "no_answer",
+        "label": "No Answer",
+        "color": "#55505f",
+        "values": [
+          "(Saw, skipped)",
+          "(Refused)",
+          "(DK)"
+        ]
+      }
+    ],
+    "columns": [
+      "SVCS_MOTHER_Y1"
+    ]
+  },
+  "TRAITS1": {
+    "label": "Trait Pair: Extroverted, Enthusiastic",
+    "parent": "Personality Traits",
+    "type": "categorical",
+    "categories": [
+      {
+        "key": "disagree_strongly",
+        "label": "Disagree Strongly",
+        "color": "#d7bde2",
+        "values": [
+          "Disagree strongly"
+        ]
+      },
+      {
+        "key": "disagree_moderately",
+        "label": "Disagree Moderately",
+        "color": "#c5a6d2",
+        "values": [
+          "Disagree moderately"
+        ]
+      },
+      {
+        "key": "disagree_a_little",
+        "label": "Disagree a Little",
+        "color": "#b38fc2",
+        "values": [
+          "Disagree a little"
+        ]
+      },
+      {
+        "key": "neutral",
+        "label": "Neutral",
+        "color": "#a278b2",
+        "values": [
+          "Neither agree nor disagree"
+        ]
+      },
+      {
+        "key": "agree_a_little",
+        "label": "Agree a Little",
+        "color": "#9062a3",
+        "values": [
+          "Agree a little"
+        ]
+      },
+      {
+        "key": "agree_moderately",
+        "label": "Agree Moderately",
+        "color": "#7e4b93",
+        "values": [
+          "Agree moderately"
+        ]
+      },
+      {
+        "key": "agree_strongly",
+        "label": "Agree Strongly",
+        "color": "#6c3483",
+        "values": [
+          "Agree strongly"
+        ]
+      },
+      {
+        "key": "no_answer",
+        "label": "No Answer",
+        "color": "#55505f",
+        "values": [
+          "(Saw, skipped)",
+          "(Refused)",
+          "(DK)"
+        ]
+      }
+    ],
+    "columns": [
+      "TRAITS1_Y1"
+    ]
+  },
+  "TRAITS2": {
+    "label": "Trait Pair: Critical, Quarrelsome",
+    "parent": "Personality Traits",
+    "type": "categorical",
+    "categories": [
+      {
+        "key": "disagree_strongly",
+        "label": "Disagree Strongly",
+        "color": "#d7bde2",
+        "values": [
+          "Disagree strongly"
+        ]
+      },
+      {
+        "key": "disagree_moderately",
+        "label": "Disagree Moderately",
+        "color": "#c5a6d2",
+        "values": [
+          "Disagree moderately"
+        ]
+      },
+      {
+        "key": "disagree_a_little",
+        "label": "Disagree a Little",
+        "color": "#b38fc2",
+        "values": [
+          "Disagree a little"
+        ]
+      },
+      {
+        "key": "neutral",
+        "label": "Neutral",
+        "color": "#a278b2",
+        "values": [
+          "Neither agree nor disagree"
+        ]
+      },
+      {
+        "key": "agree_a_little",
+        "label": "Agree a Little",
+        "color": "#9062a3",
+        "values": [
+          "Agree a little"
+        ]
+      },
+      {
+        "key": "agree_moderately",
+        "label": "Agree Moderately",
+        "color": "#7e4b93",
+        "values": [
+          "Agree moderately"
+        ]
+      },
+      {
+        "key": "agree_strongly",
+        "label": "Agree Strongly",
+        "color": "#6c3483",
+        "values": [
+          "Agree strongly"
+        ]
+      },
+      {
+        "key": "no_answer",
+        "label": "No Answer",
+        "color": "#55505f",
+        "values": [
+          "(Saw, skipped)",
+          "(Refused)",
+          "(DK)"
+        ]
+      }
+    ],
+    "columns": [
+      "TRAITS2_Y1"
+    ]
+  },
+  "TRAITS3": {
+    "label": "Trait Pair: Dependable, Self-Disciplined",
+    "parent": "Personality Traits",
+    "type": "categorical",
+    "categories": [
+      {
+        "key": "disagree_strongly",
+        "label": "Disagree Strongly",
+        "color": "#d7bde2",
+        "values": [
+          "Disagree strongly"
+        ]
+      },
+      {
+        "key": "disagree_moderately",
+        "label": "Disagree Moderately",
+        "color": "#c5a6d2",
+        "values": [
+          "Disagree moderately"
+        ]
+      },
+      {
+        "key": "disagree_a_little",
+        "label": "Disagree a Little",
+        "color": "#b38fc2",
+        "values": [
+          "Disagree a little"
+        ]
+      },
+      {
+        "key": "neutral",
+        "label": "Neutral",
+        "color": "#a278b2",
+        "values": [
+          "Neither agree nor disagree"
+        ]
+      },
+      {
+        "key": "agree_a_little",
+        "label": "Agree a Little",
+        "color": "#9062a3",
+        "values": [
+          "Agree a little"
+        ]
+      },
+      {
+        "key": "agree_moderately",
+        "label": "Agree Moderately",
+        "color": "#7e4b93",
+        "values": [
+          "Agree moderately"
+        ]
+      },
+      {
+        "key": "agree_strongly",
+        "label": "Agree Strongly",
+        "color": "#6c3483",
+        "values": [
+          "Agree strongly"
+        ]
+      },
+      {
+        "key": "no_answer",
+        "label": "No Answer",
+        "color": "#55505f",
+        "values": [
+          "(Saw, skipped)",
+          "(Refused)",
+          "(DK)"
+        ]
+      }
+    ],
+    "columns": [
+      "TRAITS3_Y1"
+    ]
+  },
+  "TRAITS4": {
+    "label": "Trait Pair: Anxious, Easily Upset",
+    "parent": "Personality Traits",
+    "type": "categorical",
+    "categories": [
+      {
+        "key": "disagree_strongly",
+        "label": "Disagree Strongly",
+        "color": "#d7bde2",
+        "values": [
+          "Disagree strongly"
+        ]
+      },
+      {
+        "key": "disagree_moderately",
+        "label": "Disagree Moderately",
+        "color": "#c5a6d2",
+        "values": [
+          "Disagree moderately"
+        ]
+      },
+      {
+        "key": "disagree_a_little",
+        "label": "Disagree a Little",
+        "color": "#b38fc2",
+        "values": [
+          "Disagree a little"
+        ]
+      },
+      {
+        "key": "neutral",
+        "label": "Neutral",
+        "color": "#a278b2",
+        "values": [
+          "Neither agree nor disagree"
+        ]
+      },
+      {
+        "key": "agree_a_little",
+        "label": "Agree a Little",
+        "color": "#9062a3",
+        "values": [
+          "Agree a little"
+        ]
+      },
+      {
+        "key": "agree_moderately",
+        "label": "Agree Moderately",
+        "color": "#7e4b93",
+        "values": [
+          "Agree moderately"
+        ]
+      },
+      {
+        "key": "agree_strongly",
+        "label": "Agree Strongly",
+        "color": "#6c3483",
+        "values": [
+          "Agree strongly"
+        ]
+      },
+      {
+        "key": "no_answer",
+        "label": "No Answer",
+        "color": "#55505f",
+        "values": [
+          "(Saw, skipped)",
+          "(Refused)",
+          "(DK)"
+        ]
+      }
+    ],
+    "columns": [
+      "TRAITS4_Y1"
+    ]
+  },
+  "TRAITS5": {
+    "label": "Trait Pair: Open to New Experiences, Complex",
+    "parent": "Personality Traits",
+    "type": "categorical",
+    "categories": [
+      {
+        "key": "disagree_strongly",
+        "label": "Disagree Strongly",
+        "color": "#d7bde2",
+        "values": [
+          "Disagree strongly"
+        ]
+      },
+      {
+        "key": "disagree_moderately",
+        "label": "Disagree Moderately",
+        "color": "#c5a6d2",
+        "values": [
+          "Disagree moderately"
+        ]
+      },
+      {
+        "key": "disagree_a_little",
+        "label": "Disagree a Little",
+        "color": "#b38fc2",
+        "values": [
+          "Disagree a little"
+        ]
+      },
+      {
+        "key": "neutral",
+        "label": "Neutral",
+        "color": "#a278b2",
+        "values": [
+          "Neither agree nor disagree"
+        ]
+      },
+      {
+        "key": "agree_a_little",
+        "label": "Agree a Little",
+        "color": "#9062a3",
+        "values": [
+          "Agree a little"
+        ]
+      },
+      {
+        "key": "agree_moderately",
+        "label": "Agree Moderately",
+        "color": "#7e4b93",
+        "values": [
+          "Agree moderately"
+        ]
+      },
+      {
+        "key": "agree_strongly",
+        "label": "Agree Strongly",
+        "color": "#6c3483",
+        "values": [
+          "Agree strongly"
+        ]
+      },
+      {
+        "key": "no_answer",
+        "label": "No Answer",
+        "color": "#55505f",
+        "values": [
+          "(Saw, skipped)",
+          "(Refused)",
+          "(DK)"
+        ]
+      }
+    ],
+    "columns": [
+      "TRAITS5_Y1"
+    ]
+  },
+  "TRAITS6": {
+    "label": "Trait Pair: Reserved, Quiet",
+    "parent": "Personality Traits",
+    "type": "categorical",
+    "categories": [
+      {
+        "key": "disagree_strongly",
+        "label": "Disagree Strongly",
+        "color": "#d7bde2",
+        "values": [
+          "Disagree strongly"
+        ]
+      },
+      {
+        "key": "disagree_moderately",
+        "label": "Disagree Moderately",
+        "color": "#c5a6d2",
+        "values": [
+          "Disagree moderately"
+        ]
+      },
+      {
+        "key": "disagree_a_little",
+        "label": "Disagree a Little",
+        "color": "#b38fc2",
+        "values": [
+          "Disagree a little"
+        ]
+      },
+      {
+        "key": "neutral",
+        "label": "Neutral",
+        "color": "#a278b2",
+        "values": [
+          "Neither agree nor disagree"
+        ]
+      },
+      {
+        "key": "agree_a_little",
+        "label": "Agree a Little",
+        "color": "#9062a3",
+        "values": [
+          "Agree a little"
+        ]
+      },
+      {
+        "key": "agree_moderately",
+        "label": "Agree Moderately",
+        "color": "#7e4b93",
+        "values": [
+          "Agree moderately"
+        ]
+      },
+      {
+        "key": "agree_strongly",
+        "label": "Agree Strongly",
+        "color": "#6c3483",
+        "values": [
+          "Agree strongly"
+        ]
+      },
+      {
+        "key": "no_answer",
+        "label": "No Answer",
+        "color": "#55505f",
+        "values": [
+          "(Saw, skipped)",
+          "(Refused)",
+          "(DK)"
+        ]
+      }
+    ],
+    "columns": [
+      "TRAITS6_Y1"
+    ]
+  },
+  "TRAITS7": {
+    "label": "Trait Pair: Sympathetic, Warm",
+    "parent": "Personality Traits",
+    "type": "categorical",
+    "categories": [
+      {
+        "key": "disagree_strongly",
+        "label": "Disagree Strongly",
+        "color": "#d7bde2",
+        "values": [
+          "Disagree strongly"
+        ]
+      },
+      {
+        "key": "disagree_moderately",
+        "label": "Disagree Moderately",
+        "color": "#c5a6d2",
+        "values": [
+          "Disagree moderately"
+        ]
+      },
+      {
+        "key": "disagree_a_little",
+        "label": "Disagree a Little",
+        "color": "#b38fc2",
+        "values": [
+          "Disagree a little"
+        ]
+      },
+      {
+        "key": "neutral",
+        "label": "Neutral",
+        "color": "#a278b2",
+        "values": [
+          "Neither agree nor disagree"
+        ]
+      },
+      {
+        "key": "agree_a_little",
+        "label": "Agree a Little",
+        "color": "#9062a3",
+        "values": [
+          "Agree a little"
+        ]
+      },
+      {
+        "key": "agree_moderately",
+        "label": "Agree Moderately",
+        "color": "#7e4b93",
+        "values": [
+          "Agree moderately"
+        ]
+      },
+      {
+        "key": "agree_strongly",
+        "label": "Agree Strongly",
+        "color": "#6c3483",
+        "values": [
+          "Agree strongly"
+        ]
+      },
+      {
+        "key": "no_answer",
+        "label": "No Answer",
+        "color": "#55505f",
+        "values": [
+          "(Saw, skipped)",
+          "(Refused)",
+          "(DK)"
+        ]
+      }
+    ],
+    "columns": [
+      "TRAITS7_Y1"
+    ]
+  },
+  "TRAITS8": {
+    "label": "Trait Pair: Disorganized, Careless",
+    "parent": "Personality Traits",
+    "type": "categorical",
+    "categories": [
+      {
+        "key": "disagree_strongly",
+        "label": "Disagree Strongly",
+        "color": "#d7bde2",
+        "values": [
+          "Disagree strongly"
+        ]
+      },
+      {
+        "key": "disagree_moderately",
+        "label": "Disagree Moderately",
+        "color": "#c5a6d2",
+        "values": [
+          "Disagree moderately"
+        ]
+      },
+      {
+        "key": "disagree_a_little",
+        "label": "Disagree a Little",
+        "color": "#b38fc2",
+        "values": [
+          "Disagree a little"
+        ]
+      },
+      {
+        "key": "neutral",
+        "label": "Neutral",
+        "color": "#a278b2",
+        "values": [
+          "Neither agree nor disagree"
+        ]
+      },
+      {
+        "key": "agree_a_little",
+        "label": "Agree a Little",
+        "color": "#9062a3",
+        "values": [
+          "Agree a little"
+        ]
+      },
+      {
+        "key": "agree_moderately",
+        "label": "Agree Moderately",
+        "color": "#7e4b93",
+        "values": [
+          "Agree moderately"
+        ]
+      },
+      {
+        "key": "agree_strongly",
+        "label": "Agree Strongly",
+        "color": "#6c3483",
+        "values": [
+          "Agree strongly"
+        ]
+      },
+      {
+        "key": "no_answer",
+        "label": "No Answer",
+        "color": "#55505f",
+        "values": [
+          "(Saw, skipped)",
+          "(Refused)",
+          "(DK)"
+        ]
+      }
+    ],
+    "columns": [
+      "TRAITS8_Y1"
+    ]
+  },
+  "TRAITS9": {
+    "label": "Trait Pair: Calm, Emotionally Stable",
+    "parent": "Personality Traits",
+    "type": "categorical",
+    "categories": [
+      {
+        "key": "disagree_strongly",
+        "label": "Disagree Strongly",
+        "color": "#d7bde2",
+        "values": [
+          "Disagree strongly"
+        ]
+      },
+      {
+        "key": "disagree_moderately",
+        "label": "Disagree Moderately",
+        "color": "#c5a6d2",
+        "values": [
+          "Disagree moderately"
+        ]
+      },
+      {
+        "key": "disagree_a_little",
+        "label": "Disagree a Little",
+        "color": "#b38fc2",
+        "values": [
+          "Disagree a little"
+        ]
+      },
+      {
+        "key": "neutral",
+        "label": "Neutral",
+        "color": "#a278b2",
+        "values": [
+          "Neither agree nor disagree"
+        ]
+      },
+      {
+        "key": "agree_a_little",
+        "label": "Agree a Little",
+        "color": "#9062a3",
+        "values": [
+          "Agree a little"
+        ]
+      },
+      {
+        "key": "agree_moderately",
+        "label": "Agree Moderately",
+        "color": "#7e4b93",
+        "values": [
+          "Agree moderately"
+        ]
+      },
+      {
+        "key": "agree_strongly",
+        "label": "Agree Strongly",
+        "color": "#6c3483",
+        "values": [
+          "Agree strongly"
+        ]
+      },
+      {
+        "key": "no_answer",
+        "label": "No Answer",
+        "color": "#55505f",
+        "values": [
+          "(Saw, skipped)",
+          "(Refused)",
+          "(DK)"
+        ]
+      }
+    ],
+    "columns": [
+      "TRAITS9_Y1"
+    ]
+  },
+  "TRAITS10": {
+    "label": "Trait Pair: Conventional, Uncreative",
+    "parent": "Personality Traits",
+    "type": "categorical",
+    "categories": [
+      {
+        "key": "disagree_strongly",
+        "label": "Disagree Strongly",
+        "color": "#d7bde2",
+        "values": [
+          "Disagree strongly"
+        ]
+      },
+      {
+        "key": "disagree_moderately",
+        "label": "Disagree Moderately",
+        "color": "#c5a6d2",
+        "values": [
+          "Disagree moderately"
+        ]
+      },
+      {
+        "key": "disagree_a_little",
+        "label": "Disagree a Little",
+        "color": "#b38fc2",
+        "values": [
+          "Disagree a little"
+        ]
+      },
+      {
+        "key": "neutral",
+        "label": "Neutral",
+        "color": "#a278b2",
+        "values": [
+          "Neither agree nor disagree"
+        ]
+      },
+      {
+        "key": "agree_a_little",
+        "label": "Agree a Little",
+        "color": "#9062a3",
+        "values": [
+          "Agree a little"
+        ]
+      },
+      {
+        "key": "agree_moderately",
+        "label": "Agree Moderately",
+        "color": "#7e4b93",
+        "values": [
+          "Agree moderately"
+        ]
+      },
+      {
+        "key": "agree_strongly",
+        "label": "Agree Strongly",
+        "color": "#6c3483",
+        "values": [
+          "Agree strongly"
+        ]
+      },
+      {
+        "key": "no_answer",
+        "label": "No Answer",
+        "color": "#55505f",
+        "values": [
+          "(Saw, skipped)",
+          "(Refused)",
+          "(DK)"
+        ]
+      }
+    ],
+    "columns": [
+      "TRAITS10_Y1"
+    ]
+  },
+  "FREEDOM": {
+    "label": "Freedom to Pursue What's Important to You",
+    "parent": "Well-Being & Life Satisfaction",
+    "type": "numeric",
+    "valueMap": {
+      "Strongly disagree": 0,
+      "Strongly agree": 10
+    },
+    "ranges": [
+      {
+        "key": "low",
+        "label": "Low (0–3)",
+        "color": "#e74c3c",
+        "min": 0,
+        "max": 3
+      },
+      {
+        "key": "mid",
+        "label": "Medium (4–6)",
+        "color": "#8a8c56",
+        "min": 4,
+        "max": 6
+      },
+      {
+        "key": "high",
+        "label": "High (7–10)",
+        "color": "#2ecc71",
+        "min": 7,
+        "max": 10
+      }
+    ],
+    "columns": [
+      "FREEDOM_Y1",
+      "FREEDOM_Y2"
+    ]
+  }
+}
+;
+
+// --- Helpers for consuming the config above ---------------------------
+
+/** The actual people.json column name(s) for a base variable, e.g. "AGE" -> ["AGE_Y1","AGE_Y2"]. */
+export function getColumns(baseVar) {
+	return variableConfig[baseVar]?.columns ?? [];
+}
+
+/** For a numeric variable: raw people.json value -> number, or null if unmapped/unparseable. */
+export function parseNumericValue(baseVar, rawValue) {
+	const config = variableConfig[baseVar];
+	if (!config || config.type !== "numeric" || rawValue === null || rawValue === undefined) {
+		return null;
+	}
+	if (typeof rawValue === "number") return rawValue;
+	if (rawValue in config.valueMap) return config.valueMap[rawValue];
+	const parsed = Number(rawValue);
+	return Number.isFinite(parsed) ? parsed : null;
+}
+
+/** For a numeric variable: raw people.json value -> its range bucket, or null. */
+export function getRangeFor(baseVar, rawValue) {
+	const config = variableConfig[baseVar];
+	if (!config || config.type !== "numeric") return null;
+	const num = parseNumericValue(baseVar, rawValue);
+	if (num === null) return null;
+	return config.ranges.find((range) => num >= range.min && num <= range.max) ?? null;
+}
+
+/** For a categorical variable: raw people.json value -> its category bucket, or null. */
+export function getCategoryFor(baseVar, rawValue) {
+	const config = variableConfig[baseVar];
+	if (!config || config.type !== "categorical") return null;
+	return config.categories.find((category) => category.values.includes(rawValue)) ?? null;
+}
+
+/** The display color for a raw people.json value, regardless of variable type. */
+export function colorFor(baseVar, rawValue) {
+	const config = variableConfig[baseVar];
+	if (!config) return null;
+	const bucket =
+		config.type === "numeric" ? getRangeFor(baseVar, rawValue) : getCategoryFor(baseVar, rawValue);
+	return bucket?.color ?? null;
+}
+
+/** Dropdown options grouped by parent, in PARENT_ORDER, for a pulldown menu. */
+export function groupedVariableOptions() {
+	const byParent = new Map(PARENT_ORDER.map((parent) => [parent, []]));
+	for (const [key, config] of Object.entries(variableConfig)) {
+		if (!byParent.has(config.parent)) byParent.set(config.parent, []);
+		byParent.get(config.parent).push({ key, label: config.label });
+	}
+	return PARENT_ORDER.map((parent) => ({ parent, options: byParent.get(parent) ?? [] })).filter(
+		(group) => group.options.length > 0
+	);
+}
