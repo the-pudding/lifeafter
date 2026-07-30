@@ -32,25 +32,43 @@
 	// Low-poly rigged humanoids with a baked-in "Walk" clip, one body per
 	// GENDER x body-type combo; each crowd member clones whichever matches
 	// their own GENDER. CC-BY-4.0 (Sketchfab, "Base Mesh 246 Tri").
+	const BASE_URL = "/assets/app/bodies_clothes/";
 	const MALE_BODY_URLS = [
-		"/assets/app/bodies/base_mesh_246_tri_walking_m_athletic.glb",
-		"/assets/app/bodies/base_mesh_246_tri_walking_m_average.glb",
-		"/assets/app/bodies/base_mesh_246_tri_walking_m_broad.glb",
-		"/assets/app/bodies/base_mesh_246_tri_walking_m_heavyset.glb",
-		"/assets/app/bodies/base_mesh_246_tri_walking_m_short_stocky.glb",
-		"/assets/app/bodies/base_mesh_246_tri_walking_m_slim.glb",
-		"/assets/app/bodies/base_mesh_246_tri_walking_m_tall_lanky.glb",
-		"/assets/app/bodies/base_mesh_246_tri_walking_m_wiry.glb"
+		BASE_URL + "base_mesh_246_tri_walking_m_athletic_v1.glb",
+		BASE_URL + "base_mesh_246_tri_walking_m_athletic_v2.glb",
+		BASE_URL + "base_mesh_246_tri_walking_m_average_v1.glb",
+		BASE_URL + "base_mesh_246_tri_walking_m_average_v2.glb",
+		BASE_URL + "base_mesh_246_tri_walking_m_broad_v1.glb",
+		BASE_URL + "base_mesh_246_tri_walking_m_broad_v2.glb",
+		BASE_URL + "base_mesh_246_tri_walking_m_heavyset_v1.glb",
+		BASE_URL + "base_mesh_246_tri_walking_m_heavyset_v2.glb",
+		BASE_URL + "base_mesh_246_tri_walking_m_short_stocky_v1.glb",
+		BASE_URL + "base_mesh_246_tri_walking_m_short_stocky_v2.glb",
+		BASE_URL + "base_mesh_246_tri_walking_m_slim_v1.glb",
+		BASE_URL + "base_mesh_246_tri_walking_m_slim_v2.glb",
+		BASE_URL + "base_mesh_246_tri_walking_m_tall_lanky_v1.glb",
+		BASE_URL + "base_mesh_246_tri_walking_m_tall_lanky_v2.glb",
+		BASE_URL + "base_mesh_246_tri_walking_m_wiry_v1.glb",
+		BASE_URL + "base_mesh_246_tri_walking_m_wiry_v2.glb"
 	];
+
 	const FEMALE_BODY_URLS = [
-		"/assets/app/bodies/base_mesh_246_tri_walking_f_athletic.glb",
-		"/assets/app/bodies/base_mesh_246_tri_walking_f_curvy.glb",
-		"/assets/app/bodies/base_mesh_246_tri_walking_f_heavyset.glb",
-		"/assets/app/bodies/base_mesh_246_tri_walking_f_pear.glb",
-		"/assets/app/bodies/base_mesh_246_tri_walking_f_petite.glb",
-		"/assets/app/bodies/base_mesh_246_tri_walking_f_slim.glb",
-		"/assets/app/bodies/base_mesh_246_tri_walking_f_stocky.glb",
-		"/assets/app/bodies/base_mesh_246_tri_walking_f_tall_lanky.glb"
+		BASE_URL + "base_mesh_246_tri_walking_f_athletic_v1.glb",
+		BASE_URL + "base_mesh_246_tri_walking_f_athletic_v2.glb",
+		BASE_URL + "base_mesh_246_tri_walking_f_curvy_v1.glb",
+		BASE_URL + "base_mesh_246_tri_walking_f_curvy_v2.glb",
+		BASE_URL + "base_mesh_246_tri_walking_f_heavyset_v1.glb",
+		BASE_URL + "base_mesh_246_tri_walking_f_heavyset_v2.glb",
+		BASE_URL + "base_mesh_246_tri_walking_f_pear_v1.glb",
+		BASE_URL + "base_mesh_246_tri_walking_f_pear_v2.glb",
+		BASE_URL + "base_mesh_246_tri_walking_f_petite_v1.glb",
+		BASE_URL + "base_mesh_246_tri_walking_f_petite_v2.glb",
+		BASE_URL + "base_mesh_246_tri_walking_f_slim_v1.glb",
+		BASE_URL + "base_mesh_246_tri_walking_f_slim_v2.glb",
+		BASE_URL + "base_mesh_246_tri_walking_f_stocky_v1.glb",
+		BASE_URL + "base_mesh_246_tri_walking_f_stocky_v2.glb",
+		BASE_URL + "base_mesh_246_tri_walking_f_tall_lanky_v1.glb",
+		BASE_URL + "base_mesh_246_tri_walking_f_tall_lanky_v2.glb"
 	];
 
 	// Fixed colors for the default recolor-by variable (AFTER_DEATH_Y1),
@@ -60,12 +78,16 @@
 	// Used for missing/null values, or a "before you pick a category" gray.
 	const MUTED_COLOR = 0xcccccc;
 	// Each door's light frame matches its own zone's color, so the door itself hints at what's behind it.
-	const DOOR_OUTLINE_COLORS = { No: NO_COLOR, Unsure: UNSURE_COLOR, Yes: YES_COLOR };
+	const DOOR_OUTLINE_COLORS = {
+		No: NO_COLOR,
+		Unsure: UNSURE_COLOR,
+		Yes: YES_COLOR
+	};
 
 	// Room dimensions, in arbitrary "world units" (~1.3 units per figure).
 	// Sized for the ~1,460 people with a valid No/Unsure/Yes + age in both waves.
 	const ROOM_WIDTH = 30; // left/right: No, Unsure, Yes, one third each
-	const ROOM_DEPTH = 500; // front/back (younger <-> older)
+	const ROOM_DEPTH = 250; // front/back (younger <-> older)
 	const ROOM_HEIGHT = 50;
 
 	// Half-extents are used constantly below, so compute them once.
@@ -214,9 +236,12 @@
 	// The camera glides toward each new wheel-driven position rather than
 	// jumping. Smaller = snappier, larger = more sluggish.
 	const FOLLOW_TIME = 0.1; // seconds to close ~63% of the remaining distance
-	// The door-click auto-walk (see handleDoorClick) reuses this same glide
-	// but much slower, so entering reads as a walk-in rather than a snap-to.
-	const AUTO_WALK_FOLLOW_TIME = 1.4;
+	// The door-click auto-walk (see handleDoorClick) moves at this constant
+	// speed instead — not eased like FOLLOW_TIME, so lining up with the
+	// door and then walking straight through it both happen at one
+	// consistent pace with no acceleration burst at the handoff between them.
+	const DOOR_WALK_SPEED = 9; // world units/second
+	const DOOR_WALK_YAW_SPEED = Math.PI * 0.7; // radians/second, turning to face forward once aligned
 	// Keeps the walker inside the walls/edges so the camera's near-clip
 	// plane never pokes through geometry; z spans plaza + building.
 	const WALK_MARGIN = 3;
@@ -252,11 +277,11 @@
 	const TOPDOWN_HEIGHT = ROOM_DEPTH * 0.9;
 	const MODE_TRANSITION_MS = 1250;
 
-	// Minimap: an always-on top-down view rendered into a viewport carved
-	// out of this same canvas (see renderMinimap). ControlPanel.svelte's
-	// toggle button uses these same px numbers to line up with it.
-	const MINIMAP_SIZE_PX = 160;
-	const MINIMAP_MARGIN_PX = 24;
+	// Minimap: a plain 2D canvas (see drawMinimap), positioned via CSS —
+	// these are its internal resolution, matched by the CSS box size below.
+	// Taller than wide (2:1) to better echo the room's own very elongated shape.
+	const MINIMAP_WIDTH_PX = 120;
+	const MINIMAP_HEIGHT_PX = 240;
 
 	// How long the crowd takes to walk from Y1 to Y2 layout (or back) —
 	// longer than the camera's mode transition since people cross the room.
@@ -283,6 +308,9 @@
 
 	// The <div> that three.js's <canvas> gets appended into.
 	let container;
+	// The plain 2D <canvas> the minimap is drawn on (see drawMinimap) —
+	// separate from three.js's own canvas above.
+	let minimapCanvas;
 
 	// Dropdown options grouped by parent (PARENT_ORDER's order) — see
 	// variable_config.js, the single source of truth for the dropdown's
@@ -453,17 +481,6 @@
 					ageMin + Math.min(1, Math.max(0, t)) * (ageMax - ageMin)
 				);
 			}
-
-			// "Light up" everyone who's the walker's own age, regardless of
-			// zone — a band across the full width of the room at the
-			// walker's current Z, since Z (not X) is what encodes age.
-			// Width is in years, converted to world Z units via the same
-			// scale ageToZ uses, so it means the same thing everywhere in
-			// the room no matter how ROOM_DEPTH gets tuned.
-			const AGE_HIGHLIGHT_YEARS = 1.5;
-			const AGE_HIGHLIGHT_RADIUS =
-				(ROOM_DEPTH / (ageMax - ageMin)) * AGE_HIGHLIGHT_YEARS;
-			const AGE_HIGHLIGHT_BOOST = 1.8; // brightness multiplier at the walker's exact age, fading to 1x at the radius's edge
 
 			// Which third of the room the walker is physically in.
 			function currentZoneKey() {
@@ -639,7 +656,7 @@
 				// field of identical clones — height scales Y only, weight
 				// (build) scales X/Z, so a taller person isn't automatically bulkier too.
 				person.__heightScale = 1 + Math.random() * 0.1;
-				person.__widthScale = 1 + Math.random() * 0.3;
+				person.__widthScale = 0.7 + Math.random() * 0.6;
 				// Which way this person is facing (radians); turned smoothly
 				// toward their actual movement each frame (see updatePeoplePositions). Starts random.
 				person.__facingYaw = Math.random() * Math.PI * 2;
@@ -700,11 +717,20 @@
 			// into this same fog band — so looking straight down would fog
 			// the whole room out to near-black. Disabled while in topdown
 			// mode instead (see updateCamera) rather than tuned around two very different camera heights.
-			const walkFog = new THREE.Fog(
-				BG_COLOR,
-				ROOM_DEPTH * 0.2,
-				ROOM_DEPTH * 0.5
-			);
+			//
+			// Deliberately tight (fixed distances, not a fraction of
+			// ROOM_DEPTH — ROOM_DEPTH is 500 now, and nobody needs to
+			// actually see that far) — tied to the LOD bands below so
+			// visual fade-out and the "stop paying for detail" distances
+			// roughly line up: FOG_NEAR matches where animation already
+			// stops (LOD_FREEZE_DISTANCE), FOG_FAR sits just past the last
+			// finite LOD band, and RENDER_CULL_DISTANCE (used in
+			// updatePeoplePositions) skips even building a draw call for
+			// anyone fully faded out beyond it — real GPU/CPU savings, not just a visual effect.
+			const FOG_NEAR = LOD_FREEZE_DISTANCE;
+			const FOG_FAR = 34;
+			const RENDER_CULL_DISTANCE = FOG_FAR;
+			const walkFog = new THREE.Fog(BG_COLOR, FOG_NEAR, FOG_FAR);
 			scene.fog = walkFog;
 
 			// Purely organizational: everything specific to "which zone this
@@ -741,121 +767,120 @@
 				defaultKeepAlive: true
 			});
 
-			// Minimap: a fixed orthographic camera rendered into a viewport
-			// carved out of this same canvas (see renderMinimap) — cheaper
-			// than a second canvas/renderer. Renders layer 1 only — flat,
-			// fixed-size dot markers instead of the actual room geometry
-			// (whose per-person scale would make far/near dots read very differently in size).
+			// Minimap: a plain 2D canvas (see minimapCanvas/drawMinimap),
+			// not a second three.js render pass — it only ever needs each
+			// person's flat (x, z) position and current color, both of
+			// which updatePeoplePositions/applyColorVariable already have,
+			// so drawing ~2,500 small fillRects is far cheaper than
+			// scissoring out and rendering an entire second scene every frame.
 			//
-			// The frustum uses the room's real (asymmetric) half-extents
-			// rather than a single padded span, so a square viewport stretches
-			// both axes to fill it completely instead of leaving the room a
-			// thin sliver down the middle — ROOM_DEPTH is many times
-			// ROOM_WIDTH, so a true-to-scale square minimap would otherwise
-			// be almost entirely empty.
-			const MINIMAP_Z_ENTRANCE = HALF_DEPTH + EXTERIOR_DEPTH; // top of the minimap: young end / where you walk in
-			const MINIMAP_Z_BACK_WALL = -HALF_DEPTH; // bottom of the minimap: old end
-			const minimapCamera = new THREE.OrthographicCamera(
-				-HALF_WIDTH,
-				HALF_WIDTH,
-				MINIMAP_Z_ENTRANCE,
-				MINIMAP_Z_BACK_WALL,
-				0.1,
-				TOPDOWN_HEIGHT * 1.5
-			);
-			minimapCamera.position.set(0, TOPDOWN_HEIGHT, 0);
-			minimapCamera.up.set(0, 0, -1); // keep "forward" (young) pointing up-screen, same as computeTopdownPose
-			minimapCamera.lookAt(0, 0, 0);
-			minimapCamera.layers.set(1);
+			// World bounds mapped onto the canvas: X across the full room
+			// width (No=left, Yes=right); Z from the entrance (bottom of the
+			// canvas — the young end, where you walk in) to the back wall
+			// (top — the old end). Verified to match the full "Top-down
+			// view" camera's own orientation via direct projection-matrix comparison.
+			const MINIMAP_Z_ENTRANCE = HALF_DEPTH + EXTERIOR_DEPTH;
+			const MINIMAP_Z_BACK_WALL = -HALF_DEPTH;
+			const MINIMAP_Z_RANGE = MINIMAP_Z_ENTRANCE - MINIMAP_Z_BACK_WALL;
+			const BG_COLOR_CSS = `#${BG_COLOR.toString(16).padStart(6, "0")}`;
 
-			// A bright marker showing the walker's position, floated above head height so the crowd never occludes it.
-			const walkerMarker = new THREE.Mesh(
-				new THREE.ConeGeometry(1.4, 3, 12),
-				new THREE.MeshBasicMaterial({ color: 0xff00b3 })
-			);
-			walkerMarker.layers.set(1);
-			scene.add(walkerMarker);
+			// Per-person minimap position, written every frame in
+			// updatePeoplePositions (typed arrays — no per-person object
+			// allocation). Color is written only in applyColorVariable,
+			// since it only changes when the dropdown selection does.
+			const minimapX = new Float32Array(respondents.length);
+			const minimapZ = new Float32Array(respondents.length);
+			const personColorCSS = new Array(respondents.length).fill(BG_COLOR_CSS);
 
-			// A full-width line at the walker's current Z, tracking the
-			// current age explicitly — the cone marker above already shows
-			// exact position, but with the minimap now stretched to fill a
-			// square regardless of the room's true (very elongated) aspect
-			// ratio, a single dot's depth is hard to judge at a glance.
-			// Thickness is a fraction of the total mapped depth so it stays
-			// legibly a few pixels tall regardless of how ROOM_DEPTH is tuned.
-			const MINIMAP_LINE_THICKNESS =
-				(MINIMAP_Z_ENTRANCE - MINIMAP_Z_BACK_WALL) / 100;
-			const minimapAgeLine = new THREE.Mesh(
-				new THREE.PlaneGeometry(ROOM_WIDTH * 1.4, MINIMAP_LINE_THICKNESS),
-				new THREE.MeshBasicMaterial({ color: 0xffffff })
-			);
-			minimapAgeLine.rotation.x = -Math.PI / 2;
-			minimapAgeLine.position.y = 3;
-			minimapAgeLine.layers.set(1);
-			scene.add(minimapAgeLine);
-
-			// Covers everything deeper (older) than the walker's current Z —
-			// "only show the extent you've walked." Oversized and simply
-			// repositioned (never resized) each frame so its near edge sits
-			// exactly at renderWalkZ; the far edge is always well past the
-			// back wall regardless of how deep the walker has gone.
-			const MINIMAP_MASK_DEPTH = ROOM_DEPTH * 3;
-			const minimapUnexploredMask = new THREE.Mesh(
-				new THREE.PlaneGeometry(ROOM_WIDTH * 1.5, MINIMAP_MASK_DEPTH),
-				new THREE.MeshBasicMaterial({ color: BG_COLOR })
-			);
-			minimapUnexploredMask.rotation.x = -Math.PI / 2;
-			minimapUnexploredMask.position.y = 6; // above the dots/marker/age line, so it actually occludes them
-			minimapUnexploredMask.layers.set(1);
-			scene.add(minimapUnexploredMask);
-
-			// One flat, unlit dot per respondent — reused every frame in
-			// updatePeoplePositions, same InstancedMesh-per-frame pattern as
-			// the blob shadows. Per-instance color (set in applyColorVariable)
-			// mirrors each person's own body color, so material.color stays
-			// plain white — it multiplies against the instance color otherwise.
-			const MINIMAP_DOT_RADIUS = 0.9;
-			const minimapDots = new THREE.InstancedMesh(
-				new THREE.CircleGeometry(MINIMAP_DOT_RADIUS, 8),
-				new THREE.MeshBasicMaterial({ color: 0xffffff }),
-				respondents.length
-			);
-			minimapDots.layers.set(1);
-			// InstancedMesh computes its boundingSphere lazily from whatever
-			// instance transforms exist the first time it's frustum-tested,
-			// then caches it forever — it never re-expands as instances
-			// move, so once this is parented under innerRoomGroup and
-			// shifting, the cached sphere can stop covering the dots
-			// entirely and the minimap camera silently culls all of them.
-			// Not worth recomputing every frame just to sidestep a one-time
-			// caching bug — simplest is to just never cull it.
-			minimapDots.frustumCulled = false;
-			innerRoomGroup.add(minimapDots);
-
-			function renderMinimap() {
-				walkerMarker.position.set(renderWalkX, FIGURE_HEIGHT + 2, renderWalkZ);
-
-				const w = container.clientWidth;
-				const h = container.clientHeight;
-				const x = w - MINIMAP_SIZE_PX - MINIMAP_MARGIN_PX;
-				const y = MINIMAP_MARGIN_PX; // three.js viewport/scissor y is measured from the bottom
-				renderer.setScissorTest(true);
-				renderer.setViewport(x, y, MINIMAP_SIZE_PX, MINIMAP_SIZE_PX);
-				renderer.setScissor(x, y, MINIMAP_SIZE_PX, MINIMAP_SIZE_PX);
-				// scene.fog is a scene-level property, applied to any camera
-				// that renders it — but the minimap camera sits TOPDOWN_HEIGHT
-				// above everything, well past walkFog's complete falloff
-				// distance, so leaving it on here
-				// would fog every dot down to the background color (the
-				// same issue the full-screen topdown view had, see
-				// updateCamera). Disabled just for this one render call, restored right after.
-				const previousFog = scene.fog;
-				scene.fog = null;
-				renderer.render(scene, minimapCamera);
-				scene.fog = previousFog;
-				renderer.setScissorTest(false);
-				renderer.setViewport(0, 0, w, h);
+			// Per-axis world-unit -> pixel scale (the room's width and Z
+			// range map onto very different pixel spans, so these aren't
+			// equal) — reused for the facing-direction cone below, which
+			// needs to scale a direction vector the same way these scale a position.
+			const MINIMAP_SCALE_X = MINIMAP_WIDTH_PX / ROOM_WIDTH;
+			const MINIMAP_SCALE_Z = MINIMAP_HEIGHT_PX / MINIMAP_Z_RANGE;
+			function worldXToMinimapPx(x) {
+				return (x + HALF_WIDTH) * MINIMAP_SCALE_X;
 			}
+			function worldZToMinimapPx(z) {
+				return (z - MINIMAP_Z_BACK_WALL) * MINIMAP_SCALE_Z;
+			}
+
+			function drawMinimap() {
+				const ctx = minimapCanvas.getContext("2d");
+				ctx.fillStyle = BG_COLOR_CSS;
+				ctx.fillRect(0, 0, MINIMAP_WIDTH_PX, MINIMAP_HEIGHT_PX);
+
+				// "Only show the extent you've walked": z < renderWalkZ is
+				// deeper/older than the walker has reached yet — just don't draw it.
+				for (let i = 0; i < respondents.length; i++) {
+					const z = minimapZ[i];
+					if (z < renderWalkZ) continue;
+					const px = worldXToMinimapPx(minimapX[i]);
+					const py = worldZToMinimapPx(z);
+					ctx.fillStyle = personColorCSS[i];
+					ctx.fillRect(px - 0.75, py - 0.75, 1.5, 1.5);
+				}
+
+				// The age line: a full-width marker at the walker's current Z.
+				const lineY = worldZToMinimapPx(renderWalkZ);
+				ctx.fillStyle = "rgba(255,255,255,0.4)";
+				ctx.fillRect(0, lineY - 1, MINIMAP_WIDTH_PX, 1);
+
+				// The walker's facing direction: a cone fading from the
+				// walker's own color at the center out to fully transparent,
+				// like a flashlight beam. World forward (sin(yaw), -cos(yaw))
+				// is mapped into canvas space with the same per-axis scale
+				// worldXToMinimapPx/worldZToMinimapPx use — no extra sign
+				// flip needed since both axes already increase in the same
+				// direction on the canvas as they do in world space.
+				const walkerCanvasX = worldXToMinimapPx(renderWalkX);
+				const forwardCanvasX = Math.sin(cameraYaw) * MINIMAP_SCALE_X;
+				const forwardCanvasY = -Math.cos(cameraYaw) * MINIMAP_SCALE_Z;
+				const headingAngle = Math.atan2(forwardCanvasY, forwardCanvasX);
+				const FOV_HALF_ANGLE = Math.PI / 5;
+				const FOV_RADIUS = 26;
+				const fovGradient = ctx.createRadialGradient(
+					walkerCanvasX,
+					lineY,
+					0,
+					walkerCanvasX,
+					lineY,
+					FOV_RADIUS
+				);
+				fovGradient.addColorStop(0, "rgba(254, 253, 254, 0.65)");
+				fovGradient.addColorStop(1, "rgba(254, 253, 254, 0)");
+				ctx.fillStyle = fovGradient;
+				ctx.beginPath();
+				ctx.moveTo(walkerCanvasX, lineY);
+				ctx.arc(
+					walkerCanvasX,
+					lineY,
+					FOV_RADIUS,
+					headingAngle - FOV_HALF_ANGLE,
+					headingAngle + FOV_HALF_ANGLE
+				);
+				ctx.closePath();
+				ctx.fill();
+
+				// The walker's own exact position, drawn on top of the cone.
+				ctx.fillStyle = "rgba(254, 253, 254,1)";
+				ctx.beginPath();
+				ctx.arc(walkerCanvasX, lineY, 3, 0, Math.PI * 2);
+				ctx.fill();
+
+				// Zone labels, near the entrance end (bottom — see
+				// worldZToMinimapPx) where the real doors themselves sit, so
+				// they read as "this column is that door's zone."
+				ctx.fillStyle = "rgba(255, 255, 255, 0.85)";
+				ctx.font = "10px sans-serif";
+				ctx.textAlign = "center";
+				const labelY = MINIMAP_HEIGHT_PX - 6;
+				ctx.fillText("No", worldXToMinimapPx(-ZONE_WIDTH), labelY);
+				ctx.fillText("Unsure", worldXToMinimapPx(0), labelY);
+				ctx.fillText("Yes", worldXToMinimapPx(ZONE_WIDTH), labelY);
+			}
+			minimapCanvas.width = MINIMAP_WIDTH_PX;
+			minimapCanvas.height = MINIMAP_HEIGHT_PX;
 
 			// Lighting: directional only, deliberately no PointLight anywhere
 			// in the scene. A point light's intensity falls off with
@@ -947,53 +972,49 @@
 			ceiling.position.y = ROOM_HEIGHT;
 			scene.add(ceiling);
 
-			// A faint floor grid, purely decorative, to convey scale/depth —
-			// noticeably lighter than the floor itself so the lines actually read against the now much-darker floor.
-			const grid = new THREE.GridHelper(
-				Math.max(ROOM_WIDTH, ROOM_DEPTH),
-				90,
-				0x27072e,
-				0x1d0024
-			);
-			grid.position.y = 0.01; // avoid z-fighting with the floor plane
-			scene.add(grid);
+			// Floor grid: a thin line at every whole-year age (so the depth
+			// axis actually reads as "age"), plus a noticeably thicker line
+			// at each of the two boundaries between the No/Unsure/Yes
+			// zones — replaces the old generic decorative GridHelper with
+			// lines that mean something specific in this room.
+			const AGE_LINE_COLOR = "#361433";
+			const ZONE_LINE_COLOR = "#361433";
+			const ZONE_LINE_THICKNESS = 0.07;
 
-			// The floor's own "you are this age" spotlight — same band (see
-			// AGE_HIGHLIGHT_RADIUS/_BOOST) and same idea as the per-person
-			// highlight in updatePeoplePositions, just painted on the floor
-			// instead of a person's material. A soft vertical gradient
-			// (transparent at both edges, brightest through the middle) on a
-			// plane sized to exactly the highlight band, additively blended
-			// so it lightens whatever's under it rather than painting over
-			// it — repositioned to renderWalkZ every frame (see animate()).
-			const ageGlowCanvas = document.createElement("canvas");
-			ageGlowCanvas.width = 8;
-			ageGlowCanvas.height = 128;
-			const ageGlowCtx = ageGlowCanvas.getContext("2d");
-			const ageGlowGradient = ageGlowCtx.createLinearGradient(
-				0,
-				0,
-				0,
-				ageGlowCanvas.height
+			const ageLinePositions = [];
+			for (let age = Math.ceil(ageMin); age <= Math.floor(ageMax); age++) {
+				const z = ageToZ(age);
+				ageLinePositions.push(-HALF_WIDTH, 0, z, HALF_WIDTH, 0, z);
+			}
+			const ageLineGeometry = new THREE.BufferGeometry();
+			ageLineGeometry.setAttribute(
+				"position",
+				new THREE.Float32BufferAttribute(ageLinePositions, 3)
 			);
-			ageGlowGradient.addColorStop(0, "rgba(255, 225, 190, 0)");
-			ageGlowGradient.addColorStop(0.5, "rgba(255, 225, 190, 0.55)");
-			ageGlowGradient.addColorStop(1, "rgba(255, 225, 190, 0)");
-			ageGlowCtx.fillStyle = ageGlowGradient;
-			ageGlowCtx.fillRect(0, 0, ageGlowCanvas.width, ageGlowCanvas.height);
-			const ageGlowTexture = new THREE.CanvasTexture(ageGlowCanvas);
-			const ageFloorGlow = new THREE.Mesh(
-				new THREE.PlaneGeometry(ROOM_WIDTH, AGE_HIGHLIGHT_RADIUS * 2),
-				new THREE.MeshBasicMaterial({
-					map: ageGlowTexture,
-					transparent: true,
-					blending: THREE.AdditiveBlending,
-					depthWrite: false
-				})
+			const ageLines = new THREE.LineSegments(
+				ageLineGeometry,
+				new THREE.LineBasicMaterial({ color: AGE_LINE_COLOR })
 			);
-			ageFloorGlow.rotation.x = -Math.PI / 2;
-			ageFloorGlow.position.y = 0.02; // just above the grid, avoids z-fighting
-			scene.add(ageFloorGlow);
+			ageLines.position.y = 0.01; // avoid z-fighting with the floor plane
+			scene.add(ageLines);
+
+			// A plain LineBasicMaterial's linewidth is ignored by most
+			// browsers/GPUs (a long-standing WebGL limitation) — a thin
+			// floor-level quad is the only reliable way to get a line that
+			// actually reads as thicker than the age lines above.
+			const zoneLineMaterial = new THREE.MeshBasicMaterial({
+				color: ZONE_LINE_COLOR
+			});
+			zoneLineMaterial.userData.outlineParameters = { visible: false };
+			for (const x of [-ZONE_WIDTH / 2, ZONE_WIDTH / 2]) {
+				const zoneLine = new THREE.Mesh(
+					new THREE.PlaneGeometry(ZONE_LINE_THICKNESS, ROOM_DEPTH),
+					zoneLineMaterial
+				);
+				zoneLine.rotation.x = -Math.PI / 2;
+				zoneLine.position.set(x, 0.012, 0);
+				scene.add(zoneLine);
+			}
 
 			const backWallMaterial = new THREE.MeshToonMaterial({
 				color: 0x2a2036,
@@ -1191,13 +1212,14 @@
 				}
 			}
 
-			// The instant the walker actually crosses into the room, doors
-			// are hidden — there's no going back out through them.
+			// Flips once the walker first crosses into the room — after
+			// that, normal scroll navigation works in both directions, so
+			// stepping back out through a door and back in again just works
+			// (the doors themselves stay visible/functional the whole time; see updateDoors).
 			function updateEnteredRoom() {
 				if (!hasEnteredRoom && renderWalkZ <= HALF_DEPTH) {
 					hasEnteredRoom = true;
 					autoWalking = false;
-					for (const door of DOORS) door.hinge.visible = false;
 				}
 			}
 
@@ -1488,6 +1510,16 @@
 					flatShading: true,
 					vertexColors: true
 				});
+				// Created once per person and mutated in place every frame
+				// (see updatePeoplePositions) rather than replaced — with
+				// ~2,500 people, allocating a fresh object here every frame
+				// for both materials was 5,000 extra small allocations/frame for no reason.
+				neutralMaterial.userData.outlineParameters = {
+					thickness: OUTLINE_DEFAULT_THICKNESS
+				};
+				outfitMaterial.userData.outlineParameters = {
+					thickness: OUTLINE_DEFAULT_THICKNESS
+				};
 				instance.traverse((node) => {
 					if (node.isMesh) {
 						const originalName = node.material.name;
@@ -1761,18 +1793,20 @@
 					const toWalkerX = renderWalkX - finalX;
 					const toWalkerZ = renderWalkZ - finalZ;
 					const distToWalkerSq = toWalkerX * toWalkerX + toWalkerZ * toWalkerZ;
+
 					if (
 						distToWalkerSq < FACE_CAMERA_RADIUS * FACE_CAMERA_RADIUS &&
 						distToWalkerSq > MOVE_FACING_EPSILON_SQ
 					) {
-						const desiredYaw = Math.atan2(toWalkerZ, toWalkerX);
+						// Negate the Z and X values to flip the desired rotation 180 degrees
+						const desiredYaw = Math.atan2(-toWalkerZ, -toWalkerX);
+						
 						person.__facingYaw +=
 							shortestAngleDelta(person.__facingYaw, desiredYaw) * facingFactor;
 					}
 					const yaw = person.__facingYaw;
 					const heightScale = person.__heightScale;
 					const widthScale = person.__widthScale;
-
 					// Only voluntary movement (Pass 1's __voluntaryMoveDx/Dz)
 					// ever gets the step-back hold treatment below — being
 					// shoved by the walker or another person just slides
@@ -1798,30 +1832,32 @@
 					const band = pickLodBand(distToWalker);
 					const isFrozen = distToWalker > LOD_FREEZE_DISTANCE;
 
-					// Age spotlight: brighten anyone within AGE_HIGHLIGHT_RADIUS
-					// of the walker's own current age (Z only — spans the
-					// full width, every zone, since age doesn't depend on X).
-					const ageDist = Math.abs(finalZ - renderWalkZ);
-					const ageHighlight =
-						1 +
-						(AGE_HIGHLIGHT_BOOST - 1) *
-							smoothstep(Math.max(0, 1 - ageDist / AGE_HIGHLIGHT_RADIUS));
-
 					const bodyMaterial = personBodyMaterials[i];
 					const skinMaterial = personSkinMaterials[i];
+					// Topdown is a full overview meant to compare everyone
+					// at a glance — distance-based dimming would defeat
+					// that, so everyone gets full brightness there regardless of distToWalker.
+					const brightness = mode === "topdown" ? 1 : band.brightness;
 					bodyMaterial.color
 						.copy(personBaseColors[i])
-						.multiplyScalar(band.brightness * ageHighlight);
-					bodyMaterial.userData.outlineParameters = {
-						thickness: band.outlineThickness
-					};
-					skinMaterial.userData.outlineParameters = {
-						thickness: band.outlineThickness
-					};
+						.multiplyScalar(brightness);
+					bodyMaterial.userData.outlineParameters.thickness =
+						band.outlineThickness;
+					skinMaterial.userData.outlineParameters.thickness =
+						band.outlineThickness;
 
 					// Position/orient/scale this person's whole clone at once.
 					// A subtle "breathing" wobble (Y scale) fades in as they stop, and out as they start walking.
 					const root = personRoots[i];
+					// Beyond RENDER_CULL_DISTANCE they're fully faded into
+					// the fog anyway (see walkFog above) — skipping the draw
+					// call entirely for everyone out there is the actual
+					// perf win, not just the visual fade. Topdown is a
+					// functional overview (fog's already off there too, see
+					// updateCamera) meant to show the whole crowd at once,
+					// so this culling is skipped in that mode.
+					root.visible =
+						mode === "topdown" || distToWalker <= RENDER_CULL_DISTANCE;
 					const baseHeightScale = heightScale * WALKER_SCALE_CORRECTION;
 					const baseWidthScale = widthScale * WALKER_SCALE_CORRECTION;
 					const breathAmount = 1 - person.__walkAmount;
@@ -1884,17 +1920,12 @@
 					placementHelper.updateMatrix();
 					shadows.setMatrixAt(i, placementHelper.matrix);
 
-					// This person's minimap dot — same flat placement as the
-					// shadow, but fixed-size and floated above the crowd/
-					// room (which the minimap camera never renders anyway) for a consistent, unlit position marker.
-					placementHelper.position.set(finalX, FIGURE_HEIGHT + 1, finalZ);
-					placementHelper.scale.setScalar(1);
-					placementHelper.updateMatrix();
-					minimapDots.setMatrixAt(i, placementHelper.matrix);
+					// This person's flat position for the 2D minimap (see drawMinimap).
+					minimapX[i] = finalX;
+					minimapZ[i] = finalZ;
 				}
 
 				shadows.instanceMatrix.needsUpdate = true;
-				minimapDots.instanceMatrix.needsUpdate = true;
 			}
 
 			// Recoloring: variable_config.js is the single source of truth for
@@ -1916,32 +1947,35 @@
 				const config = variableConfig[baseVar];
 				const column = resolveColumn(baseVar);
 				const muted = new THREE.Color(MUTED_COLOR);
+				const mutedCSS = `#${muted.getHexString()}`;
 
 				const bucketFor =
 					config.type === "numeric"
 						? (person) => getRangeFor(baseVar, person[column])
 						: (person) => getCategoryFor(baseVar, person[column]);
-				const getColor = (person) => {
-					const bucket = bucketFor(person);
-					return bucket ? new THREE.Color(bucket.color) : muted;
-				};
 				legendData = {
 					kind: "categorical",
-					items: (config.type === "numeric" ? config.ranges : config.categories).map(
-						(bucket) => ({ label: bucket.label, color: bucket.color })
-					)
+					items: (config.type === "numeric"
+						? config.ranges
+						: config.categories
+					).map((bucket) => ({ label: bucket.label, color: bucket.color }))
 				};
 
 				// Each person has their own body material, so tinting one
-				// doesn't affect anyone else — the minimap dot mirrors the
-				// same color. The body material itself is written every
-				// frame in updatePeoplePositions from personBaseColors (darkened by LOD distance band), not here directly.
+				// doesn't affect anyone else. The body material itself is
+				// written every frame in updatePeoplePositions from
+				// personBaseColors (darkened by LOD distance band), not here
+				// directly; personColorCSS feeds the 2D minimap (see drawMinimap).
 				for (let i = 0; i < respondents.length; i++) {
-					const color = getColor(respondents[i]);
-					personBaseColors[i].copy(color);
-					minimapDots.setColorAt(i, color);
+					const bucket = bucketFor(respondents[i]);
+					if (bucket) {
+						personBaseColors[i].set(bucket.color);
+						personColorCSS[i] = bucket.color;
+					} else {
+						personBaseColors[i].copy(muted);
+						personColorCSS[i] = mutedCSS;
+					}
 				}
-				minimapDots.instanceColor.needsUpdate = true;
 			}
 
 			// Re-runs on any change to selectedVariable — and, since
@@ -2218,7 +2252,7 @@
 						// Vertical drag -> Walk forward/backward (Z-axis)
 						const dyNormalized = dy / rect.height;
 						const fovScale = camera.fov / 60;
-						const BASE_WALK_SPEED = 100;
+						const BASE_WALK_SPEED = 300;
 
 						walk(dyNormalized * BASE_WALK_SPEED * fovScale);
 					}
@@ -2438,34 +2472,44 @@
 					targetCameraYaw = 0;
 				}
 
-				// Glide the rendered walk position toward the input-driven
-				// target. This exponential ("critically damped") follow is
-				// frame-rate independent: after FOLLOW_TIME seconds, ~63% of
-				// the remaining distance has been closed, regardless of fps.
-				const followFactor =
-					1 -
-					Math.exp(
-						-dt / (hasEnteredRoom ? FOLLOW_TIME : AUTO_WALK_FOLLOW_TIME)
-					);
-				renderWalkX += (targetWalkX - renderWalkX) * followFactor;
-				renderWalkZ += (targetWalkZ - renderWalkZ) * followFactor;
-
-				// Steering (yaw/pitch) snaps straight to the drag input —
-				// no follow-time smoothing — so looking around tracks the
-				// mouse/touch instantly instead of trailing behind it. The
-				// one exception is the door auto-walk (autoWalking): turning
-				// to face forward there eases like the position does, so it
-				// reads as turning to walk somewhere, not a jump-cut.
 				if (autoWalking) {
-					const yawFollowFactor = 1 - Math.exp(-dt / AUTO_WALK_FOLLOW_TIME);
-					cameraYaw +=
-						shortestAngleDelta(cameraYaw, targetCameraYaw) * yawFollowFactor;
+					// Constant speed, not eased — exponential easing's speed
+					// is proportional to remaining distance, so the moment
+					// pendingDoorWalkZ resolves above (a fresh, larger
+					// delta) velocity jumps discontinuously, reading as a
+					// sudden burst. A fixed units/second step has no such
+					// jump, and (unlike an asymptotic ease) actually arrives.
+					const stepX =
+						Math.sign(targetWalkX - renderWalkX) *
+						Math.min(Math.abs(targetWalkX - renderWalkX), DOOR_WALK_SPEED * dt);
+					const stepZ =
+						Math.sign(targetWalkZ - renderWalkZ) *
+						Math.min(Math.abs(targetWalkZ - renderWalkZ), DOOR_WALK_SPEED * dt);
+					renderWalkX += stepX;
+					renderWalkZ += stepZ;
+
+					const yawStep =
+						Math.sign(shortestAngleDelta(cameraYaw, targetCameraYaw)) *
+						Math.min(
+							Math.abs(shortestAngleDelta(cameraYaw, targetCameraYaw)),
+							DOOR_WALK_YAW_SPEED * dt
+						);
+					cameraYaw = wrapAngle(cameraYaw + yawStep);
 				} else {
+					// Glide the rendered walk position toward the
+					// input-driven target. This exponential ("critically
+					// damped") follow is frame-rate independent: after
+					// FOLLOW_TIME seconds, ~63% of the remaining distance has
+					// been closed, regardless of fps.
+					const followFactor = 1 - Math.exp(-dt / FOLLOW_TIME);
+					renderWalkX += (targetWalkX - renderWalkX) * followFactor;
+					renderWalkZ += (targetWalkZ - renderWalkZ) * followFactor;
+
+					// Steering (yaw/pitch) snaps straight to the drag input —
+					// no follow-time smoothing — so looking around tracks the mouse/touch instantly.
 					cameraYaw = targetCameraYaw;
 				}
 				cameraPitch = targetCameraPitch;
-
-				ageFloorGlow.position.z = renderWalkZ;
 
 				updatePositionBlend();
 				updateEnteredRoom();
@@ -2481,12 +2525,20 @@
 				// a thin rim, making the whole view look solid black.
 				// Topdown is a functional overview rather than part of the
 				// stylized outlined look anyway, so it just skips the effect and renders plainly.
-				if (mode === "topdown") {
+				//
+				// Also skipped during the door auto-walk (autoWalking): it
+				// draws every person twice (an inflated backface pass plus
+				// the normal one), and crossing the threshold is exactly the
+				// moment a lot of people go from "far, frozen, no
+				// animation" to "close, animating, full LOD" all at once —
+				// the single biggest fixed cost in the frame is the one this
+				// briefly turns off, right when everything else spikes.
+				if (mode === "topdown" || autoWalking) {
 					renderer.render(scene, camera);
 				} else {
 					effect.render(scene, camera);
 				}
-				renderMinimap();
+				drawMinimap();
 			}
 			animate();
 
@@ -2540,6 +2592,7 @@
 			{/each}
 		</div>
 	{/if}
+	<canvas class="minimap-canvas" bind:this={minimapCanvas}></canvas>
 </div>
 
 <style>
@@ -2558,6 +2611,20 @@
 	.lifedeath-room :global(canvas) {
 		display: block;
 		touch-action: none;
+	}
+
+	/* Must match MINIMAP_WIDTH_PX / MINIMAP_HEIGHT_PX in the script —
+	   those set the canvas's internal resolution, this sets its on-screen
+	   box. ControlPanel.svelte's toggle button sits at the same coordinates. */
+	.minimap-canvas {
+		position: absolute;
+		right: 24px;
+		bottom: 24px;
+		width: 120px;
+		height: 240px;
+		border: 1px solid rgba(255, 255, 255, 0.25);
+		border-radius: 0.5rem;
+		pointer-events: none;
 	}
 
 	.story-overlay {

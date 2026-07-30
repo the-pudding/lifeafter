@@ -45,9 +45,17 @@
 		<div class="button-row">
 			<button
 				class="mode-toggle"
-				onclick={() => (positionMode = positionMode === "Y1" ? "Y2" : "Y1")}
+				class:active={positionMode === "Y1"}
+				onclick={() => (positionMode = "Y1")}
 			>
-				{positionMode === "Y1" ? "Toggle to Y2" : "Toggle to Y1"}
+				Y1
+			</button>
+			<button
+				class="mode-toggle"
+				class:active={positionMode === "Y2"}
+				onclick={() => (positionMode = "Y2")}
+			>
+				Y2
 			</button>
 		</div>
 
@@ -61,11 +69,11 @@
 </div>
 
 {#if !loadingMessage}
-	<!-- Frames the live top-down minimap that Main.lifedeath.svelte renders
-	     directly onto the WebGL canvas underneath (see MINIMAP_SIZE_PX /
-	     MINIMAP_MARGIN_PX there — these px values must match). This div
-	     itself ignores pointer events so drag-to-steer/scroll-to-walk still
-	     reach the canvas underneath; only the button re-enables them. -->
+	<!-- Positions the toggle button over the real minimap <canvas> that
+	     Main.lifedeath.svelte draws separately (see .minimap-canvas /
+	     MINIMAP_WIDTH_PX / MINIMAP_HEIGHT_PX there — these px values must
+	     match). This div itself ignores pointer events so drag-to-steer/
+	     scroll-to-walk still reach the 3D canvas underneath; only the button re-enables them. -->
 	<div class="minimap">
 		<button class="minimap-toggle" onclick={() => (mode = mode === "walk" ? "topdown" : "walk")}>
 			{mode === "walk" ? "Top-down view" : "Back to walk view"}
@@ -155,6 +163,16 @@
 		background: rgba(255, 255, 255, 0.18);
 	}
 
+	.mode-toggle.active {
+		background: #9d00ff;
+		border-color: #9d00ff;
+		color: #fff;
+	}
+
+	.mode-toggle.active:hover {
+		background: #9d00ff;
+	}
+
 	.current-age {
 		color: #eee;
 		font-size: 0.8rem;
@@ -171,17 +189,15 @@
 		font-size: 0.8rem;
 	}
 
-	/* Must match MINIMAP_SIZE_PX / MINIMAP_MARGIN_PX in Main.lifedeath.svelte
-	   — this frames the live WebGL render underneath, it draws nothing
-	   itself. */
+	/* Just an anchor for the toggle button below — the minimap itself is a
+	   real <canvas> (see .minimap-canvas in Main.lifedeath.svelte), which
+	   draws its own border; this div positions nothing but the button. */
 	.minimap {
 		position: absolute;
 		right: 24px;
 		bottom: 24px;
-		width: 160px;
-		height: 160px;
-		border: 1px solid rgba(255, 255, 255, 0.25);
-		border-radius: 0.5rem;
+		width: 120px;
+		height: 240px;
 		pointer-events: none;
 	}
 
