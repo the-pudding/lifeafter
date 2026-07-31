@@ -1,5 +1,6 @@
 <script>
 	import { onMount } from "svelte";
+	import { fade } from "svelte/transition";
 	import * as THREE from "three";
 	import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 	// Deep-clones a rigged GLTF graph with its own skeleton — plain
@@ -8,7 +9,11 @@
 	// Used once, up front, to weld the walker GLB's low-poly hard-edged
 	// geometry into smooth-shaded geometry — see smoothGeometry() below.
 	import { mergeVertices } from "three/examples/jsm/utils/BufferGeometryUtils.js";
-	import { OutlineEffect } from "three/addons/effects/OutlineEffect.js";
+	// A fork of three's own OutlineEffect that wobbles the outline's
+	// extruded hull per-vertex, so the line reads as hand-drawn instead of
+	// a perfectly smooth silhouette — see the file itself for why it's a
+	// full fork rather than a wrapper.
+	import { PencilOutlineEffect } from "./PencilOutlineEffect.js";
 
 	// Drives the "Color by" dropdown: label/parent/grouping for every
 	// variable, plus per-category/per-range colors so the recolor and its
@@ -71,17 +76,25 @@
 		BASE_URL + "base_mesh_246_tri_walking_f_tall_lanky_v2.glb"
 	];
 
-	// Fixed colors for the default recolor-by variable (AFTER_DEATH_Y1),
-	const NO_COLOR = "#884b80"; // warm orange — "No"
-	const UNSURE_COLOR = 0x9d00ff; // purple — "Unsure"
-	const YES_COLOR = 0xff2ec4; // pink — "Yes"
 	// Used for missing/null values, or a "before you pick a category" gray.
 	const MUTED_COLOR = 0xcccccc;
-	// Each door's light frame matches its own zone's color, so the door itself hints at what's behind it.
-	const DOOR_OUTLINE_COLORS = {
-		No: NO_COLOR,
-		Unsure: UNSURE_COLOR,
-		Yes: YES_COLOR
+	// The building's only "lit" color, outside — the sign, each door's
+	// outline frame, and its lamp fixture/glow are all this one pink neon
+	// shade rather than being tinted per zone, so the dark, mostly-unlit
+	// exterior reads as one consistent neon-signage look.
+	const NEON_PINK = 0xff8dce;
+	// The door PANEL itself still hints at what's behind it (the frame
+	// around it doesn't anymore, see NEON_PINK) — solid, unlit colors,
+	// not textured, so they stay clearly legible against the dark facade.
+	const DOOR_ZONE_COLORS = {
+		No: "rgb(69, 50, 7)",
+		Unsure: "#3e1f42",
+		Yes: "#53043d"
+	};
+	const DOOR_ZONE_COLORS_LIGHT = {
+		No: "rgb(255, 179, 1)",
+		Unsure: "#8c19c6",
+		Yes: "#fd08a8"
 	};
 
 	// Room dimensions, in arbitrary "world units" (~1.3 units per figure).
@@ -98,31 +111,37 @@
 
 	// The exterior: a dark plaza where the walker starts, and an enclosed
 	// vestibule whose corridors route from the entrance to the correct zone.
-	const EXTERIOR_DEPTH = 10;
+	// Deeper than before so the walker's default starting position (see
+	// DEFAULT_START_Z below, which is derived from this) sits further
+	// back from the doors, with more plaza visible behind it.
+	const EXTERIOR_DEPTH = 12;
 	const VESTIBULE_DEPTH = 0;
 	const DOOR_Z = HALF_DEPTH + VESTIBULE_DEPTH;
 	const DOOR_WIDTH = 2.4; // just wide enough for one figure
 	const DOOR_HEIGHT = 4; // just clears a figure's head (FIGURE_HEIGHT is 2)
 	const FACADE_THICKNESS = 0.6;
 	const FACADE_CLEARANCE = FACADE_THICKNESS / 2 + 0.4;
+	// The back/side walls' own thickness — same idea as FACADE_THICKNESS,
+	// just for the plain room shell rather than the door wall; extrudes
+	// outward (away from the walkable room), so it never eats into
+	// WALK_MARGIN or any of the collision bounds below.
+	const WALL_THICKNESS = 0.5;
 	// How close the walker must be to trigger a door, and how open (0..1) it must get before it stops blocking.
 	const DOOR_TRIGGER_RADIUS = 1.2;
 	const DOOR_OPEN_TIME = 0.35; // seconds to close ~63% of the remaining open/close
 	const DOOR_OPEN_ANGLE = Math.PI * 0.8; // swings inward, almost flat against the inside wall
 	const DOOR_PASSABLE_OPEN_AMOUNT = 0.5;
-	// A light frame around each door, reading as a lit doorway from the dark plaza.
-	const DOOR_OUTLINE_THICKNESS = 0.1;
 	// Each door sits directly in front of its own zone (see ZONE_XS below) —
 	// the room's narrow enough now that doors can just line up with their
 	// zone's opening directly, no shifted interior needed to bridge them.
 	// openAmount (0 closed .. 1 open) is plain per-door render state, not a
-	// Svelte rune — updateDoors() in onMount advances it every frame. Each
-	// door's outline is colored to match that answer's own figures inside
-	// (see DOOR_OUTLINE_COLORS below), so the door itself hints at what's behind it.
+	// Svelte rune — updateDoors() in onMount advances it every frame. Which
+	// door is which is conveyed by its text label now, not a per-zone
+	// outline color — see NEON_PINK above.
 	const DOORS = [
-		{ x: -ZONE_WIDTH, label: "No", openAmount: 0 },
+		{ x: -ZONE_WIDTH + ZONE_WIDTH / 3, label: "No", openAmount: 0 },
 		{ x: 0, label: "Unsure", openAmount: 0 },
-		{ x: ZONE_WIDTH, label: "Yes", openAmount: 0 }
+		{ x: ZONE_WIDTH - ZONE_WIDTH / 3, label: "Yes", openAmount: 0 }
 	];
 	const BUILDING_LABEL = ["Life after death?"];
 
@@ -293,6 +312,17 @@
 	let mode = $state("walk"); // "walk" | "topdown"
 	let selectedVariable = $state("AFTER_DEATH");
 	let positionMode = $state("Y1"); // "Y1" | "Y2"
+
+	// Debug convenience only: mirrors the "Color by" dropdown into
+	// ?variable=, so a specific view can be linked/reloaded directly.
+	// One-way (dropdown -> URL) — nothing reads this param back on load.
+	$effect(() => {
+		const variable = selectedVariable;
+		if (!debugMode) return;
+		const url = new URL(window.location.href);
+		url.searchParams.set("variable", variable);
+		window.history.replaceState({}, "", url);
+	});
 	// A small summary of the current color mapping, rendered as a legend.
 	// Either { kind: "categorical", items: [{label, color, count}, ...] } or { kind: "continuous", min, max }.
 	let legendData = $state(null);
@@ -728,7 +758,7 @@
 			// updatePeoplePositions) skips even building a draw call for
 			// anyone fully faded out beyond it — real GPU/CPU savings, not just a visual effect.
 			const FOG_NEAR = LOD_FREEZE_DISTANCE;
-			const FOG_FAR = 34;
+			const FOG_FAR = 50;
 			const RENDER_CULL_DISTANCE = FOG_FAR;
 			const walkFog = new THREE.Fog(BG_COLOR, FOG_NEAR, FOG_FAR);
 			scene.fog = walkFog;
@@ -754,14 +784,36 @@
 			}
 
 			const camera = new THREE.PerspectiveCamera(fov, width / height, 0.1, 800);
+			// The facade's brick and its point lights (see buildDoor/
+			// buildingSign below) live on this layer, separate from
+			// everything else's flat toon shading — keyLight/fillLight
+			// stay on the default layer only, so they never touch the
+			// facade, and these point lights stay on this layer only, so
+			// they never touch anything else. The camera needs it
+			// enabled just to see the facade at all.
+			const FACADE_LIGHT_LAYER = 1;
+			camera.layers.enable(FACADE_LIGHT_LAYER);
 			const renderer = new THREE.WebGLRenderer({ antialias: true });
 			renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 			renderer.setSize(width, height);
+			// Only ever needed for the facade's brick (see
+			// FACADE_LIGHT_LAYER/brickInstances below) — every other
+			// light/material in the scene is unlit or flat toon-shaded
+			// and never casts or receives a shadow.
+			renderer.shadowMap.enabled = true;
+			// Hard-edged, not the soft/blurred PCF default — matches the
+			// crowd/interior's own flat toon shading (see brickMaterial
+			// below): a brick reads as either lit or in shadow, not a
+			// soft gradient between the two.
+			renderer.shadowMap.type = THREE.BasicShadowMap;
 			container.appendChild(renderer.domElement);
 			// Draws each person's black silhouette outline as a second
 			// (inflated, back-face) pass — the standard cheap per-object
-			// outline technique, done here instead of by hand per body part.
-			const effect = new OutlineEffect(renderer, {
+			// outline technique, done here instead of by hand per body
+			// part. PencilOutlineEffect additionally wobbles that hull per
+			// vertex for a hand-drawn look (see the file itself); the
+			// defaults there are tuned for the crowd's body scale.
+			const effect = new PencilOutlineEffect(renderer, {
 				defaultThickness: OUTLINE_DEFAULT_THICKNESS,
 				defaultColor: [0, 0, 0],
 				defaultKeepAlive: true
@@ -810,11 +862,21 @@
 				ctx.fillStyle = BG_COLOR_CSS;
 				ctx.fillRect(0, 0, MINIMAP_WIDTH_PX, MINIMAP_HEIGHT_PX);
 
-				// "Only show the extent you've walked": z < renderWalkZ is
-				// deeper/older than the walker has reached yet — just don't draw it.
+				// Light dividers between the No/Unsure/Yes columns, echoing
+				// the zone lines on the actual room floor — drawn under the
+				// people dots (like the age line's floor markings) rather
+				// than over them.
+				ctx.fillStyle = "rgba(255, 255, 255, 0.25)";
+				for (const x of [-ZONE_WIDTH / 2, ZONE_WIDTH / 2]) {
+					const px = worldXToMinimapPx(x);
+					ctx.fillRect(px - 0.5, 0, 1, MINIMAP_HEIGHT_PX);
+				}
+
+				// The whole room's layout is shown at once now, not just
+				// the extent the walker has reached — it's a map, not a
+				// fog-of-war reveal.
 				for (let i = 0; i < respondents.length; i++) {
 					const z = minimapZ[i];
-					if (z < renderWalkZ) continue;
 					const px = worldXToMinimapPx(minimapX[i]);
 					const py = worldZToMinimapPx(z);
 					ctx.fillStyle = personColorCSS[i];
@@ -892,11 +954,11 @@
 			// full stop. Combined with flatShading (below) and the 2-step
 			// toon ramp, this is what actually produces "sharp facets, no
 			// gradient" on the low-poly crowd and a single flat tone per wall/floor plane.
-			const keyLight = new THREE.DirectionalLight(0xf5cfb0, 6);
+			const keyLight = new THREE.DirectionalLight(0xf5cfb0, 4.2);
 			keyLight.position.set(0, 1, -1); // from the doorway end, angled down
 			scene.add(keyLight);
 
-			const fillLight = new THREE.DirectionalLight(0x6a5a8a, 2);
+			const fillLight = new THREE.DirectionalLight(0x6a5a8a, 1.3);
 			fillLight.position.set(0.6, 0.4, 1); // opposite side, dim — keeps the far side of every facet from going pure black
 			scene.add(fillLight);
 
@@ -908,7 +970,7 @@
 			toonRampCanvas.width = 2;
 			toonRampCanvas.height = 1;
 			const toonRampCtx = toonRampCanvas.getContext("2d");
-			[55, 190].forEach((v, i) => {
+			[40, 150].forEach((v, i) => {
 				toonRampCtx.fillStyle = `rgb(${v}, ${v}, ${v})`;
 				toonRampCtx.fillRect(i, 0, 1, 1);
 			});
@@ -917,11 +979,32 @@
 			toonGradientMap.magFilter = THREE.NearestFilter;
 			toonGradientMap.generateMipmaps = false;
 
+			// A lighter tint of a base color — used for the door fixtures'
+			// hot core (see buildDoor below), a shade lighter than the
+			// neon pink everything else outside uses.
+			function lightenColor(input, amount) {
+				return new THREE.Color(input).lerp(new THREE.Color(0xffffff), amount);
+			}
+
+			// Shared everywhere so every wall (interior shell, exterior
+			// floor) reads as the same material family: one dark,
+			// desaturated purple, plain (no texture — see the walls
+			// themselves), lit only by keyLight/fillLight's shading.
+			const CONCRETE_COLOR = "#191022";
+
 			// A self-illuminated bright rectangle standing in for the
 			// doorway opening, so the light source has a visible origin.
+			const doorGlowMaterial = new THREE.MeshBasicMaterial({ color: "#fff4e0" });
+			// A flat, unlit plane like this is exactly the geometry that
+			// breaks OutlineEffect's inflated-backface trick at grazing
+			// view angles (see the topdown-camera note further down, and
+			// doorOutlineMaterial below) — its outline shell can balloon
+			// into a huge stray triangle instead of a thin rim. This
+			// plane doesn't need an outline at all, so just suppress it.
+			doorGlowMaterial.userData.outlineParameters = { visible: false };
 			const doorGlow = new THREE.Mesh(
-				new THREE.PlaneGeometry(ROOM_WIDTH * 0.1, ROOM_HEIGHT * 0.4),
-				new THREE.MeshBasicMaterial({ color: 0xfff4e0 })
+				new THREE.PlaneGeometry(ROOM_WIDTH * 0.5, ROOM_HEIGHT * 0.4),
+				doorGlowMaterial
 			);
 			doorGlow.position.set(0, ROOM_HEIGHT * 0.24, -HALF_DEPTH + 0.05);
 			scene.add(doorGlow);
@@ -948,15 +1031,83 @@
 			});
 			floorMaterial.userData.outlineParameters = { visible: false };
 			const floor = new THREE.Mesh(
-				new THREE.PlaneGeometry(
-					OUTER_WALL_HALF_WIDTH * 2,
-					ROOM_DEPTH + EXTERIOR_DEPTH
-				),
+				new THREE.PlaneGeometry(OUTER_WALL_HALF_WIDTH * 2, ROOM_DEPTH),
 				floorMaterial
 			);
 			floor.rotation.x = -Math.PI / 2; // lay the plane flat
-			floor.position.z = EXTERIOR_DEPTH / 2;
 			scene.add(floor);
+
+			// The exterior plaza floor: a separate mesh/material from the
+			// interior above (rather than one floor plane spanning both),
+			// so it can be its own dark desaturated purple rather than
+			// the interior's near-black tone — unlit, like the facade
+			// (see facadeMaterial below), so the plaza stays "not very lit."
+			// Darker than the interior floor, and lit (unlike the brick
+			// facade) — keyLight/fillLight are dim enough out here that
+			// it still reads as dark, but real enough that the pebbles
+			// below can actually catch a bit of light/shadow rather than
+			// being uniformly flat.
+			const exteriorFloorMaterial = new THREE.MeshToonMaterial({
+				color: "#110515",
+				gradientMap: toonGradientMap
+			});
+			exteriorFloorMaterial.userData.outlineParameters = { visible: false };
+			const exteriorFloor = new THREE.Mesh(
+				new THREE.PlaneGeometry(OUTER_WALL_HALF_WIDTH * 2, EXTERIOR_DEPTH),
+				exteriorFloorMaterial
+			);
+			exteriorFloor.rotation.x = -Math.PI / 2;
+			exteriorFloor.position.z = HALF_DEPTH + EXTERIOR_DEPTH / 2;
+			exteriorFloor.receiveShadow = true;
+			scene.add(exteriorFloor);
+
+			// Pebbles/rocks scattered across the plaza — real 3D shapes
+			// (a low-detail icosahedron per instance, flat-shaded for
+			// sharp rock-like facets, not a texture), so they actually
+			// catch light and cast/receive shadows rather than just
+			// being painted on.
+			const PEBBLE_COUNT = 6000;
+			const PEBBLE_MIN_RADIUS = 0.01;
+			const PEBBLE_MAX_RADIUS = 0.04;
+			const pebbleGeometry = new THREE.IcosahedronGeometry(1, 0);
+			const pebbleMaterial = new THREE.MeshToonMaterial({
+				color: "#040006",
+				gradientMap: toonGradientMap,
+				flatShading: true
+			});
+			pebbleMaterial.userData.outlineParameters = { visible: false };
+			const pebbleInstances = new THREE.InstancedMesh(
+				pebbleGeometry,
+				pebbleMaterial,
+				PEBBLE_COUNT
+			);
+			pebbleInstances.castShadow = false;
+			pebbleInstances.receiveShadow = true;
+			const pebblePlacementHelper = new THREE.Object3D();
+			for (let i = 0; i < PEBBLE_COUNT; i++) {
+				const radius =
+					PEBBLE_MIN_RADIUS +
+					Math.random() * (PEBBLE_MAX_RADIUS - PEBBLE_MIN_RADIUS);
+				pebblePlacementHelper.position.set(
+					-OUTER_WALL_HALF_WIDTH + Math.random() * OUTER_WALL_HALF_WIDTH * 2,
+					radius * 0.4, // partly embedded in the floor, not resting on top of it
+					HALF_DEPTH + Math.random() * EXTERIOR_DEPTH
+				);
+				pebblePlacementHelper.rotation.set(
+					Math.random() * Math.PI,
+					Math.random() * Math.PI,
+					Math.random() * Math.PI
+				);
+				pebblePlacementHelper.scale.set(
+					radius * (0.7 + Math.random() * 0.6),
+					radius * (0.5 + Math.random() * 0.5), // flatter than wide, like a real pebble
+					radius * (0.7 + Math.random() * 0.6)
+				);
+				pebblePlacementHelper.updateMatrix();
+				pebbleInstances.setMatrixAt(i, pebblePlacementHelper.matrix);
+			}
+			pebbleInstances.instanceMatrix.needsUpdate = true;
+			scene.add(pebbleInstances);
 
 			const ceilingMaterial = new THREE.MeshToonMaterial({
 				color: 0x000000,
@@ -1017,16 +1168,24 @@
 			}
 
 			const backWallMaterial = new THREE.MeshToonMaterial({
-				color: 0x2a2036,
+				color: CONCRETE_COLOR,
 				gradientMap: toonGradientMap,
 				flatShading: true
 			});
 			backWallMaterial.userData.outlineParameters = { visible: false };
+			// A real box, not a flat plane — extruded outward (away from
+			// the room) by WALL_THICKNESS so its inner face lands exactly
+			// where the old flat plane sat, without eating into the room
+			// or any of the collision bounds.
 			const backWall = new THREE.Mesh(
-				new THREE.PlaneGeometry(ROOM_WIDTH, ROOM_HEIGHT),
+				new THREE.BoxGeometry(ROOM_WIDTH, ROOM_HEIGHT, WALL_THICKNESS),
 				backWallMaterial
 			);
-			backWall.position.set(0, ROOM_HEIGHT / 2, -HALF_DEPTH);
+			backWall.position.set(
+				0,
+				ROOM_HEIGHT / 2,
+				-HALF_DEPTH - WALL_THICKNESS / 2
+			);
 			scene.add(backWall);
 
 			// Renders text onto a canvas and wraps it in an unlit plane —
@@ -1035,30 +1194,51 @@
 			// `text` may be a string or an array of lines stacked top to bottom.
 			function makeTextPanel(
 				text,
-				{ width, height, fontSize, color = "#fdf6e3", neon = false }
+				{ width, height, fontSize, color = "#ff29d8", neon = true }
 			) {
 				const lines = Array.isArray(text) ? text : [text];
 				const canvas = document.createElement("canvas");
 				canvas.width = 724;
 				canvas.height = Math.round(724 * (height / width));
 				const ctx = canvas.getContext("2d");
-				ctx.font = `bold ${fontSize}px "Helvetica, Arial Black", Arial, sans-serif`;
+				ctx.font = `400 ${fontSize}px "Menlo", mono`;
 				ctx.textAlign = "center";
 				ctx.textBaseline = "middle";
 				const cx = canvas.width / 2;
 				const maxWidth = canvas.width * 0.94;
 				const lineHeight = canvas.height / (lines.length + 3);
-				ctx.fillStyle = color;
 				for (let i = 0; i < lines.length; i++) {
 					const cy = lineHeight * (i + 1);
+					const lineText = lines[i]; // Corrected string variable usage
+
 					if (neon) {
+						// 1. Crisp Neon Outline (Defines the glass edge sharply)
+						ctx.save();
+						ctx.strokeStyle = color;
+						ctx.lineWidth = 4;
 						ctx.shadowColor = color;
-						ctx.shadowBlur = 45;
-						ctx.fillText(lines[i], cx, cy, maxWidth);
-						ctx.shadowBlur = 22;
-						ctx.fillText(lines[i], cx, cy, maxWidth);
+						ctx.shadowBlur = 10;
+						ctx.strokeText(lineText, cx, cy, maxWidth);
+						ctx.restore();
+
+						// 2. Tight Color Glow (Minimal blur to prevent light wash out)
+						ctx.save();
+						ctx.fillStyle = color;
+						ctx.shadowColor = color;
+						ctx.shadowBlur = 4;
+						ctx.fillText(lineText, cx, cy, maxWidth);
+						ctx.restore();
+
+						// 3. Sharp White Core (Pure white tube center, 0 blur for max legibility)
+						ctx.save();
+						ctx.fillStyle = "#ffffff";
+						ctx.shadowColor = "transparent";
+						ctx.shadowBlur = 0;
+						ctx.fillText(lineText, cx, cy, maxWidth);
+						ctx.restore();
 					} else {
-						ctx.fillText(lines[i], cx, cy, maxWidth);
+						ctx.fillStyle = color;
+						ctx.fillText(lineText, cx, cy, maxWidth);
 					}
 				}
 				const texture = new THREE.CanvasTexture(canvas);
@@ -1066,16 +1246,61 @@
 					map: texture,
 					transparent: true
 				});
+				// Flat planes like this text panel are exactly the
+				// geometry that breaks OutlineEffect's inflated-backface
+				// trick at grazing view angles (see doorOutlineMaterial
+				// below, and the topdown-camera note further down) —
+				// suppressed everywhere else that isn't a real 3D object,
+				// so do the same here.
+				material.userData.outlineParameters = { visible: false };
 				return new THREE.Mesh(new THREE.PlaneGeometry(width, height), material);
 			}
 
-			// The outer facade: the building's front at z = DOOR_Z, solid
-			// everywhere except the three doors.
-			const facadeMaterial = new THREE.MeshBasicMaterial({
-				color: 0x21031c,
-				side: THREE.DoubleSide
+			// keyLight/fillLight are directional — a directional light has
+			// no position, so there's no way to keep it away from the
+			// facade by distance the way the point lights' own falloff
+			// naturally limits them. FACADE_LIGHT_LAYER (see camera
+			// above) turned out not to help with this either: three.js
+			// layers only gate whether a light is active for a camera at
+			// all, not which specific objects it illuminates — once a
+			// light is active, it lights everything the camera draws,
+			// regardless of either one's layer. So instead, this patches
+			// the two facade materials' own compiled shader to drop the
+			// directional-lights loop entirely, leaving the point-light
+			// loop (fixtureLight/signLight) untouched — the only way to
+			// actually make one material blind to specific lights.
+			function excludeDirectionalLights(material) {
+				material.onBeforeCompile = (shader) => {
+					// onBeforeCompile runs before three resolves #include
+					// directives, so the shader source here still says
+					// literally "#include <lights_fragment_begin>" — the
+					// #if ( NUM_DIR_LIGHTS > 0 ) line this needs to patch
+					// doesn't exist as text yet. Pull that chunk's actual
+					// source from THREE.ShaderChunk, patch the one line,
+					// and substitute the whole patched chunk in place of
+					// the include so three's own resolver has nothing
+					// left to expand there.
+					const patchedChunk = THREE.ShaderChunk.lights_fragment_begin.replace(
+						"#if ( NUM_DIR_LIGHTS > 0 ) && defined( RE_Direct )",
+						"#if ( 0 > 1 ) && defined( RE_Direct )"
+					);
+					shader.fragmentShader = shader.fragmentShader.replace(
+						"#include <lights_fragment_begin>",
+						patchedChunk
+					);
+				};
+			}
+
+			// The backing wall behind the bricks (see below) — plain dark
+			// mortar tone, no texture; the bricks themselves are what
+			// give this wall its shape now, not an image of bricks.
+			const facadeMaterial = new THREE.MeshToonMaterial({
+				color: 0x000000,
+				gradientMap: toonGradientMap
 			});
 			facadeMaterial.userData.outlineParameters = { visible: false };
+			excludeDirectionalLights(facadeMaterial);
+			excludeDirectionalLights(facadeMaterial);
 
 			// The lower tier's solid segments left over once each door
 			// opening is cut out — ascending [xStart, xEnd] pairs. Spans
@@ -1095,24 +1320,146 @@
 				if (x < OUTER_WALL_HALF_WIDTH) ranges.push([x, OUTER_WALL_HALF_WIDTH]);
 				return ranges;
 			}
+			// Boxed like the other walls now (see backWall/sideWall above)
+			// — straddling DOOR_Z the same way each door's own panel
+			// already does (BoxGeometry(DOOR_WIDTH, DOOR_HEIGHT,
+			// FACADE_THICKNESS) below), rather than extruding outward
+			// only, so the facade and the doors set into it stay flush.
 			for (const [xStart, xEnd] of facadeSolidXRanges()) {
 				const width = xEnd - xStart;
 				const lowerTier = new THREE.Mesh(
-					new THREE.PlaneGeometry(width, DOOR_HEIGHT),
+					new THREE.BoxGeometry(width, DOOR_HEIGHT, FACADE_THICKNESS),
 					facadeMaterial
 				);
 				lowerTier.position.set((xStart + xEnd) / 2, DOOR_HEIGHT / 2, DOOR_Z);
+				lowerTier.layers.set(FACADE_LIGHT_LAYER);
+				lowerTier.receiveShadow = true;
 				scene.add(lowerTier);
 			}
 			// The upper tier is one continuous solid lintel spanning the
 			// full (wide) width, holding the sign above the doors.
 			const upperTierHeight = ROOM_HEIGHT * 1.2 - DOOR_HEIGHT;
 			const upperTier = new THREE.Mesh(
-				new THREE.PlaneGeometry(OUTER_WALL_HALF_WIDTH * 2, upperTierHeight),
+				new THREE.BoxGeometry(
+					OUTER_WALL_HALF_WIDTH * 2,
+					upperTierHeight,
+					FACADE_THICKNESS
+				),
 				facadeMaterial
 			);
 			upperTier.position.set(0, DOOR_HEIGHT + upperTierHeight / 2, DOOR_Z);
+			upperTier.layers.set(FACADE_LIGHT_LAYER);
+			upperTier.receiveShadow = true;
 			scene.add(upperTier);
+
+			// Real 3D brick, not an image of brick — individual boxes,
+			// offset every other row (a running bond, like real
+			// brickwork), proud of the backing wall above — so the point
+			// lights at each fixture/the sign actually cast shadows
+			// between them instead of a bumpMap faking the relief.
+			// Sized chunky/stylized (real brick would be a huge instance
+			// count for no visual benefit at this camera distance),
+			// matching the rest of the scene's low-poly character.
+			const BRICK_WIDTH = 0.8;
+			const BRICK_HEIGHT = 0.3;
+			const BRICK_DEPTH = 0.1;
+			const BRICK_GAP = 0.04; // mortar gap between adjacent bricks
+			// Sits just proud of the backing wall's own plaza-facing face.
+			const BRICK_PROTRUSION = FACADE_THICKNESS / 2 + BRICK_DEPTH / 2;
+			// The brick's own outermost face, as a local offset from
+			// DOOR_Z — for anything (the sign, the door lamps) that needs
+			// to clear the bricks rather than sit flush with the old
+			// flat wall.
+			const BRICK_FRONT_LOCAL_Z = FACADE_THICKNESS / 2 + BRICK_DEPTH;
+
+			// One brick per row/column across a rectangular region of the
+			// facade — every row is filled edge to edge: a running-bond
+			// offset row starts with a narrower (not full-width) brick to
+			// fill that lead-in instead of leaving a gap, and whatever's
+			// left at the far end (less than a full brick) is its own
+			// narrower brick too, clipped exactly to xEnd, rather than
+			// either leaving a gap or overhanging past it (into a door
+			// opening, for the segments that flank one). Width is
+			// per-brick (via the instance's own scale, see below), not
+			// baked into the shared geometry.
+			function brickPositionsFor(xStart, xEnd, yStart, yEnd) {
+				const positions = [];
+				const rows = Math.max(1, Math.round((yEnd - yStart) / BRICK_HEIGHT));
+				const rowHeight = (yEnd - yStart) / rows;
+				const MIN_BRICK_WIDTH = 0.12;
+				for (let row = 0; row < rows; row++) {
+					const y = yStart + rowHeight * (row + 0.5);
+					const rowOffset = row % 2 === 0 ? 0 : BRICK_WIDTH / 2;
+					let x = xStart;
+					if (rowOffset > MIN_BRICK_WIDTH) {
+						positions.push({ x: xStart + rowOffset / 2, y, width: rowOffset });
+						x = xStart + rowOffset;
+					}
+					while (x < xEnd - MIN_BRICK_WIDTH) {
+						const width = Math.min(BRICK_WIDTH, xEnd - x);
+						positions.push({ x: x + width / 2, y, width });
+						x += width;
+					}
+				}
+				return positions;
+			}
+
+			const brickPositions = [];
+			for (const [xStart, xEnd] of facadeSolidXRanges()) {
+				brickPositions.push(...brickPositionsFor(xStart, xEnd, 0, DOOR_HEIGHT));
+			}
+			brickPositions.push(
+				...brickPositionsFor(
+					-OUTER_WALL_HALF_WIDTH,
+					OUTER_WALL_HALF_WIDTH,
+					DOOR_HEIGHT,
+					DOOR_HEIGHT + upperTierHeight
+				)
+			);
+
+			// Unit width (1 world unit); each instance is scaled on X to
+			// its own brick's actual width (full-width bricks get scale 1).
+			const brickGeometry = new THREE.BoxGeometry(
+				1,
+				BRICK_HEIGHT - BRICK_GAP,
+				BRICK_DEPTH
+			);
+			// MeshToonMaterial, not MeshStandardMaterial — a hard 2-step
+			// light/shadow ramp (see toonGradientMap above), same as
+			// every other lit surface in the scene (the crowd, the
+			// interior walls), instead of MeshStandardMaterial's smooth
+			// PBR falloff — so a brick reads as either lit or in shadow,
+			// no soft gradient between the two.
+			const brickMaterial = new THREE.MeshToonMaterial({
+				color: "#2d1625",
+				gradientMap: toonGradientMap
+			});
+			brickMaterial.userData.outlineParameters = { visible: false };
+			excludeDirectionalLights(brickMaterial);
+			const brickInstances = new THREE.InstancedMesh(
+				brickGeometry,
+				brickMaterial,
+				brickPositions.length
+			);
+			brickInstances.castShadow = true;
+			brickInstances.receiveShadow = true;
+			brickInstances.layers.set(FACADE_LIGHT_LAYER);
+			const brickPlacementHelper = new THREE.Object3D();
+			brickPositions.forEach(({ x, y, width }, i) => {
+				brickPlacementHelper.position.set(
+					x,
+					// A little per-brick jitter, on top of the running-bond
+					// pattern itself, so the coursing reads as real,
+					// slightly imperfect masonry rather than a perfect grid.
+					y + (Math.random() - 0.5) * 0.03,
+					DOOR_Z + BRICK_PROTRUSION + (Math.random() * 0.3 - 0.5) * 0.04
+				);
+				brickPlacementHelper.scale.set(width - BRICK_GAP, 1, 1);
+				brickPlacementHelper.updateMatrix();
+				brickInstances.setMatrixAt(i, brickPlacementHelper.matrix);
+			});
+			brickInstances.instanceMatrix.needsUpdate = true;
+			scene.add(brickInstances);
 
 			// The building's name — a neon sign on the lintel facing the
 			// plaza, glowing pink, sized to sit above the clustered doors.
@@ -1120,34 +1467,83 @@
 				width: 14,
 				height: 4,
 				fontSize: 24,
-				color: "#ff8dce",
+				color: "#ff36a8",
 				neon: true
 			});
-			// +0.05: must sit on the plaza-facing side of the lintel, or the opaque wall would hide it from outside.
-			buildingSign.position.set(0, DOOR_HEIGHT + 0.3, DOOR_Z + 0.01);
+			// Must clear the brick's own outermost face (BRICK_PROTRUSION
+			// is bricks' center, so + half their depth again gets to
+			// their front) or the real 3D brick relief would now hide it
+			// from outside — unlike the old flat lintel, these bricks
+			// actually stick out further than a bare +0.01 accounted for.
+			buildingSign.position.set(
+				0,
+				DOOR_HEIGHT + 0.3,
+				DOOR_Z + BRICK_FRONT_LOCAL_Z + 0.1
+			);
 			scene.add(buildingSign);
+
+			// The sign's own pool of light on the brick around it — see
+			// FACADE_LIGHT_LAYER above for why this only affects the
+			// facade and nothing else in the scene.
+			const signLight = new THREE.PointLight("#ff36a8", 1, 7, 2);
+			// Out past the bricks' own front face, next to the sign
+			// itself — not embedded in/behind the brick relief.
+			signLight.position.set(
+				0,
+				DOOR_HEIGHT + 0.3,
+				DOOR_Z + BRICK_FRONT_LOCAL_Z + 0.25
+			);
+			signLight.layers.set(FACADE_LIGHT_LAYER);
+			signLight.castShadow = true;
+			signLight.shadow.mapSize.set(512, 512);
+			signLight.shadow.bias = -0.002;
+			scene.add(signLight);
 
 			// Each door is a real panel, hinged on its left edge, closed
 			// until the walker approaches (see updateDoors). The label lives on the panel so it swings with it.
 			function buildDoor(door) {
-				const doorOutlineMaterial = new THREE.MeshBasicMaterial({
-					color: DOOR_OUTLINE_COLORS[door.label] ?? 0xff2ec4
-				});
 				const hinge = new THREE.Group();
 				hinge.position.set(door.x - DOOR_WIDTH / 2, 0, DOOR_Z);
 				scene.add(hinge);
 
+				const doorColorHex = DOOR_ZONE_COLORS[door.label] ?? NEON_PINK;
+				const doorColorLightHex = DOOR_ZONE_COLORS_LIGHT[door.label] ?? NEON_PINK;
+				const baseColor = new THREE.Color(doorColorHex);
+
+				// 1. Darkened tint of the door's zone color for the main surface
+				// (Provides contrast for neon light while maintaining color identity)
+				const panelMaterial = new THREE.MeshBasicMaterial({
+					color: baseColor.clone().multiplyScalar(0.12)
+				});
+				panelMaterial.userData.outlineParameters = { visible: false };
 				const panel = new THREE.Mesh(
 					new THREE.BoxGeometry(DOOR_WIDTH, DOOR_HEIGHT, FACADE_THICKNESS),
-					facadeMaterial
+					panelMaterial
 				);
 				panel.position.set(DOOR_WIDTH / 2, DOOR_HEIGHT / 2, 0);
 				hinge.add(panel);
 
+				// 2. Bright neon outline frame matching the door's zone color
+				const frameGeo = new THREE.BoxGeometry(
+					DOOR_WIDTH + 0.04,
+					DOOR_HEIGHT + 0.04,
+					FACADE_THICKNESS + 0.01
+				);
+				const frameMaterial = new THREE.MeshBasicMaterial({
+					color: baseColor
+				});
+				frameMaterial.userData.outlineParameters = { visible: false };
+				const frame = new THREE.Mesh(frameGeo, frameMaterial);
+				frame.position.set(DOOR_WIDTH / 2, DOOR_HEIGHT / 2, -0.005);
+				hinge.add(frame);
+
+				// 3. Crisp Neon Text
 				const label = makeTextPanel(door.label, {
 					width: DOOR_WIDTH * 1.15,
 					height: DOOR_HEIGHT * 0.4,
-					fontSize: 100
+					fontSize: 100,
+					color: doorColorLightHex,
+					neon: true
 				});
 				label.position.set(
 					DOOR_WIDTH / 2,
@@ -1156,43 +1552,62 @@
 				);
 				hinge.add(label);
 
-				// A light frame tracing the panel's outline, reading as a
-				// lit doorway from across the plaza; parented to the hinge so it swings with the door.
-				const t = DOOR_OUTLINE_THICKNESS;
-				const outlineZ = FACADE_THICKNESS / 2 + t / 2;
-				const topBar = new THREE.Mesh(
-					new THREE.BoxGeometry(DOOR_WIDTH + t, t, t),
-					doorOutlineMaterial
-				);
-				topBar.position.set(DOOR_WIDTH / 2, DOOR_HEIGHT, outlineZ);
-				hinge.add(topBar);
-				const bottomBar = topBar.clone();
-				bottomBar.position.y = 0;
-				hinge.add(bottomBar);
-				const sideBar = new THREE.Mesh(
-					new THREE.BoxGeometry(t, DOOR_HEIGHT, t),
-					doorOutlineMaterial
-				);
-				sideBar.position.set(0, DOOR_HEIGHT / 2, outlineZ);
-				hinge.add(sideBar);
-				const otherSideBar = sideBar.clone();
-				otherSideBar.position.x = DOOR_WIDTH;
-				hinge.add(otherSideBar);
+				// Lamp fixture mounted above door
+				const fixtureColor = lightenColor(doorColorLightHex, 0.4);
+				const fixtureZ = BRICK_FRONT_LOCAL_Z + 0.25;
+				const fixtureMaterial = new THREE.MeshBasicMaterial({
+					color: fixtureColor
+				});
+				fixtureMaterial.userData.outlineParameters = { visible: false };
 
-				// A bright floor-level rectangle in the opening, same trick
-				// as doorGlow above — an unmistakable "walk here" threshold, fixed to the ground not the hinge.
+				const bracketMaterial = new THREE.MeshBasicMaterial({
+					color: 0x1a1a1a
+				});
+				bracketMaterial.userData.outlineParameters = { visible: false };
+
+				const bracketLength = fixtureZ - FACADE_THICKNESS / 2;
+				const bracket = new THREE.Mesh(
+					new THREE.CylinderGeometry(0.025, 0.025, bracketLength, 6),
+					bracketMaterial
+				);
+				bracket.rotation.x = Math.PI / 2;
+				bracket.position.set(
+					DOOR_WIDTH / 2,
+					DOOR_HEIGHT + 0.25,
+					FACADE_THICKNESS / 2 + bracketLength / 2
+				);
+				hinge.add(bracket);
+
+				const fixture = new THREE.Mesh(
+					new THREE.SphereGeometry(0.15, 12, 8),
+					fixtureMaterial
+				);
+				fixture.position.set(DOOR_WIDTH / 2, DOOR_HEIGHT + 0.25, fixtureZ);
+				hinge.add(fixture);
+
+				// Point light on facade
+				const fixtureLight = new THREE.PointLight(fixtureColor, 4, 3, 4);
+				fixtureLight.position.set(DOOR_WIDTH / 2, DOOR_HEIGHT + 0.25, fixtureZ);
+				fixtureLight.layers.set(FACADE_LIGHT_LAYER);
+				fixtureLight.castShadow = true;
+				fixtureLight.shadow.mapSize.set(512, 512);
+				fixtureLight.shadow.bias = -0.002;
+				hinge.add(fixtureLight);
+
+				// Floor threshold
+				const thresholdMaterial = new THREE.MeshBasicMaterial({
+					color: "#1f021a"
+				});
+				thresholdMaterial.userData.outlineParameters = { visible: false };
 				const threshold = new THREE.Mesh(
 					new THREE.PlaneGeometry(DOOR_WIDTH * 0.8, 0.3),
-					new THREE.MeshBasicMaterial({ color: 0xfff4e0 })
+					thresholdMaterial
 				);
 				threshold.rotation.x = -Math.PI / 2;
 				threshold.position.set(door.x, 0.02, DOOR_Z);
 				scene.add(threshold);
 
 				door.hinge = hinge;
-				// Tagged on the hinge (and inherited by raycasts against any
-				// of its children) so handleDoorClick can walk back up from
-				// whichever part of the door was actually clicked to find which door it belongs to.
 				hinge.userData.door = door;
 			}
 			DOORS.forEach(buildDoor);
@@ -1242,7 +1657,10 @@
 
 			// The inner wall: at z = HALF_DEPTH, plain openings (no doors,
 			// the outer ones already gate entry) sized to CORRIDOR_WIDTH.
-			const ZONE_XS = [-ZONE_WIDTH, 0, ZONE_WIDTH];
+			// Derived straight from each door's own x (not an independent
+			// copy of it) so this wall's openings always line up with
+			// wherever the doors actually are, even after moving them.
+			const ZONE_XS = DOORS.map((door) => door.x);
 			function innerWallSolidXRanges() {
 				const halfGap = CORRIDOR_WIDTH / 2;
 				const ranges = [];
@@ -1255,10 +1673,26 @@
 				if (x < HALF_WIDTH) ranges.push([x, HALF_WIDTH]);
 				return ranges;
 			}
+			// Concrete, not brick — this one isn't the outside/door wall,
+			// just another interior partition, so it matches the
+			// back/side walls' material instead of the facade's.
+			const innerWallMaterial = new THREE.MeshToonMaterial({
+				color: CONCRETE_COLOR,
+				gradientMap: toonGradientMap,
+				flatShading: true
+			});
+			innerWallMaterial.userData.outlineParameters = { visible: false };
 			for (const [xStart, xEnd] of innerWallSolidXRanges()) {
+				// Boxed like the facade's own panels — straddles
+				// HALF_DEPTH the same way, consistent with FACADE_CLEARANCE
+				// (already sized around a FACADE_THICKNESS-deep wall here).
 				const innerWall = new THREE.Mesh(
-					new THREE.PlaneGeometry(xEnd - xStart, ROOM_HEIGHT * 1.2),
-					facadeMaterial
+					new THREE.BoxGeometry(
+						xEnd - xStart,
+						ROOM_HEIGHT * 1.2,
+						FACADE_THICKNESS
+					),
+					innerWallMaterial
 				);
 				innerWall.position.set(
 					(xStart + xEnd) / 2,
@@ -1279,194 +1713,67 @@
 				return z;
 			}
 
-			// // The vestibule's corridors: solid side walls connecting each
-			// // outer door to its zone's inner-wall opening. Unsure runs
-			// // straight; No/Yes turn behind their door (see turnZ below).
-			// function buildCorridorAlongZ(x, zStart, zEnd) {
-			// 	const length = Math.abs(zStart - zEnd);
-			// 	const zCenter = (zStart + zEnd) / 2;
-			// 	const hw = CORRIDOR_WIDTH / 2;
-			// 	for (const side of [-1, 1]) {
-			// 		const wall = new THREE.Mesh(
-			// 			new THREE.PlaneGeometry(length, CORRIDOR_WALL_HEIGHT),
-			// 			hallwayWallMaterial
-			// 		);
-			// 		wall.rotation.y = Math.PI / 2;
-			// 		wall.position.set(x + side * hw, CORRIDOR_WALL_HEIGHT / 2, zCenter);
-			// 		scene.add(wall);
-			// 	}
-			// }
-			// function buildCorridorAlongX(z, xStart, xEnd) {
-			// 	const length = Math.abs(xStart - xEnd);
-			// 	const xCenter = (xStart + xEnd) / 2;
-			// 	const hw = CORRIDOR_WIDTH / 2;
-			// 	for (const side of [-1, 1]) {
-			// 		const wall = new THREE.Mesh(
-			// 			new THREE.PlaneGeometry(length, CORRIDOR_WALL_HEIGHT),
-			// 			hallwayWallMaterial
-			// 		);
-			// 		wall.position.set(xCenter, CORRIDOR_WALL_HEIGHT / 2, z + side * hw);
-			// 		scene.add(wall);
-			// 	}
-			// }
-			// const hallwayWallMaterial = new THREE.MeshToonMaterial({
-			// 	color: 0x241c30,
-			// 	gradientMap: toonGradientMap,
-			// 	flatShading: true,
-			// 	side: THREE.DoubleSide
-			// });
-
-			// // Unsure: straight through, door already lined up with its zone.
-			// buildCorridorAlongZ(0, DOOR_Z, HALF_DEPTH);
-
-			// // Yes/No: turn right behind their door — the sideways leg
-			// // starts as close as TURN_CLEARANCE allows, no straight lead-in.
-			// const turnZ = DOOR_Z - FACADE_CLEARANCE - TURN_CLEARANCE - CORRIDOR_WIDTH / 2;
-			// buildCorridorAlongX(turnZ, DOOR_SPACING, ZONE_WIDTH);
-			// buildCorridorAlongZ(ZONE_WIDTH, turnZ, HALF_DEPTH);
-
-			// // No: mirrored — turn left, then straight in.
-			// buildCorridorAlongX(turnZ, -DOOR_SPACING, -ZONE_WIDTH);
-			// buildCorridorAlongZ(-ZONE_WIDTH, turnZ, HALF_DEPTH);
-
-			// // One low ceiling over the whole vestibule — deliberately
-			// // cramped compared to the room beyond the inner wall.
-			// const vestibuleCeiling = new THREE.Mesh(
-			// 	new THREE.PlaneGeometry(ROOM_WIDTH, VESTIBULE_DEPTH),
-			// 	hallwayWallMaterial
-			// );
-			// vestibuleCeiling.rotation.x = Math.PI / 2;
-			// vestibuleCeiling.position.set(0, VESTIBULE_CEILING_HEIGHT, (HALF_DEPTH + DOOR_Z) / 2);
-			// scene.add(vestibuleCeiling);
-
-			// // The three corridors above, as axis-aligned rectangles, for
-			// // resolveVestibuleCollision to hold the walker to.
-			// const corridorRects = (() => {
-			// 	const hw = CORRIDOR_WIDTH / 2;
-			// 	return [
-			// 		{ xMin: -hw, xMax: hw, zMin: HALF_DEPTH, zMax: DOOR_Z }, // Unsure
-			// 		{ xMin: DOOR_SPACING - hw, xMax: ZONE_WIDTH + hw, zMin: turnZ - hw, zMax: turnZ + hw }, // Yes turn
-			// 		{ xMin: ZONE_WIDTH - hw, xMax: ZONE_WIDTH + hw, zMin: HALF_DEPTH, zMax: turnZ }, // Yes run
-			// 		{ xMin: -ZONE_WIDTH - hw, xMax: -DOOR_SPACING + hw, zMin: turnZ - hw, zMax: turnZ + hw }, // No turn
-			// 		{ xMin: -ZONE_WIDTH - hw, xMax: -ZONE_WIDTH + hw, zMin: HALF_DEPTH, zMax: turnZ } // No run
-			// 	];
-			// })();
-			// // A no-op outside the vestibule's z range; inside it, clamps to
-			// // whichever corridor rectangle is nearest.
-			// function resolveVestibuleCollision(x, z) {
-			// 	if (z <= HALF_DEPTH || z >= DOOR_Z) return { x, z };
-			// 	for (const r of corridorRects) {
-			// 		if (x >= r.xMin && x <= r.xMax && z >= r.zMin && z <= r.zMax) return { x, z };
-			// 	}
-			// 	let best = { x, z };
-			// 	let bestDist = Infinity;
-			// 	for (const r of corridorRects) {
-			// 		const cx = Math.min(r.xMax, Math.max(r.xMin, x));
-			// 		const cz = Math.min(r.zMax, Math.max(r.zMin, z));
-			// 		const dist = Math.hypot(cx - x, cz - z);
-			// 		if (dist < bestDist) {
-			// 			bestDist = dist;
-			// 			best = { x: cx, z: cz };
-			// 		}
-			// 	}
-			// 	return best;
-			// }
-
-			// // Neon wayfinding arrows: one in the Unsure corridor, one at
-			// // each turn, one before each inner door — facing back toward the door.
-			// function buildArrowSign(x, z, rotationY, arrow, color = ARROW_COLOR) {
-			// 	const sign = makeTextPanel(arrow, {
-			// 		width: CORRIDOR_WIDTH * 0.8,
-			// 		height: CORRIDOR_WIDTH * 0.8,
-			// 		fontSize: 160,
-			// 		color,
-			// 		neon: true
-			// 	});
-			// 	sign.position.set(x, CORRIDOR_WALL_HEIGHT * 0.35, z);
-			// 	sign.rotation.y = rotationY;
-			// 	scene.add(sign);
-			// }
-			// // All three face default (+z) — correct for anyone walking in -z, deeper into the vestibule.
-			// buildArrowSign(0, HALF_DEPTH + (DOOR_Z - HALF_DEPTH) * 0.4, 0, "↑"); // straight ahead, mid-corridor
-			// // At each T-junction's entry side, first thing seen from the door.
-			// buildArrowSign(DOOR_SPACING, turnZ + 0.1, 0, "→"); // turn right, toward Yes
-			// buildArrowSign(-DOOR_SPACING, turnZ + 0.1, 0, "←"); // turn left, toward No
-
-			// // Arrows painted on the ground, pointing the walking direction:
-			// // left for No, straight for Unsure, right for Yes. Laying a
-			// // plane flat maps local +y to world -z, so an unrotated glyph already points correctly.
-			// function buildFloorArrow(x, z, arrow) {
-			// 	const sign = makeTextPanel(arrow, {
-			// 		width: CORRIDOR_WIDTH * 0.7,
-			// 		height: CORRIDOR_WIDTH * 0.7,
-			// 		fontSize: 160,
-			// 		color: ARROW_COLOR,
-			// 		neon: true
-			// 	});
-			// 	sign.rotation.x = -Math.PI / 2;
-			// 	sign.position.set(x, 0.03, z); // just above the floor, avoiding z-fighting
-			// 	scene.add(sign);
-			// }
-			// buildFloorArrow(0, HALF_DEPTH + (DOOR_Z - HALF_DEPTH) * 0.4, "↑");
-			// buildFloorArrow(DOOR_SPACING, turnZ, "→");
-			// buildFloorArrow(-DOOR_SPACING, turnZ, "←");
-
-			// // The inner door to each zone: outlined in that zone's own data
-			// // color, plus a matching arrow confirming "this way" ahead of it.
-			// function buildInnerDoorway(zoneX, color) {
-			// 	const outlineMaterial = new THREE.MeshBasicMaterial({ color });
-			// 	const t = DOOR_OUTLINE_THICKNESS;
-			// 	const halfW = CORRIDOR_WIDTH / 2;
-			// 	const z = HALF_DEPTH + 0.05; // just on the vestibule side of the inner wall
-			// 	const topBar = new THREE.Mesh(new THREE.BoxGeometry(CORRIDOR_WIDTH + t, t, t), outlineMaterial);
-			// 	topBar.position.set(zoneX, DOOR_HEIGHT, z);
-			// 	scene.add(topBar);
-			// 	const bottomBar = topBar.clone();
-			// 	bottomBar.position.y = 0;
-			// 	scene.add(bottomBar);
-			// 	const sideBar = new THREE.Mesh(new THREE.BoxGeometry(t, DOOR_HEIGHT, t), outlineMaterial);
-			// 	sideBar.position.set(zoneX - halfW, DOOR_HEIGHT / 2, z);
-			// 	scene.add(sideBar);
-			// 	const otherSideBar = sideBar.clone();
-			// 	otherSideBar.position.x = zoneX + halfW;
-			// 	scene.add(otherSideBar);
-
-			// 	const hexColor = `#${new THREE.Color(color).getHexString()}`;
-			// 	buildArrowSign(zoneX, HALF_DEPTH + 2.5, 0, "↑", hexColor);
-			// }
-			// buildInnerDoorway(-ZONE_WIDTH, NO_COLOR);
-			// buildInnerDoorway(0, UNSURE_COLOR);
-			// buildInnerDoorway(ZONE_WIDTH, YES_COLOR);
-
-			// Stretched past the building's depth to also flank the
-			// exterior plaza — recentered to match, same idea as the floor above.
-			const sideWallGeometry = new THREE.PlaneGeometry(
-				ROOM_DEPTH + EXTERIOR_DEPTH,
-				ROOM_HEIGHT
+			// A real box (not a flat plane) for the same "these walls
+			// have volume" reason as the back wall — a box's own
+			// width/height/depth axes already point the right way once
+			// placed, so unlike the old plane this needs no Y rotation.
+			// Split at HALF_DEPTH (interior vs. exterior plaza), same
+			// idea as the floor above — the interior segment keeps the
+			// lit concrete look, the exterior segment (see below) is its
+			// own separate, pure-black, unlit material instead.
+			const sideWallGeometry = new THREE.BoxGeometry(
+				WALL_THICKNESS,
+				ROOM_HEIGHT,
+				ROOM_DEPTH
 			);
 			const sideWallMaterial = new THREE.MeshToonMaterial({
-				color: 0x241c30,
+				color: CONCRETE_COLOR,
 				gradientMap: toonGradientMap,
-				flatShading: true,
-				side: THREE.DoubleSide
+				flatShading: true
 			});
 			sideWallMaterial.userData.outlineParameters = { visible: false };
 
-			// Pushed out to OUTER_WALL_HALF_WIDTH (matching the widened
-			// facade/floor) rather than HALF_WIDTH, so they still bound the
-			// wider structure instead of the wide facade poking past them.
+			// Extruded outward from HALF_WIDTH (away from the room) by
+			// WALL_THICKNESS, so the inner face lands exactly where the
+			// old flat plane sat.
 			const leftWall = new THREE.Mesh(sideWallGeometry, sideWallMaterial);
 			leftWall.position.set(
-				-OUTER_WALL_HALF_WIDTH,
+				-HALF_WIDTH - WALL_THICKNESS / 2,
 				ROOM_HEIGHT / 2,
-				EXTERIOR_DEPTH / 2
+				0
 			);
-			leftWall.rotation.y = Math.PI / 2;
 			scene.add(leftWall);
 
 			const rightWall = leftWall.clone();
-			rightWall.position.x = OUTER_WALL_HALF_WIDTH;
+			rightWall.position.x = HALF_WIDTH + WALL_THICKNESS / 2;
 			scene.add(rightWall);
+
+			// The exterior plaza's own side walls — pure black and
+			// unlit, so the plaza reads as dark on every side, not just
+			// the brick facade you're facing.
+			const exteriorSideWallGeometry = new THREE.BoxGeometry(
+				WALL_THICKNESS,
+				ROOM_HEIGHT,
+				EXTERIOR_DEPTH
+			);
+			const exteriorSideWallMaterial = new THREE.MeshBasicMaterial({
+				color: 0x000000
+			});
+			exteriorSideWallMaterial.userData.outlineParameters = { visible: false };
+			const leftExteriorWall = new THREE.Mesh(
+				exteriorSideWallGeometry,
+				exteriorSideWallMaterial
+			);
+			leftExteriorWall.position.set(
+				-HALF_WIDTH - WALL_THICKNESS / 2,
+				ROOM_HEIGHT / 2,
+				HALF_DEPTH + EXTERIOR_DEPTH / 2
+			);
+			scene.add(leftExteriorWall);
+
+			const rightExteriorWall = leftExteriorWall.clone();
+			rightExteriorWall.position.x = HALF_WIDTH + WALL_THICKNESS / 2;
+			scene.add(rightExteriorWall);
 
 			// Each person is its own clone of a body GLB matching their own
 			// GENDER (see pickModelForPerson above), with an independent
@@ -1800,7 +2107,7 @@
 					) {
 						// Negate the Z and X values to flip the desired rotation 180 degrees
 						const desiredYaw = Math.atan2(-toWalkerZ, -toWalkerX);
-						
+
 						person.__facingYaw +=
 							shortestAngleDelta(person.__facingYaw, desiredYaw) * facingFactor;
 					}
@@ -2559,6 +2866,7 @@
 				renderer.dispose();
 				shadowGeometry.dispose();
 				sideWallGeometry.dispose();
+				exteriorSideWallGeometry.dispose();
 				scene.traverse((obj) => {
 					if (obj.material) obj.material.dispose?.();
 					if (obj.geometry) obj.geometry.dispose?.();
@@ -2586,12 +2894,13 @@
 		{loadingMessage}
 	/>
 	{#if storyTexts.length > 0}
-		<div class="story-overlay">
+		<div class="story-overlay" transition:fade>
 			{#each storyTexts as text}
 				<p>{text}</p>
 			{/each}
 		</div>
 	{/if}
+	<div class="age">Age {currentAge}</div>
 	<canvas class="minimap-canvas" bind:this={minimapCanvas}></canvas>
 </div>
 
@@ -2619,27 +2928,20 @@
 	.minimap-canvas {
 		position: absolute;
 		right: 24px;
-		bottom: 24px;
+		bottom: 50px;
 		width: 120px;
 		height: 240px;
-		border: 1px solid rgba(255, 255, 255, 0.25);
-		border-radius: 0.5rem;
+		border: 1px solid rgba(255, 255, 255, 0.2);
+		border-radius: 0rem;
 		pointer-events: none;
 	}
-
-	.story-overlay {
+	.age {
 		position: absolute;
-		/* Cleared past the site header (e.g. "THE PUDDING" logo), which
-		   overlays the top of this full-viewport component. */
-		top: 90px;
-		left: 50%;
-		transform: translateX(-50%);
-		max-width: 640px;
-		width: 90%;
-		z-index: 10;
+		right: 24px;
+		bottom: 300px;
+		width: 120px;
 		text-align: center;
-		pointer-events: none;
-		color: #fff;
-		text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
+		color: var(--color-light-purple);
+		font-size: 18px;
 	}
 </style>

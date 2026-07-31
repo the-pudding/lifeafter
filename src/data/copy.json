@@ -2,9 +2,14 @@
   "hed": "life after death?",
   "all": [
     {
-      "age": "20",
-      "age_end": "25",
-      "text": "This is some text for all age 20"
+      "age": "18",
+      "age_end": "22",
+      "text": "Everyone you see in this room answered questions about some of their most profound beliefs—including whether they believe in an afterlife."
+    },
+    {
+      "age": "25",
+      "age_end": "30",
+      "text": "Keep walking. The people are organized by age—youngest people here, in the front, and older people in the back."
     },
     {
       "age": "30",
@@ -14,9 +19,9 @@
   ],
   "unsure": [
     {
-      "age": "25",
-      "age_end": "30",
-      "text": "This is some text for unsure age 25"
+      "age": "22",
+      "age_end": "25",
+      "text": "Here, in the middle, are people who aren’t sure."
     },
     {
       "age": "35",
@@ -26,9 +31,9 @@
   ],
   "yes": [
     {
-      "age": "25",
-      "age_end": "30",
-      "text": "This is some text for yes age 25"
+      "age": "22",
+      "age_end": "25",
+      "text": "Here, on the right, are people who believe there is life after death."
     },
     {
       "age": "35",
@@ -38,9 +43,9 @@
   ],
   "no": [
     {
-      "age": "25",
-      "age_end": "30",
-      "text": "This is some text for no age 25"
+      "age": "22",
+      "age_end": "25",
+      "text": "Here, on the left, are people who believe there is no life after death."
     },
     {
       "age": "35",

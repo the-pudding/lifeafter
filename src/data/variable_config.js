@@ -7,11 +7,6 @@
 // recruit-only questions have just _Y1; GENDER/SELFID1/SELFID2 have no
 // suffix at all).
 //
-// This was auto-generated from the actual value distributions in
-// people.json (labels, groupings, and colors are all a first pass —
-// edit freely, nothing here is load-bearing elsewhere in the codebase
-// yet). Two variable shapes:
-//
 //   type: "categorical"
 //     categories: [{ key, label, color, values }, ...]
 //     `values` is the list of raw people.json strings folded into
@@ -28,12 +23,60 @@
 //     as-is. ranges: [{ key, label, color, min, max }, ...] bucket the
 //     resulting number — this is the "give ranges for each category" knob.
 //
-// A few high-cardinality nominal variables (INCOME, POLITICAL_ID,
-// SELFID1, SELFID2, REL3) are country-specific text (currency brackets,
-// party names, ethnicities, denominations) with no safe universal way
-// to auto-bucket them — those are left with `needsManualGrouping: true`
-// and a `note` explaining why, plus just the "No Answer"/obvious
-// buckets filled in. Everything else got a real first-pass grouping.
+// COLOR RULE (this pass) — three palettes, used for three different jobs:
+//
+//   - `colors_asc`: Highest values map to a bright pink/purple (#ff00d4), 
+//     and smoothly descend into a dark, highly desaturated purple to 
+//     maintain the "more is brighter" rule while ensuring high contrast.
+//
+//   - `colors_diverging`: Positive/Agreement maps to bright pink/purple,
+//     fading into a neutral desaturated purple midpoint, and diverging 
+//     down into a bright orange (#ff9514) for Negative/Disagreement.
+//
+//   - `colors_div`: the 9-swatch qualitative palette. 0-index colors are 
+//     the brightest/most vibrant (used for dominant groups/religions), 
+//     while higher indices fade into darker, desaturated tones.
+//
+//   - "No Answer" stays a fixed neutral gray (#55505f) and
+//     "(Does not apply)" stays a fixed muted plum (#4a4550) in every
+//     variable.
+
+export const colors_div = {
+  "purple0": "#c118ff", // Bright Purple
+  "purple1": "#7c4099", // Desaturated Purple
+  "purple2": "#3b2647", // Dark Desaturated Purple
+  "pink0": "#ff00d4",   // Bright Pink
+  "pink1": "#ad4096",   // Desaturated Pink/Purple
+  "pink2": "#472640",   // Dark Desaturated Pink
+  "orange0": "#ff9514", // Bright Orange
+  "orange1": "#a67138", // Desaturated Orange
+  "orange2": "#4a3621", // Dark Desaturated Orange
+}
+
+// Ascending: #ff00d4 -> Dark Desaturated Purple.
+// Brightness strictly decreases as values go down.
+export const colors_asc = {
+  "purple0": "#171521", // Lowest (Darkest, desaturated purple)
+  "purple1": "#2c2838",
+  "purple2": "#473d52",
+  "purple3": "#664d6e",
+  "purple4": "#87538a", // Mid (Desaturated purple)
+  "purple5": "#b044a6",
+  "purple6": "#d620bd",
+  "purple7": "#ff00d4", // Highest (Brightest pink/purple)
+}
+
+// Diverging: #ff9514 (Orange) -> Desaturated Purple -> #ff00d4 (Pink/Purple).
+export const colors_diverging = {
+  "purple0": "#ffc782", // Disagree (Orange)
+  "purple1": "#e09056",
+  "purple2": "#d27255",
+  "purple3": "#b86586",
+  "purple4": "#823b70", // Neutral (Desaturated purple)
+  "purple5": "#ab268f",
+  "purple6": "#d411b0",
+  "purple7": "#ff00d4", // Agree (Bright pink/purple)
+}
 
 export const PARENT_ORDER = [
 	"Demographics & Background",
@@ -50,6 +93,9 @@ export const PARENT_ORDER = [
 	"Health & Habits"
 ];
 
+const NO_ANSWER_COLOR = "#55505f";
+const NOT_APPLICABLE_COLOR = "#4a4550";
+
 export const variableConfig =
 {
   "GENDER": {
@@ -60,7 +106,7 @@ export const variableConfig =
       {
         "key": "female",
         "label": "Female",
-        "color": "#e91e8c",
+        "color": colors_div.pink0,
         "values": [
           "Female"
         ]
@@ -68,7 +114,7 @@ export const variableConfig =
       {
         "key": "male",
         "label": "Male",
-        "color": "#1e88e5",
+        "color": colors_div.purple1,
         "values": [
           "Male"
         ]
@@ -76,7 +122,7 @@ export const variableConfig =
       {
         "key": "other",
         "label": "Other",
-        "color": "#8e44ad",
+        "color": colors_div.orange1,
         "values": [
           "Other"
         ]
@@ -84,7 +130,7 @@ export const variableConfig =
       {
         "key": "no_answer",
         "label": "No Answer",
-        "color": "#55505f",
+        "color": NO_ANSWER_COLOR,
         "values": [
           "(Saw, skipped)",
           "(Refused)",
@@ -97,102 +143,74 @@ export const variableConfig =
       "GENDER"
     ]
   },
-  "AGE": {
-    "label": "Age",
-    "parent": "Demographics & Background",
-    "type": "numeric",
-    "valueMap": {},
-    "ranges": [
-      {
-        "key": "18_29",
-        "label": "18–29",
-        "color": "#aed6f1",
-        "min": 18,
-        "max": 29
-      },
-      {
-        "key": "30_44",
-        "label": "30–44",
-        "color": "#89b5d2",
-        "min": 30,
-        "max": 44
-      },
-      {
-        "key": "45_59",
-        "label": "45–59",
-        "color": "#6494b4",
-        "min": 45,
-        "max": 59
-      },
-      {
-        "key": "60_74",
-        "label": "60–74",
-        "color": "#3f7395",
-        "min": 60,
-        "max": 74
-      },
-      {
-        "key": "75_plus",
-        "label": "75+",
-        "color": "#1a5276",
-        "min": 75,
-        "max": 120
-      }
-    ],
-    "columns": [
-      "AGE_Y1",
-      "AGE_Y2"
-    ]
-  },
+  // "AGE": {
+  //   "label": "Age",
+  //   "parent": "Demographics & Background",
+  //   "type": "numeric",
+  //   "valueMap": {},
+  //   "ranges": [
+  //     {
+  //       "key": "18_44",
+  //       "label": "18–44",
+  //       "color": colors_asc.purple0,
+  //       "min": 18,
+  //       "max": 44
+  //     },
+  //     {
+  //       "key": "45_64",
+  //       "label": "45–64",
+  //       "color": colors_asc.purple4,
+  //       "min": 45,
+  //       "max": 64
+  //     },
+  //     {
+  //       "key": "65_plus",
+  //       "label": "65+",
+  //       "color": colors_asc.purple7,
+  //       "min": 65,
+  //       "max": 120
+  //     }
+  //   ],
+  //   "columns": [
+  //     "AGE_Y1",
+  //     "AGE_Y2"
+  //   ]
+  // },
   "MARITAL_STATUS": {
     "label": "Marital Status",
     "parent": "Demographics & Background",
     "type": "categorical",
     "categories": [
       {
-        "key": "married",
-        "label": "Married/partnered",
-        "color": "#2ecc71",
+        "key": "married_partnered",
+        "label": "Married/Partnered",
+        "color": colors_div.pink0,
         "values": [
-          "Married"
-        ]
-      },
-      {
-        "key": "domestic_partner",
-        "label": "Married/partnered",
-        "color": "#2ecc71",
-        "values": [
+          "Married",
           "Domestic partner"
         ]
       },
       {
         "key": "single",
         "label": "Single",
-        "color": "#3498db",
+        "color": colors_diverging.purple3,
         "values": [
           "Single/Never been married"
         ]
       },
       {
-        "key": "divorced",
-        "label": "Divorced",
-        "color": "#e67e22",
+        "key": "divorced_separated",
+        "label": "Divorced/Separated",
+        "color": colors_div.purple1,
         "values": [
-          "Divorced"
-        ]
-      },
-      {
-        "key": "separated",
-        "label": "Separated",
-        "color": "#e74c3c",
-        "values": [
+          "Divorced",
           "Separated"
         ]
       },
       {
         "key": "widowed",
         "label": "Widowed",
-        "color": "#7f8c8d",
+        "color": colors_div.orange0,
         "values": [
           "Widowed"
         ]
@@ -200,7 +218,7 @@ export const variableConfig =
       {
         "key": "no_answer",
         "label": "No Answer",
-        "color": "#55505f",
+        "color": NO_ANSWER_COLOR,
         "values": [
           "(Saw, skipped)",
           "(Refused)",
@@ -220,24 +238,24 @@ export const variableConfig =
     "categories": [
       {
         "key": "elementary_or_less",
-        "label": "Elementary or Less",
-        "color": "#aed6f1",
+        "label": "K8 or less",
+        "color": colors_diverging.purple1,
         "values": [
           "Completed elementary education or less (up to 8 years of basic education)"
         ]
       },
       {
         "key": "secondary_some_post_secondary",
-        "label": "Secondary / Some Post-Secondary",
-        "color": "#6494b4",
+        "label": "Some HS or college",
+        "color": colors_div.purple0,
         "values": [
           "Some secondary education, completed secondary education, or some post-secondary"
         ]
       },
       {
         "key": "completed_4_year_degree",
-        "label": "Completed 4-Year Degree+",
-        "color": "#1a5276",
+        "label": "4-year degree or more",
+        "color": colors_asc.purple7,
         "values": [
           "Completed four years of education beyond high school and/or received a 4-year co"
         ]
@@ -245,7 +263,7 @@ export const variableConfig =
       {
         "key": "no_answer",
         "label": "No Answer",
-        "color": "#55505f",
+        "color": NO_ANSWER_COLOR,
         "values": [
           "(Saw, skipped)",
           "(Refused)",
@@ -265,24 +283,17 @@ export const variableConfig =
     "categories": [
       {
         "key": "employed",
-        "label": "Employed",
-        "color": "#2ecc71",
+        "label": "Employed / Self-Employed",
+        "color": colors_div.purple0,
         "values": [
-          "Employed for an employer"
-        ]
-      },
-      {
-        "key": "self_employed",
-        "label": "Self-Employed",
-        "color": "#16a085",
-        "values": [
+          "Employed for an employer",
           "Self-employed"
         ]
       },
       {
         "key": "retired",
         "label": "Retired",
-        "color": "#8e44ad",
+        "color": colors_div.pink0,
         "values": [
           "Retired"
         ]
@@ -290,7 +301,7 @@ export const variableConfig =
       {
         "key": "homemaker",
         "label": "Homemaker",
-        "color": "#e67e22",
+        "color": colors_div.orange0,
         "values": [
           "Homemaker"
         ]
@@ -298,7 +309,7 @@ export const variableConfig =
       {
         "key": "student",
         "label": "Student",
-        "color": "#3498db",
+        "color": colors_div.purple1,
         "values": [
           "Student"
         ]
@@ -306,7 +317,7 @@ export const variableConfig =
       {
         "key": "unemployed",
         "label": "Unemployed",
-        "color": "#e74c3c",
+        "color": colors_div.pink1,
         "values": [
           "Unemployed and looking for a job"
         ]
@@ -314,7 +325,7 @@ export const variableConfig =
       {
         "key": "other",
         "label": "Other",
-        "color": "#7f8c8d",
+        "color": colors_div.orange1,
         "values": [
           "None of these/Other"
         ]
@@ -322,7 +333,7 @@ export const variableConfig =
       {
         "key": "no_answer",
         "label": "No Answer",
-        "color": "#55505f",
+        "color": NO_ANSWER_COLOR,
         "values": [
           "(Saw, skipped)",
           "(Refused)",
@@ -335,80 +346,66 @@ export const variableConfig =
       "EMPLOYMENT_Y2"
     ]
   },
-  "INCOME": {
-    "label": "Household Income",
-    "parent": "Demographics & Background",
-    "type": "categorical",
-    "needsManualGrouping": true,
-    "note": "305 raw values, each a country-specific currency bracket (e.g. \"United States: $60,000 to $89,999\", \"Japan: 300,001 – 400,000 yen\"). No safe automatic bucketing across currencies — group by hand (e.g. into low/mid/high terciles per country, or convert to a common PPP-adjusted scale).",
-    "categories": [
-      {
-        "key": "no_income",
-        "label": "No Household Income",
-        "color": "#e74c3c",
-        "values": [
-          "(None/No household income)"
-        ]
-      },
-      {
-        "key": "no_answer",
-        "label": "No Answer",
-        "color": "#55505f",
-        "values": [
-          "(Saw, skipped)",
-          "(Refused)",
-          "(DK)",
-          "(Does NOT know household income)",
-          "(Refused to give household income)"
-        ]
-      }
-    ],
-    "columns": [
-      "INCOME_Y1",
-      "INCOME_Y2"
-    ]
-  },
+  // "INCOME": {
+  //   "label": "Household Income",
+  //   "parent": "Demographics & Background",
+  //   "type": "categorical",
+  //   "needsManualGrouping": true,
+  //   "note": "305 raw values, each a country-specific currency bracket (e.g. \"United States: $60,000 to $89,999\", \"Japan: 300,001 – 400,000 yen\"). No safe automatic bucketing across currencies — group by hand (e.g. into low/mid/high terciles per country, or convert to a common PPP-adjusted scale).",
+  //   "categories": [
+  //     {
+  //       "key": "no_income",
+  //       "label": "No Household Income",
+  //       "color": colors_asc.purple6,
+  //       "values": [
+  //         "(None/No household income)"
+  //       ]
+  //     },
+  //     {
+  //       "key": "no_answer",
+  //       "label": "No Answer",
+  //       "color": NO_ANSWER_COLOR,
+  //       "values": [
+  //         "(Saw, skipped)",
+  //         "(Refused)",
+  //         "(DK)",
+  //         "(Does NOT know household income)",
+  //         "(Refused to give household income)"
+  //       ]
+  //     }
+  //   ],
+  //   "columns": [
+  //     "INCOME_Y1",
+  //     "INCOME_Y2"
+  //   ]
+  // },
   "INCOME_FEELINGS": {
     "label": "Feelings About Household Income",
     "parent": "Demographics & Background",
     "type": "categorical",
     "categories": [
       {
-        "key": "living_comfortably",
-        "label": "Living Comfortably",
-        "color": "#2ecc71",
+        "key": "comfortable",
+        "label": "Comfortable / Getting By",
+        "color": colors_asc.purple7,
         "values": [
-          "Living comfortably on present income"
-        ]
-      },
-      {
-        "key": "getting_by",
-        "label": "Getting By",
-        "color": "#6ca15f",
-        "values": [
+          "Living comfortably on present income",
           "Getting by on present income"
         ]
       },
       {
-        "key": "finding_it_difficult",
+        "key": "struggling",
         "label": "Finding It Difficult",
-        "color": "#a9774e",
+        "color": colors_asc.purple1,
         "values": [
-          "Finding it difficult on present income"
-        ]
-      },
-      {
-        "key": "finding_it_very_difficult",
-        "label": "Finding It Very Difficult",
-        "color": "#e74c3c",
-        "values": [
+          "Finding it difficult on present income",
           "Finding it very difficult on present income"
         ]
       },
       {
         "key": "no_answer",
         "label": "No Answer",
-        "color": "#55505f",
+        "color": NO_ANSWER_COLOR,
         "values": [
           "(Saw, skipped)",
           "(Refused)",
@@ -432,28 +429,21 @@ export const variableConfig =
       {
         "key": "0",
         "label": "0",
-        "color": "#aed6f1",
+        "color": colors_asc.purple0,
         "min": 0,
         "max": 0
       },
       {
-        "key": "1",
-        "label": "1",
-        "color": "#7daac8",
+        "key": "1_2",
+        "label": "1–2",
+        "color": colors_asc.purple4,
         "min": 1,
-        "max": 1
-      },
-      {
-        "key": "2",
-        "label": "2",
-        "color": "#4b7e9f",
-        "min": 2,
         "max": 2
       },
       {
         "key": "3_plus",
         "label": "3+",
-        "color": "#1a5276",
+        "color": colors_asc.purple7,
         "min": 3,
         "max": 30
       }
@@ -474,29 +464,22 @@ export const variableConfig =
       {
         "key": "1",
         "label": "1",
-        "color": "#aed6f1",
+        "color": colors_asc.purple0,
         "min": 1,
         "max": 1
       },
       {
-        "key": "2",
-        "label": "2",
-        "color": "#7daac8",
+        "key": "2_3",
+        "label": "2–3",
+        "color": colors_asc.purple4,
         "min": 2,
-        "max": 2
+        "max": 3
       },
       {
-        "key": "3_4",
-        "label": "3–4",
-        "color": "#4b7e9f",
-        "min": 3,
-        "max": 4
-      },
-      {
-        "key": "5_plus",
-        "label": "5+",
-        "color": "#1a5276",
-        "min": 5,
+        "key": "4_plus",
+        "label": "4+",
+        "color": colors_asc.purple7,
+        "min": 4,
         "max": 100
       }
     ],
@@ -510,41 +493,27 @@ export const variableConfig =
     "type": "categorical",
     "categories": [
       {
-        "key": "large_city",
-        "label": "Large City",
-        "color": "#616a6b",
+        "key": "urban",
+        "label": "Urban (City / Suburb)",
+        "color": colors_asc.purple7,
         "values": [
-          "A large city"
-        ]
-      },
-      {
-        "key": "suburb",
-        "label": "Suburb",
-        "color": "#7f8c8d",
-        "values": [
+          "A large city",
           "A suburb of a large city"
         ]
       },
       {
-        "key": "small_town_village",
-        "label": "Small Town / Village",
-        "color": "#82e0aa",
+        "key": "rural",
+        "label": "Rural / Small Town",
+        "color": colors_asc.purple1,
         "values": [
-          "A small town or village"
-        ]
-      },
-      {
-        "key": "rural_farm",
-        "label": "Rural / Farm",
-        "color": "#229954",
-        "values": [
+          "A small town or village",
           "A rural area or on a farm"
         ]
       },
       {
         "key": "no_answer",
         "label": "No Answer",
-        "color": "#55505f",
+        "color": NO_ANSWER_COLOR,
         "values": [
           "(Saw, skipped)",
           "(Refused)",
@@ -565,7 +534,7 @@ export const variableConfig =
       {
         "key": "born_here",
         "label": "Born Here",
-        "color": "#2ecc71",
+        "color": colors_asc.purple7,
         "values": [
           "Born in this country"
         ]
@@ -573,7 +542,7 @@ export const variableConfig =
       {
         "key": "born_abroad",
         "label": "Born Abroad",
-        "color": "#3498db",
+        "color": colors_asc.purple1,
         "values": [
           "Born in another country"
         ]
@@ -581,7 +550,7 @@ export const variableConfig =
       {
         "key": "no_answer",
         "label": "No Answer",
-        "color": "#55505f",
+        "color": NO_ANSWER_COLOR,
         "values": [
           "(Saw, skipped)",
           "(Refused)",
@@ -603,7 +572,7 @@ export const variableConfig =
       {
         "key": "no_answer",
         "label": "No Answer",
-        "color": "#55505f",
+        "color": NO_ANSWER_COLOR,
         "values": [
           "(Saw, skipped)",
           "(Refused)",
@@ -626,7 +595,7 @@ export const variableConfig =
       {
         "key": "none",
         "label": "No Second Identity",
-        "color": "#95a5a6",
+        "color": colors_asc.purple4,
         "values": [
           "(No other response)"
         ]
@@ -634,7 +603,7 @@ export const variableConfig =
       {
         "key": "no_answer",
         "label": "No Answer",
-        "color": "#55505f",
+        "color": NO_ANSWER_COLOR,
         "values": [
           "(Saw, skipped)",
           "(Refused)",
@@ -657,7 +626,7 @@ export const variableConfig =
       {
         "key": "no_party",
         "label": "Do Not Feel Close to Any Party",
-        "color": "#95a5a6",
+        "color": colors_asc.purple4,
         "values": [
           "Do not feel close to any party"
         ]
@@ -665,7 +634,7 @@ export const variableConfig =
       {
         "key": "no_answer",
         "label": "No Answer",
-        "color": "#55505f",
+        "color": NO_ANSWER_COLOR,
         "values": [
           "(Saw, skipped)",
           "(Refused)",
@@ -685,49 +654,35 @@ export const variableConfig =
     "type": "categorical",
     "categories": [
       {
-        "key": "strongly_disagree",
-        "label": "Strongly Disagree",
-        "color": "#d7bde2",
+        "key": "disagree",
+        "label": "Disagree",
+        "color": colors_diverging.purple0,
         "values": [
-          "Strongly disagree"
-        ]
-      },
-      {
-        "key": "somewhat_disagree",
-        "label": "Somewhat Disagree",
-        "color": "#bc9bca",
-        "values": [
+          "Strongly disagree",
           "Somewhat disagree"
         ]
       },
       {
         "key": "neutral",
         "label": "Neutral",
-        "color": "#a278b2",
+        "color": colors_diverging.purple4,
         "values": [
           "Neither agree nor disagree"
         ]
       },
       {
-        "key": "somewhat_agree",
-        "label": "Somewhat Agree",
-        "color": "#87569b",
+        "key": "agree",
+        "label": "Agree",
+        "color": colors_diverging.purple7,
         "values": [
-          "Somewhat agree"
-        ]
-      },
-      {
-        "key": "strongly_agree",
-        "label": "Strongly Agree",
-        "color": "#6c3483",
-        "values": [
+          "Somewhat agree",
           "Strongly agree"
         ]
       },
       {
         "key": "no_answer",
         "label": "No Answer",
-        "color": "#55505f",
+        "color": NO_ANSWER_COLOR,
         "values": [
           "(Saw, skipped)",
           "(Refused)",
@@ -745,49 +700,35 @@ export const variableConfig =
     "type": "categorical",
     "categories": [
       {
-        "key": "strongly_disagree",
-        "label": "Strongly Disagree",
-        "color": "#d7bde2",
+        "key": "disagree",
+        "label": "Disagree",
+        "color": colors_diverging.purple0,
         "values": [
-          "Strongly disagree"
-        ]
-      },
-      {
-        "key": "somewhat_disagree",
-        "label": "Somewhat Disagree",
-        "color": "#bc9bca",
-        "values": [
+          "Strongly disagree",
           "Somewhat disagree"
         ]
       },
       {
         "key": "neutral",
         "label": "Neutral",
-        "color": "#a278b2",
+        "color": colors_diverging.purple4,
         "values": [
           "Neither agree nor disagree"
         ]
       },
       {
-        "key": "somewhat_agree",
-        "label": "Somewhat Agree",
-        "color": "#87569b",
+        "key": "agree",
+        "label": "Agree",
+        "color": colors_diverging.purple7,
         "values": [
-          "Somewhat agree"
-        ]
-      },
-      {
-        "key": "strongly_agree",
-        "label": "Strongly Agree",
-        "color": "#6c3483",
-        "values": [
+          "Somewhat agree",
           "Strongly agree"
         ]
       },
       {
         "key": "no_answer",
         "label": "No Answer",
-        "color": "#55505f",
+        "color": NO_ANSWER_COLOR,
         "values": [
           "(Saw, skipped)",
           "(Refused)",
@@ -807,7 +748,7 @@ export const variableConfig =
       {
         "key": "agree",
         "label": "Agree",
-        "color": "#2ecc71",
+        "color": colors_diverging.purple7,
         "values": [
           "Agree"
         ]
@@ -815,7 +756,7 @@ export const variableConfig =
       {
         "key": "unsure",
         "label": "Unsure",
-        "color": "#f1c40f",
+        "color": colors_diverging.purple4,
         "values": [
           "Unsure"
         ]
@@ -823,7 +764,7 @@ export const variableConfig =
       {
         "key": "disagree",
         "label": "Disagree",
-        "color": "#e74c3c",
+        "color": colors_diverging.purple0,
         "values": [
           "Disagree"
         ]
@@ -831,7 +772,7 @@ export const variableConfig =
       {
         "key": "no_answer",
         "label": "No Answer",
-        "color": "#55505f",
+        "color": NO_ANSWER_COLOR,
         "values": [
           "(Saw, skipped)",
           "(Refused)",
@@ -850,41 +791,27 @@ export const variableConfig =
     "type": "categorical",
     "categories": [
       {
-        "key": "never",
-        "label": "Never",
-        "color": "#2ecc71",
-        "values": [
-          "Never"
-        ]
-      },
-      {
         "key": "rarely",
-        "label": "Rarely",
-        "color": "#6ca15f",
+        "label": "Never / Rarely",
+        "color": colors_asc.purple1,
         "values": [
+          "Never",
           "Rarely"
         ]
       },
       {
         "key": "often",
-        "label": "Often",
-        "color": "#a9774e",
+        "label": "Often / Always",
+        "color": colors_asc.purple7,
         "values": [
-          "Often"
-        ]
-      },
-      {
-        "key": "always",
-        "label": "Always",
-        "color": "#e74c3c",
-        "values": [
+          "Often",
           "Always"
         ]
       },
       {
         "key": "no_answer",
         "label": "No Answer",
-        "color": "#55505f",
+        "color": NO_ANSWER_COLOR,
         "values": [
           "(Saw, skipped)",
           "(Refused)",
@@ -905,7 +832,7 @@ export const variableConfig =
       {
         "key": "yes",
         "label": "Yes",
-        "color": "#ff2ec4",
+        "color": colors_diverging.purple7,
         "values": [
           "Yes"
         ]
@@ -913,7 +840,7 @@ export const variableConfig =
       {
         "key": "unsure",
         "label": "Unsure",
-        "color": "#9d00ff",
+        "color": colors_diverging.purple4,
         "values": [
           "Unsure"
         ]
@@ -921,7 +848,7 @@ export const variableConfig =
       {
         "key": "no",
         "label": "No",
-        "color": "#884b80",
+        "color": colors_diverging.purple0,
         "values": [
           "No"
         ]
@@ -929,7 +856,7 @@ export const variableConfig =
       {
         "key": "no_answer",
         "label": "No Answer",
-        "color": "#55505f",
+        "color": NO_ANSWER_COLOR,
         "values": [
           "(Saw, skipped)",
           "(Refused)",
@@ -948,49 +875,35 @@ export const variableConfig =
     "type": "categorical",
     "categories": [
       {
-        "key": "never",
-        "label": "Never",
-        "color": "#aed6f1",
+        "key": "rarely",
+        "label": "Never / A Few Times a Year",
+        "color": colors_asc.purple0,
         "values": [
-          "Never"
-        ]
-      },
-      {
-        "key": "a_few_times_a_year",
-        "label": "A Few Times a Year",
-        "color": "#89b5d2",
-        "values": [
+          "Never",
           "A few times a year"
         ]
       },
       {
-        "key": "13_times_a_month",
+        "key": "monthly",
         "label": "1–3 Times a Month",
-        "color": "#6494b4",
+        "color": colors_asc.purple4,
         "values": [
           "One to three times a month"
         ]
       },
       {
-        "key": "once_a_week",
-        "label": "Once a Week",
-        "color": "#3f7395",
+        "key": "weekly_plus",
+        "label": "Weekly or More",
+        "color": colors_asc.purple7,
         "values": [
-          "Once a week"
-        ]
-      },
-      {
-        "key": "more_than_once_a_week",
-        "label": "More Than Once a Week",
-        "color": "#1a5276",
-        "values": [
+          "Once a week",
           "More than once a week"
         ]
       },
       {
         "key": "no_answer",
         "label": "No Answer",
-        "color": "#55505f",
+        "color": NO_ANSWER_COLOR,
         "values": [
           "(Saw, skipped)",
           "(Refused)",
@@ -1011,7 +924,7 @@ export const variableConfig =
       {
         "key": "one_god",
         "label": "One God",
-        "color": "#3498db",
+        "color": colors_div.purple0,
         "values": [
           "One God"
         ]
@@ -1019,7 +932,7 @@ export const variableConfig =
       {
         "key": "more_than_one_god",
         "label": "More Than One God",
-        "color": "#9b59b6",
+        "color": colors_div.pink0,
         "values": [
           "More than one god"
         ]
@@ -1027,31 +940,31 @@ export const variableConfig =
       {
         "key": "impersonal_spiritual_force",
         "label": "Impersonal Spiritual Force",
-        "color": "#16a085",
+        "color": colors_div.orange0,
         "values": [
           "An impersonal spiritual force"
         ]
       },
       {
-        "key": "none_of_these",
-        "label": "None of These",
-        "color": "#e74c3c",
-        "values": [
-          "None of these"
-        ]
-      },
-      {
         "key": "unsure",
         "label": "Unsure",
-        "color": "#f1c40f",
+        "color": colors_div.purple1,
         "values": [
           "Unsure"
         ]
       },
       {
+        "key": "none_of_these",
+        "label": "None of These",
+        "color": colors_div.pink1,
+        "values": [
+          "None of these"
+        ]
+      },
+      {
         "key": "no_answer",
         "label": "No Answer",
-        "color": "#55505f",
+        "color": NO_ANSWER_COLOR,
         "values": [
           "(Saw, skipped)",
           "(Refused)",
@@ -1072,31 +985,31 @@ export const variableConfig =
       {
         "key": "agree",
         "label": "Agree",
-        "color": "#3498db",
+        "color": colors_diverging.purple7,
         "values": [
           "Agree"
         ]
       },
       {
-        "key": "disagree",
-        "label": "Disagree",
-        "color": "#e67e22",
-        "values": [
-          "Disagree"
-        ]
-      },
-      {
         "key": "unsure",
         "label": "Unsure",
-        "color": "#f1c40f",
+        "color": colors_diverging.purple4,
         "values": [
           "Unsure"
         ]
       },
       {
+        "key": "disagree",
+        "label": "Disagree",
+        "color": colors_diverging.purple0,
+        "values": [
+          "Disagree"
+        ]
+      },
+      {
         "key": "not_relevant_not_religious",
         "label": "Not Relevant / Not Religious",
-        "color": "#95a5a6",
+        "color": NOT_APPLICABLE_COLOR,
         "values": [
           "Not relevant"
         ]
@@ -1104,7 +1017,7 @@ export const variableConfig =
       {
         "key": "no_answer",
         "label": "No Answer",
-        "color": "#55505f",
+        "color": NO_ANSWER_COLOR,
         "values": [
           "(Saw, skipped)",
           "(Refused)",
@@ -1123,41 +1036,27 @@ export const variableConfig =
     "type": "categorical",
     "categories": [
       {
-        "key": "never",
-        "label": "Never",
-        "color": "#aed6f1",
-        "values": [
-          "Never"
-        ]
-      },
-      {
         "key": "rarely",
-        "label": "Rarely",
-        "color": "#7daac8",
+        "label": "Never / Rarely",
+        "color": colors_asc.purple1,
         "values": [
+          "Never",
           "Rarely"
         ]
       },
       {
         "key": "often",
-        "label": "Often",
-        "color": "#4b7e9f",
+        "label": "Often / Always",
+        "color": colors_asc.purple7,
         "values": [
-          "Often"
-        ]
-      },
-      {
-        "key": "always",
-        "label": "Always",
-        "color": "#1a5276",
-        "values": [
+          "Often",
           "Always"
         ]
       },
       {
         "key": "no_answer",
         "label": "No Answer",
-        "color": "#55505f",
+        "color": NO_ANSWER_COLOR,
         "values": [
           "(Saw, skipped)",
           "(Refused)",
@@ -1178,31 +1077,31 @@ export const variableConfig =
       {
         "key": "agree",
         "label": "Agree",
-        "color": "#e67e22",
+        "color": colors_diverging.purple7,
         "values": [
           "Agree"
         ]
       },
       {
-        "key": "disagree",
-        "label": "Disagree",
-        "color": "#3498db",
-        "values": [
-          "Disagree"
-        ]
-      },
-      {
         "key": "unsure",
         "label": "Unsure",
-        "color": "#f1c40f",
+        "color": colors_diverging.purple4,
         "values": [
           "Unsure"
         ]
       },
       {
+        "key": "disagree",
+        "label": "Disagree",
+        "color": colors_diverging.purple0,
+        "values": [
+          "Disagree"
+        ]
+      },
+      {
         "key": "not_relevant_not_religious",
         "label": "Not Relevant / Not Religious",
-        "color": "#95a5a6",
+        "color": NOT_APPLICABLE_COLOR,
         "values": [
           "Not relevant"
         ]
@@ -1210,7 +1109,7 @@ export const variableConfig =
       {
         "key": "no_answer",
         "label": "No Answer",
-        "color": "#55505f",
+        "color": NO_ANSWER_COLOR,
         "values": [
           "(Saw, skipped)",
           "(Refused)",
@@ -1231,31 +1130,31 @@ export const variableConfig =
       {
         "key": "agree",
         "label": "Agree",
-        "color": "#e67e22",
+        "color": colors_diverging.purple7,
         "values": [
           "Agree"
         ]
       },
       {
-        "key": "disagree",
-        "label": "Disagree",
-        "color": "#3498db",
-        "values": [
-          "Disagree"
-        ]
-      },
-      {
         "key": "unsure",
         "label": "Unsure",
-        "color": "#f1c40f",
+        "color": colors_diverging.purple4,
         "values": [
           "Unsure"
         ]
       },
       {
+        "key": "disagree",
+        "label": "Disagree",
+        "color": colors_diverging.purple0,
+        "values": [
+          "Disagree"
+        ]
+      },
+      {
         "key": "not_relevant_not_religious",
         "label": "Not Relevant / Not Religious",
-        "color": "#95a5a6",
+        "color": NOT_APPLICABLE_COLOR,
         "values": [
           "Not relevant"
         ]
@@ -1263,7 +1162,7 @@ export const variableConfig =
       {
         "key": "no_answer",
         "label": "No Answer",
-        "color": "#55505f",
+        "color": NO_ANSWER_COLOR,
         "values": [
           "(Saw, skipped)",
           "(Refused)",
@@ -1282,49 +1181,35 @@ export const variableConfig =
     "type": "categorical",
     "categories": [
       {
-        "key": "never",
-        "label": "Never",
-        "color": "#aed6f1",
+        "key": "rarely",
+        "label": "Never / A Few Times a Year",
+        "color": colors_asc.purple0,
         "values": [
-          "Never"
-        ]
-      },
-      {
-        "key": "a_few_times_a_year",
-        "label": "A Few Times a Year",
-        "color": "#89b5d2",
-        "values": [
+          "Never",
           "A few times a year"
         ]
       },
       {
-        "key": "13_times_a_month",
+        "key": "monthly",
         "label": "1–3 Times a Month",
-        "color": "#6494b4",
+        "color": colors_asc.purple4,
         "values": [
           "One to three times a month"
         ]
       },
       {
-        "key": "once_a_week",
-        "label": "Once a Week",
-        "color": "#3f7395",
+        "key": "weekly_plus",
+        "label": "Weekly or More",
+        "color": colors_asc.purple7,
         "values": [
-          "Once a week"
-        ]
-      },
-      {
-        "key": "more_than_once_a_week",
-        "label": "More Than Once a Week",
-        "color": "#1a5276",
-        "values": [
+          "Once a week",
           "More than once a week"
         ]
       },
       {
         "key": "no_answer",
         "label": "No Answer",
-        "color": "#55505f",
+        "color": NO_ANSWER_COLOR,
         "values": [
           "(Saw, skipped)",
           "(Refused)",
@@ -1345,31 +1230,31 @@ export const variableConfig =
       {
         "key": "agree",
         "label": "Agree",
-        "color": "#3498db",
+        "color": colors_diverging.purple7,
         "values": [
           "Agree"
         ]
       },
       {
-        "key": "disagree",
-        "label": "Disagree",
-        "color": "#e67e22",
-        "values": [
-          "Disagree"
-        ]
-      },
-      {
         "key": "unsure",
         "label": "Unsure",
-        "color": "#f1c40f",
+        "color": colors_diverging.purple4,
         "values": [
           "Unsure"
         ]
       },
       {
+        "key": "disagree",
+        "label": "Disagree",
+        "color": colors_diverging.purple0,
+        "values": [
+          "Disagree"
+        ]
+      },
+      {
         "key": "not_relevant_not_religious",
         "label": "Not Relevant / Not Religious",
-        "color": "#95a5a6",
+        "color": NOT_APPLICABLE_COLOR,
         "values": [
           "Not relevant"
         ]
@@ -1377,7 +1262,7 @@ export const variableConfig =
       {
         "key": "no_answer",
         "label": "No Answer",
-        "color": "#55505f",
+        "color": NO_ANSWER_COLOR,
         "values": [
           "(Saw, skipped)",
           "(Refused)",
@@ -1398,31 +1283,31 @@ export const variableConfig =
       {
         "key": "agree",
         "label": "Agree",
-        "color": "#3498db",
+        "color": colors_diverging.purple7,
         "values": [
           "Agree"
         ]
       },
       {
-        "key": "disagree",
-        "label": "Disagree",
-        "color": "#e67e22",
-        "values": [
-          "Disagree"
-        ]
-      },
-      {
         "key": "unsure",
         "label": "Unsure",
-        "color": "#f1c40f",
+        "color": colors_diverging.purple4,
         "values": [
           "Unsure"
         ]
       },
       {
+        "key": "disagree",
+        "label": "Disagree",
+        "color": colors_diverging.purple0,
+        "values": [
+          "Disagree"
+        ]
+      },
+      {
         "key": "not_relevant_not_religious",
         "label": "Not Relevant / Not Religious",
-        "color": "#95a5a6",
+        "color": NOT_APPLICABLE_COLOR,
         "values": [
           "Not relevant"
         ]
@@ -1430,7 +1315,7 @@ export const variableConfig =
       {
         "key": "no_answer",
         "label": "No Answer",
-        "color": "#55505f",
+        "color": NO_ANSWER_COLOR,
         "values": [
           "(Saw, skipped)",
           "(Refused)",
@@ -1449,41 +1334,27 @@ export const variableConfig =
     "type": "categorical",
     "categories": [
       {
-        "key": "never",
-        "label": "Never",
-        "color": "#aed6f1",
+        "key": "rarely",
+        "label": "Never / Sometimes",
+        "color": colors_asc.purple1,
         "values": [
-          "Never"
-        ]
-      },
-      {
-        "key": "sometimes",
-        "label": "Sometimes",
-        "color": "#7daac8",
-        "values": [
+          "Never",
           "Sometimes"
         ]
       },
       {
-        "key": "about_once_a_day",
-        "label": "About Once a Day",
-        "color": "#4b7e9f",
+        "key": "daily",
+        "label": "About Once a Day or More",
+        "color": colors_asc.purple7,
         "values": [
-          "About once a day"
-        ]
-      },
-      {
-        "key": "more_than_once_a_day",
-        "label": "More Than Once a Day",
-        "color": "#1a5276",
-        "values": [
+          "About once a day",
           "More than once a day"
         ]
       },
       {
         "key": "no_answer",
         "label": "No Answer",
-        "color": "#55505f",
+        "color": NO_ANSWER_COLOR,
         "values": [
           "(Saw, skipped)",
           "(Refused)",
@@ -1504,7 +1375,7 @@ export const variableConfig =
       {
         "key": "yes",
         "label": "Yes",
-        "color": "#3498db",
+        "color": colors_asc.purple7,
         "values": [
           "Yes"
         ]
@@ -1512,7 +1383,7 @@ export const variableConfig =
       {
         "key": "no",
         "label": "No",
-        "color": "#e67e22",
+        "color": colors_asc.purple1,
         "values": [
           "No"
         ]
@@ -1520,7 +1391,7 @@ export const variableConfig =
       {
         "key": "no_answer",
         "label": "No Answer",
-        "color": "#55505f",
+        "color": NO_ANSWER_COLOR,
         "values": [
           "(Saw, skipped)",
           "(Refused)",
@@ -1541,7 +1412,7 @@ export const variableConfig =
       {
         "key": "yes",
         "label": "Yes",
-        "color": "#3498db",
+        "color": colors_asc.purple7,
         "values": [
           "Yes"
         ]
@@ -1549,7 +1420,7 @@ export const variableConfig =
       {
         "key": "no",
         "label": "No",
-        "color": "#e67e22",
+        "color": colors_asc.purple1,
         "values": [
           "No"
         ]
@@ -1557,7 +1428,7 @@ export const variableConfig =
       {
         "key": "no_answer",
         "label": "No Answer",
-        "color": "#55505f",
+        "color": NO_ANSWER_COLOR,
         "values": [
           "(Saw, skipped)",
           "(Refused)",
@@ -1577,7 +1448,7 @@ export const variableConfig =
       {
         "key": "christianity",
         "label": "Christianity",
-        "color": "#3498db",
+        "color": colors_div.purple0,
         "values": [
           "Christianity"
         ]
@@ -1585,7 +1456,7 @@ export const variableConfig =
       {
         "key": "islam",
         "label": "Islam",
-        "color": "#2ecc71",
+        "color": colors_div.pink0,
         "values": [
           "Islam"
         ]
@@ -1593,7 +1464,7 @@ export const variableConfig =
       {
         "key": "hinduism",
         "label": "Hinduism",
-        "color": "#e67e22",
+        "color": colors_div.orange0,
         "values": [
           "Hinduism"
         ]
@@ -1601,7 +1472,7 @@ export const variableConfig =
       {
         "key": "buddhism",
         "label": "Buddhism",
-        "color": "#f1c40f",
+        "color": colors_div.purple1,
         "values": [
           "Buddhism"
         ]
@@ -1609,7 +1480,7 @@ export const variableConfig =
       {
         "key": "judaism",
         "label": "Judaism",
-        "color": "#9b59b6",
+        "color": colors_div.pink1,
         "values": [
           "Judaism"
         ]
@@ -1617,7 +1488,7 @@ export const variableConfig =
       {
         "key": "none",
         "label": "No Religion / Atheist / Agnostic",
-        "color": "#95a5a6",
+        "color": colors_div.orange1,
         "values": [
           "No religion/Atheist/Agnostic"
         ]
@@ -1625,7 +1496,7 @@ export const variableConfig =
       {
         "key": "other",
         "label": "Other Religion",
-        "color": "#7f8c8d",
+        "color": colors_div.purple2,
         "values": [
           "Some other religion",
           "Primal, Animist, or Folk religion",
@@ -1641,7 +1512,7 @@ export const variableConfig =
       {
         "key": "no_answer",
         "label": "No Answer",
-        "color": "#55505f",
+        "color": NO_ANSWER_COLOR,
         "values": [
           "(Saw, skipped)",
           "(Refused)",
@@ -1661,7 +1532,7 @@ export const variableConfig =
       {
         "key": "christianity",
         "label": "Christianity",
-        "color": "#3498db",
+        "color": colors_div.purple0,
         "values": [
           "Christianity"
         ]
@@ -1669,7 +1540,7 @@ export const variableConfig =
       {
         "key": "islam",
         "label": "Islam",
-        "color": "#2ecc71",
+        "color": colors_div.pink0,
         "values": [
           "Islam"
         ]
@@ -1677,7 +1548,7 @@ export const variableConfig =
       {
         "key": "hinduism",
         "label": "Hinduism",
-        "color": "#e67e22",
+        "color": colors_div.orange0,
         "values": [
           "Hinduism"
         ]
@@ -1685,7 +1556,7 @@ export const variableConfig =
       {
         "key": "buddhism",
         "label": "Buddhism",
-        "color": "#f1c40f",
+        "color": colors_div.purple1,
         "values": [
           "Buddhism"
         ]
@@ -1693,7 +1564,7 @@ export const variableConfig =
       {
         "key": "judaism",
         "label": "Judaism",
-        "color": "#9b59b6",
+        "color": colors_div.pink1,
         "values": [
           "Judaism"
         ]
@@ -1701,7 +1572,7 @@ export const variableConfig =
       {
         "key": "none",
         "label": "No Religion / Atheist / Agnostic",
-        "color": "#95a5a6",
+        "color": colors_div.orange1,
         "values": [
           "No religion/Atheist/Agnostic"
         ]
@@ -1709,7 +1580,7 @@ export const variableConfig =
       {
         "key": "other",
         "label": "Other Religion",
-        "color": "#7f8c8d",
+        "color": colors_div.purple2,
         "values": [
           "Some other religion",
           "Primal, Animist, or Folk religion",
@@ -1725,7 +1596,7 @@ export const variableConfig =
       {
         "key": "no_answer",
         "label": "No Answer",
-        "color": "#55505f",
+        "color": NO_ANSWER_COLOR,
         "values": [
           "(Saw, skipped)",
           "(Refused)",
@@ -1748,7 +1619,7 @@ export const variableConfig =
       {
         "key": "catholic",
         "label": "Catholic",
-        "color": "#3498db",
+        "color": colors_asc.purple4,
         "values": [
           "Catholic"
         ]
@@ -1756,7 +1627,7 @@ export const variableConfig =
       {
         "key": "no_answer",
         "label": "No Answer",
-        "color": "#55505f",
+        "color": NO_ANSWER_COLOR,
         "values": [
           "(Saw, skipped)",
           "(Refused)",
@@ -1777,7 +1648,7 @@ export const variableConfig =
       {
         "key": "atheist",
         "label": "Atheist",
-        "color": "#e74c3c",
+        "color": colors_div.purple0,
         "values": [
           "Atheist – do not believe in any god"
         ]
@@ -1785,7 +1656,7 @@ export const variableConfig =
       {
         "key": "agnostic",
         "label": "Agnostic",
-        "color": "#f1c40f",
+        "color": colors_div.pink0,
         "values": [
           "Agnostic – unsure whether a God or gods exist"
         ]
@@ -1793,7 +1664,7 @@ export const variableConfig =
       {
         "key": "neither",
         "label": "Neither",
-        "color": "#95a5a6",
+        "color": colors_div.orange0,
         "values": [
           "Neither"
         ]
@@ -1801,7 +1672,7 @@ export const variableConfig =
       {
         "key": "no_answer",
         "label": "No Answer",
-        "color": "#55505f",
+        "color": NO_ANSWER_COLOR,
         "values": [
           "(Saw, skipped)",
           "(Refused)",
@@ -1821,7 +1692,7 @@ export const variableConfig =
       {
         "key": "religious",
         "label": "Religious",
-        "color": "#3498db",
+        "color": colors_div.purple0,
         "values": [
           "Religious"
         ]
@@ -1829,7 +1700,7 @@ export const variableConfig =
       {
         "key": "spiritual",
         "label": "Spiritual",
-        "color": "#9b59b6",
+        "color": colors_div.pink0,
         "values": [
           "Spiritual"
         ]
@@ -1837,7 +1708,7 @@ export const variableConfig =
       {
         "key": "both",
         "label": "Both",
-        "color": "#2ecc71",
+        "color": colors_div.orange0,
         "values": [
           "Both"
         ]
@@ -1845,7 +1716,7 @@ export const variableConfig =
       {
         "key": "neither",
         "label": "Neither",
-        "color": "#95a5a6",
+        "color": colors_div.purple1,
         "values": [
           "Neither"
         ]
@@ -1853,7 +1724,7 @@ export const variableConfig =
       {
         "key": "no_answer",
         "label": "No Answer",
-        "color": "#55505f",
+        "color": NO_ANSWER_COLOR,
         "values": [
           "(Saw, skipped)",
           "(Refused)",
@@ -1871,41 +1742,27 @@ export const variableConfig =
     "type": "categorical",
     "categories": [
       {
-        "key": "never",
-        "label": "Never",
-        "color": "#aed6f1",
+        "key": "rarely",
+        "label": "Never / Sometimes",
+        "color": colors_asc.purple1,
         "values": [
-          "Never"
-        ]
-      },
-      {
-        "key": "sometimes",
-        "label": "Sometimes",
-        "color": "#7daac8",
-        "values": [
+          "Never",
           "Sometimes"
         ]
       },
       {
-        "key": "about_once_a_day",
-        "label": "About Once a Day",
-        "color": "#4b7e9f",
+        "key": "daily",
+        "label": "About Once a Day or More",
+        "color": colors_asc.purple7,
         "values": [
-          "About once a day"
-        ]
-      },
-      {
-        "key": "more_than_once_a_day",
-        "label": "More Than Once a Day",
-        "color": "#1a5276",
-        "values": [
+          "About once a day",
           "More than once a day"
         ]
       },
       {
         "key": "no_answer",
         "label": "No Answer",
-        "color": "#55505f",
+        "color": NO_ANSWER_COLOR,
         "values": [
           "(Saw, skipped)",
           "(Refused)",
@@ -1926,31 +1783,31 @@ export const variableConfig =
       {
         "key": "agree",
         "label": "Agree",
-        "color": "#3498db",
+        "color": colors_diverging.purple7,
         "values": [
           "Agree"
         ]
       },
       {
-        "key": "disagree",
-        "label": "Disagree",
-        "color": "#e67e22",
-        "values": [
-          "Disagree"
-        ]
-      },
-      {
         "key": "unsure",
         "label": "Unsure",
-        "color": "#f1c40f",
+        "color": colors_diverging.purple4,
         "values": [
           "Unsure"
         ]
       },
       {
+        "key": "disagree",
+        "label": "Disagree",
+        "color": colors_diverging.purple0,
+        "values": [
+          "Disagree"
+        ]
+      },
+      {
         "key": "not_relevant_not_religious",
         "label": "Not Relevant / Not Religious",
-        "color": "#95a5a6",
+        "color": NOT_APPLICABLE_COLOR,
         "values": [
           "Not relevant"
         ]
@@ -1958,7 +1815,7 @@ export const variableConfig =
       {
         "key": "no_answer",
         "label": "No Answer",
-        "color": "#55505f",
+        "color": NO_ANSWER_COLOR,
         "values": [
           "(Saw, skipped)",
           "(Refused)",
@@ -1971,251 +1828,251 @@ export const variableConfig =
       "TELL_BELIEFS_Y2"
     ]
   },
-  "CNTRY_REL_BUD": {
-    "label": "Teachings of Buddhism Are Important (Country-Level)",
-    "parent": "Religion & Spirituality",
-    "type": "numeric",
-    "valueMap": {
-      "Strongly disagree": 0,
-      "Strongly agree": 10
-    },
-    "ranges": [
-      {
-        "key": "low",
-        "label": "Low (0–3)",
-        "color": "#d7bde2",
-        "min": 0,
-        "max": 3
-      },
-      {
-        "key": "mid",
-        "label": "Medium (4–6)",
-        "color": "#a278b2",
-        "min": 4,
-        "max": 6
-      },
-      {
-        "key": "high",
-        "label": "High (7–10)",
-        "color": "#6c3483",
-        "min": 7,
-        "max": 10
-      }
-    ],
-    "columns": [
-      "CNTRY_REL_BUD_Y1"
-    ]
-  },
-  "CNTRY_REL_CHI": {
-    "label": "Teachings of Chinese Folk Religion Are Important (Country-Level)",
-    "parent": "Religion & Spirituality",
-    "type": "numeric",
-    "valueMap": {
-      "Strongly disagree": 0,
-      "Strongly agree": 10
-    },
-    "ranges": [
-      {
-        "key": "low",
-        "label": "Low (0–3)",
-        "color": "#d7bde2",
-        "min": 0,
-        "max": 3
-      },
-      {
-        "key": "mid",
-        "label": "Medium (4–6)",
-        "color": "#a278b2",
-        "min": 4,
-        "max": 6
-      },
-      {
-        "key": "high",
-        "label": "High (7–10)",
-        "color": "#6c3483",
-        "min": 7,
-        "max": 10
-      }
-    ],
-    "columns": [
-      "CNTRY_REL_CHI_Y1"
-    ]
-  },
-  "CNTRY_REL_CHR": {
-    "label": "Teachings of Christianity Are Important (Country-Level)",
-    "parent": "Religion & Spirituality",
-    "type": "numeric",
-    "valueMap": {
-      "Strongly disagree": 0,
-      "Strongly agree": 10
-    },
-    "ranges": [
-      {
-        "key": "low",
-        "label": "Low (0–3)",
-        "color": "#d7bde2",
-        "min": 0,
-        "max": 3
-      },
-      {
-        "key": "mid",
-        "label": "Medium (4–6)",
-        "color": "#a278b2",
-        "min": 4,
-        "max": 6
-      },
-      {
-        "key": "high",
-        "label": "High (7–10)",
-        "color": "#6c3483",
-        "min": 7,
-        "max": 10
-      }
-    ],
-    "columns": [
-      "CNTRY_REL_CHR_Y1"
-    ]
-  },
-  "CNTRY_REL_HIN": {
-    "label": "Teachings of Hinduism Are Important (Country-Level)",
-    "parent": "Religion & Spirituality",
-    "type": "numeric",
-    "valueMap": {
-      "Strongly disagree": 0,
-      "Strongly agree": 10
-    },
-    "ranges": [
-      {
-        "key": "low",
-        "label": "Low (0–3)",
-        "color": "#d7bde2",
-        "min": 0,
-        "max": 3
-      },
-      {
-        "key": "mid",
-        "label": "Medium (4–6)",
-        "color": "#a278b2",
-        "min": 4,
-        "max": 6
-      },
-      {
-        "key": "high",
-        "label": "High (7–10)",
-        "color": "#6c3483",
-        "min": 7,
-        "max": 10
-      }
-    ],
-    "columns": [
-      "CNTRY_REL_HIN_Y1"
-    ]
-  },
-  "CNTRY_REL_ISL": {
-    "label": "Teachings of Islam Are Important (Country-Level)",
-    "parent": "Religion & Spirituality",
-    "type": "numeric",
-    "valueMap": {
-      "Strongly disagree": 0,
-      "Strongly agree": 10
-    },
-    "ranges": [
-      {
-        "key": "low",
-        "label": "Low (0–3)",
-        "color": "#d7bde2",
-        "min": 0,
-        "max": 3
-      },
-      {
-        "key": "mid",
-        "label": "Medium (4–6)",
-        "color": "#a278b2",
-        "min": 4,
-        "max": 6
-      },
-      {
-        "key": "high",
-        "label": "High (7–10)",
-        "color": "#6c3483",
-        "min": 7,
-        "max": 10
-      }
-    ],
-    "columns": [
-      "CNTRY_REL_ISL_Y1"
-    ]
-  },
-  "CNTRY_REL_JUD": {
-    "label": "Teachings of Judaism Are Important (Country-Level)",
-    "parent": "Religion & Spirituality",
-    "type": "numeric",
-    "valueMap": {
-      "Strongly disagree": 0,
-      "Strongly agree": 10
-    },
-    "ranges": [
-      {
-        "key": "low",
-        "label": "Low (0–3)",
-        "color": "#d7bde2",
-        "min": 0,
-        "max": 3
-      },
-      {
-        "key": "mid",
-        "label": "Medium (4–6)",
-        "color": "#a278b2",
-        "min": 4,
-        "max": 6
-      },
-      {
-        "key": "high",
-        "label": "High (7–10)",
-        "color": "#6c3483",
-        "min": 7,
-        "max": 10
-      }
-    ],
-    "columns": [
-      "CNTRY_REL_JUD_Y1"
-    ]
-  },
-  "CNTRY_REL_SHI": {
-    "label": "Teachings of Shinto Are Important (Country-Level)",
-    "parent": "Religion & Spirituality",
-    "type": "numeric",
-    "valueMap": {
-      "Strongly disagree": 0,
-      "Strongly agree": 10
-    },
-    "ranges": [
-      {
-        "key": "low",
-        "label": "Low (0–3)",
-        "color": "#d7bde2",
-        "min": 0,
-        "max": 3
-      },
-      {
-        "key": "mid",
-        "label": "Medium (4–6)",
-        "color": "#a278b2",
-        "min": 4,
-        "max": 6
-      },
-      {
-        "key": "high",
-        "label": "High (7–10)",
-        "color": "#6c3483",
-        "min": 7,
-        "max": 10
-      }
-    ],
-    "columns": [
-      "CNTRY_REL_SHI_Y1"
-    ]
-  },
+  // "CNTRY_REL_BUD": {
+  //   "label": "Teachings of Buddhism Are Important (Country-Level)",
+  //   "parent": "Religion & Spirituality",
+  //   "type": "numeric",
+  //   "valueMap": {
+  //     "Strongly disagree": 0,
+  //     "Strongly agree": 10
+  //   },
+  //   "ranges": [
+  //     {
+  //       "key": "low",
+  //       "label": "Low (0–3)",
+  //       "color": colors_asc.purple0,
+  //       "min": 0,
+  //       "max": 3
+  //     },
+  //     {
+  //       "key": "mid",
+  //       "label": "Medium (4–6)",
+  //       "color": colors_asc.purple4,
+  //       "min": 4,
+  //       "max": 6
+  //     },
+  //     {
+  //       "key": "high",
+  //       "label": "High (7–10)",
+  //       "color": colors_asc.purple7,
+  //       "min": 7,
+  //       "max": 10
+  //     }
+  //   ],
+  //   "columns": [
+  //     "CNTRY_REL_BUD_Y1"
+  //   ]
+  // },
+  // "CNTRY_REL_CHI": {
+  //   "label": "Teachings of Chinese Folk Religion Are Important (Country-Level)",
+  //   "parent": "Religion & Spirituality",
+  //   "type": "numeric",
+  //   "valueMap": {
+  //     "Strongly disagree": 0,
+  //     "Strongly agree": 10
+  //   },
+  //   "ranges": [
+  //     {
+  //       "key": "low",
+  //       "label": "Low (0–3)",
+  //       "color": colors_asc.purple0,
+  //       "min": 0,
+  //       "max": 3
+  //     },
+  //     {
+  //       "key": "mid",
+  //       "label": "Medium (4–6)",
+  //       "color": colors_asc.purple4,
+  //       "min": 4,
+  //       "max": 6
+  //     },
+  //     {
+  //       "key": "high",
+  //       "label": "High (7–10)",
+  //       "color": colors_asc.purple7,
+  //       "min": 7,
+  //       "max": 10
+  //     }
+  //   ],
+  //   "columns": [
+  //     "CNTRY_REL_CHI_Y1"
+  //   ]
+  // },
+  // "CNTRY_REL_CHR": {
+  //   "label": "Teachings of Christianity Are Important (Country-Level)",
+  //   "parent": "Religion & Spirituality",
+  //   "type": "numeric",
+  //   "valueMap": {
+  //     "Strongly disagree": 0,
+  //     "Strongly agree": 10
+  //   },
+  //   "ranges": [
+  //     {
+  //       "key": "low",
+  //       "label": "Low (0–3)",
+  //       "color": colors_asc.purple0,
+  //       "min": 0,
+  //       "max": 3
+  //     },
+  //     {
+  //       "key": "mid",
+  //       "label": "Medium (4–6)",
+  //       "color": colors_asc.purple4,
+  //       "min": 4,
+  //       "max": 6
+  //     },
+  //     {
+  //       "key": "high",
+  //       "label": "High (7–10)",
+  //       "color": colors_asc.purple7,
+  //       "min": 7,
+  //       "max": 10
+  //     }
+  //   ],
+  //   "columns": [
+  //     "CNTRY_REL_CHR_Y1"
+  //   ]
+  // },
+  // "CNTRY_REL_HIN": {
+  //   "label": "Teachings of Hinduism Are Important (Country-Level)",
+  //   "parent": "Religion & Spirituality",
+  //   "type": "numeric",
+  //   "valueMap": {
+  //     "Strongly disagree": 0,
+  //     "Strongly agree": 10
+  //   },
+  //   "ranges": [
+  //     {
+  //       "key": "low",
+  //       "label": "Low (0–3)",
+  //       "color": colors_asc.purple0,
+  //       "min": 0,
+  //       "max": 3
+  //     },
+  //     {
+  //       "key": "mid",
+  //       "label": "Medium (4–6)",
+  //       "color": colors_asc.purple4,
+  //       "min": 4,
+  //       "max": 6
+  //     },
+  //     {
+  //       "key": "high",
+  //       "label": "High (7–10)",
+  //       "color": colors_asc.purple7,
+  //       "min": 7,
+  //       "max": 10
+  //     }
+  //   ],
+  //   "columns": [
+  //     "CNTRY_REL_HIN_Y1"
+  //   ]
+  // },
+  // "CNTRY_REL_ISL": {
+  //   "label": "Teachings of Islam Are Important (Country-Level)",
+  //   "parent": "Religion & Spirituality",
+  //   "type": "numeric",
+  //   "valueMap": {
+  //     "Strongly disagree": 0,
+  //     "Strongly agree": 10
+  //   },
+  //   "ranges": [
+  //     {
+  //       "key": "low",
+  //       "label": "Low (0–3)",
+  //       "color": colors_asc.purple0,
+  //       "min": 0,
+  //       "max": 3
+  //     },
+  //     {
+  //       "key": "mid",
+  //       "label": "Medium (4–6)",
+  //       "color": colors_asc.purple4,
+  //       "min": 4,
+  //       "max": 6
+  //     },
+  //     {
+  //       "key": "high",
+  //       "label": "High (7–10)",
+  //       "color": colors_asc.purple7,
+  //       "min": 7,
+  //       "max": 10
+  //     }
+  //   ],
+  //   "columns": [
+  //     "CNTRY_REL_ISL_Y1"
+  //   ]
+  // },
+  // "CNTRY_REL_JUD": {
+  //   "label": "Teachings of Judaism Are Important (Country-Level)",
+  //   "parent": "Religion & Spirituality",
+  //   "type": "numeric",
+  //   "valueMap": {
+  //     "Strongly disagree": 0,
+  //     "Strongly agree": 10
+  //   },
+  //   "ranges": [
+  //     {
+  //       "key": "low",
+  //       "label": "Low (0–3)",
+  //       "color": colors_asc.purple0,
+  //       "min": 0,
+  //       "max": 3
+  //     },
+  //     {
+  //       "key": "mid",
+  //       "label": "Medium (4–6)",
+  //       "color": colors_asc.purple4,
+  //       "min": 4,
+  //       "max": 6
+  //     },
+  //     {
+  //       "key": "high",
+  //       "label": "High (7–10)",
+  //       "color": colors_asc.purple7,
+  //       "min": 7,
+  //       "max": 10
+  //     }
+  //   ],
+  //   "columns": [
+  //     "CNTRY_REL_JUD_Y1"
+  //   ]
+  // },
+  // "CNTRY_REL_SHI": {
+  //   "label": "Teachings of Shinto Are Important (Country-Level)",
+  //   "parent": "Religion & Spirituality",
+  //   "type": "numeric",
+  //   "valueMap": {
+  //     "Strongly disagree": 0,
+  //     "Strongly agree": 10
+  //   },
+  //   "ranges": [
+  //     {
+  //       "key": "low",
+  //       "label": "Low (0–3)",
+  //       "color": colors_asc.purple0,
+  //       "min": 0,
+  //       "max": 3
+  //     },
+  //     {
+  //       "key": "mid",
+  //       "label": "Medium (4–6)",
+  //       "color": colors_asc.purple4,
+  //       "min": 4,
+  //       "max": 6
+  //     },
+  //     {
+  //       "key": "high",
+  //       "label": "High (7–10)",
+  //       "color": colors_asc.purple7,
+  //       "min": 7,
+  //       "max": 10
+  //     }
+  //   ],
+  //   "columns": [
+  //     "CNTRY_REL_SHI_Y1"
+  //   ]
+  // },
   "LIFE_SAT": {
     "label": "Satisfaction With Life as a Whole",
     "parent": "Well-Being & Life Satisfaction",
@@ -2228,21 +2085,21 @@ export const variableConfig =
       {
         "key": "low",
         "label": "Low (0–3)",
-        "color": "#e74c3c",
+        "color": colors_asc.purple0,
         "min": 0,
         "max": 3
       },
       {
         "key": "mid",
         "label": "Medium (4–6)",
-        "color": "#8a8c56",
+        "color": colors_asc.purple4,
         "min": 4,
         "max": 6
       },
       {
         "key": "high",
         "label": "High (7–10)",
-        "color": "#2ecc71",
+        "color": colors_asc.purple7,
         "min": 7,
         "max": 10
       }
@@ -2264,21 +2121,21 @@ export const variableConfig =
       {
         "key": "low",
         "label": "Low (0–3)",
-        "color": "#e74c3c",
+        "color": colors_asc.purple0,
         "min": 0,
         "max": 3
       },
       {
         "key": "mid",
         "label": "Medium (4–6)",
-        "color": "#8a8c56",
+        "color": colors_asc.purple4,
         "min": 4,
         "max": 6
       },
       {
         "key": "high",
         "label": "High (7–10)",
-        "color": "#2ecc71",
+        "color": colors_asc.purple7,
         "min": 7,
         "max": 10
       }
@@ -2300,21 +2157,21 @@ export const variableConfig =
       {
         "key": "low",
         "label": "Low (0–3)",
-        "color": "#e74c3c",
+        "color": colors_asc.purple0,
         "min": 0,
         "max": 3
       },
       {
         "key": "mid",
         "label": "Medium (4–6)",
-        "color": "#8a8c56",
+        "color": colors_asc.purple4,
         "min": 4,
         "max": 6
       },
       {
         "key": "high",
         "label": "High (7–10)",
-        "color": "#2ecc71",
+        "color": colors_asc.purple7,
         "min": 7,
         "max": 10
       }
@@ -2336,21 +2193,21 @@ export const variableConfig =
       {
         "key": "low",
         "label": "Low (0–3)",
-        "color": "#e74c3c",
+        "color": colors_asc.purple0,
         "min": 0,
         "max": 3
       },
       {
         "key": "mid",
         "label": "Medium (4–6)",
-        "color": "#8a8c56",
+        "color": colors_asc.purple4,
         "min": 4,
         "max": 6
       },
       {
         "key": "high",
         "label": "High (7–10)",
-        "color": "#2ecc71",
+        "color": colors_asc.purple7,
         "min": 7,
         "max": 10
       }
@@ -2372,21 +2229,21 @@ export const variableConfig =
       {
         "key": "low",
         "label": "Low (0–3)",
-        "color": "#e74c3c",
+        "color": colors_asc.purple0,
         "min": 0,
         "max": 3
       },
       {
         "key": "mid",
         "label": "Medium (4–6)",
-        "color": "#8a8c56",
+        "color": colors_asc.purple4,
         "min": 4,
         "max": 6
       },
       {
         "key": "high",
         "label": "High (7–10)",
-        "color": "#2ecc71",
+        "color": colors_asc.purple7,
         "min": 7,
         "max": 10
       }
@@ -2408,21 +2265,21 @@ export const variableConfig =
       {
         "key": "low",
         "label": "Low (0–3)",
-        "color": "#e74c3c",
+        "color": colors_asc.purple0,
         "min": 0,
         "max": 3
       },
       {
         "key": "mid",
         "label": "Medium (4–6)",
-        "color": "#8a8c56",
+        "color": colors_asc.purple4,
         "min": 4,
         "max": 6
       },
       {
         "key": "high",
         "label": "High (7–10)",
-        "color": "#2ecc71",
+        "color": colors_asc.purple7,
         "min": 7,
         "max": 10
       }
@@ -2444,21 +2301,21 @@ export const variableConfig =
       {
         "key": "low",
         "label": "Low (0–3)",
-        "color": "#e74c3c",
+        "color": colors_asc.purple0,
         "min": 0,
         "max": 3
       },
       {
         "key": "mid",
         "label": "Medium (4–6)",
-        "color": "#8a8c56",
+        "color": colors_asc.purple4,
         "min": 4,
         "max": 6
       },
       {
         "key": "high",
         "label": "High (7–10)",
-        "color": "#2ecc71",
+        "color": colors_asc.purple7,
         "min": 7,
         "max": 10
       }
@@ -2474,41 +2331,27 @@ export const variableConfig =
     "type": "categorical",
     "categories": [
       {
-        "key": "never",
-        "label": "Never",
-        "color": "#e74c3c",
-        "values": [
-          "Never"
-        ]
-      },
-      {
         "key": "rarely",
-        "label": "Rarely",
-        "color": "#a9774e",
+        "label": "Never / Rarely",
+        "color": colors_asc.purple1,
         "values": [
+          "Never",
           "Rarely"
         ]
       },
       {
         "key": "often",
-        "label": "Often",
-        "color": "#6ca15f",
+        "label": "Often / Always",
+        "color": colors_asc.purple7,
         "values": [
-          "Often"
-        ]
-      },
-      {
-        "key": "always",
-        "label": "Always",
-        "color": "#2ecc71",
-        "values": [
+          "Often",
           "Always"
         ]
       },
       {
         "key": "no_answer",
         "label": "No Answer",
-        "color": "#55505f",
+        "color": NO_ANSWER_COLOR,
         "values": [
           "(Saw, skipped)",
           "(Refused)",
@@ -2533,21 +2376,21 @@ export const variableConfig =
       {
         "key": "low",
         "label": "Low (0–3)",
-        "color": "#e74c3c",
+        "color": colors_asc.purple0,
         "min": 0,
         "max": 3
       },
       {
         "key": "mid",
         "label": "Medium (4–6)",
-        "color": "#8a8c56",
+        "color": colors_asc.purple4,
         "min": 4,
         "max": 6
       },
       {
         "key": "high",
         "label": "High (7–10)",
-        "color": "#2ecc71",
+        "color": colors_asc.purple7,
         "min": 7,
         "max": 10
       }
@@ -2569,21 +2412,21 @@ export const variableConfig =
       {
         "key": "low",
         "label": "Low (0–3)",
-        "color": "#e74c3c",
+        "color": colors_asc.purple0,
         "min": 0,
         "max": 3
       },
       {
         "key": "mid",
         "label": "Medium (4–6)",
-        "color": "#8a8c56",
+        "color": colors_asc.purple4,
         "min": 4,
         "max": 6
       },
       {
         "key": "high",
         "label": "High (7–10)",
-        "color": "#2ecc71",
+        "color": colors_asc.purple7,
         "min": 7,
         "max": 10
       }
@@ -2599,41 +2442,27 @@ export const variableConfig =
     "type": "categorical",
     "categories": [
       {
-        "key": "never",
-        "label": "Never",
-        "color": "#e74c3c",
-        "values": [
-          "Never"
-        ]
-      },
-      {
         "key": "rarely",
-        "label": "Rarely",
-        "color": "#a9774e",
+        "label": "Never / Rarely",
+        "color": colors_asc.purple1,
         "values": [
+          "Never",
           "Rarely"
         ]
       },
       {
         "key": "often",
-        "label": "Often",
-        "color": "#6ca15f",
+        "label": "Often / Always",
+        "color": colors_asc.purple7,
         "values": [
-          "Often"
-        ]
-      },
-      {
-        "key": "always",
-        "label": "Always",
-        "color": "#2ecc71",
-        "values": [
+          "Often",
           "Always"
         ]
       },
       {
         "key": "no_answer",
         "label": "No Answer",
-        "color": "#55505f",
+        "color": NO_ANSWER_COLOR,
         "values": [
           "(Saw, skipped)",
           "(Refused)",
@@ -2652,41 +2481,27 @@ export const variableConfig =
     "type": "categorical",
     "categories": [
       {
-        "key": "never",
-        "label": "Never",
-        "color": "#e74c3c",
-        "values": [
-          "Never"
-        ]
-      },
-      {
         "key": "rarely",
-        "label": "Rarely",
-        "color": "#a9774e",
+        "label": "Never / Rarely",
+        "color": colors_asc.purple1,
         "values": [
+          "Never",
           "Rarely"
         ]
       },
       {
         "key": "often",
-        "label": "Often",
-        "color": "#6ca15f",
+        "label": "Often / Always",
+        "color": colors_asc.purple7,
         "values": [
-          "Often"
-        ]
-      },
-      {
-        "key": "always",
-        "label": "Always",
-        "color": "#2ecc71",
-        "values": [
+          "Often",
           "Always"
         ]
       },
       {
         "key": "no_answer",
         "label": "No Answer",
-        "color": "#55505f",
+        "color": NO_ANSWER_COLOR,
         "values": [
           "(Saw, skipped)",
           "(Refused)",
@@ -2711,21 +2526,21 @@ export const variableConfig =
       {
         "key": "low",
         "label": "Low (0–3)",
-        "color": "#e74c3c",
+        "color": colors_asc.purple0,
         "min": 0,
         "max": 3
       },
       {
         "key": "mid",
         "label": "Medium (4–6)",
-        "color": "#8a8c56",
+        "color": colors_asc.purple4,
         "min": 4,
         "max": 6
       },
       {
         "key": "high",
         "label": "High (7–10)",
-        "color": "#2ecc71",
+        "color": colors_asc.purple7,
         "min": 7,
         "max": 10
       }
@@ -2747,21 +2562,21 @@ export const variableConfig =
       {
         "key": "low",
         "label": "Low (0–3)",
-        "color": "#e74c3c",
+        "color": colors_asc.purple0,
         "min": 0,
         "max": 3
       },
       {
         "key": "mid",
         "label": "Medium (4–6)",
-        "color": "#8a8c56",
+        "color": colors_asc.purple4,
         "min": 4,
         "max": 6
       },
       {
         "key": "high",
         "label": "High (7–10)",
-        "color": "#2ecc71",
+        "color": colors_asc.purple7,
         "min": 7,
         "max": 10
       }
@@ -2783,21 +2598,21 @@ export const variableConfig =
       {
         "key": "low",
         "label": "Low (0–3)",
-        "color": "#e74c3c",
+        "color": colors_asc.purple0,
         "min": 0,
         "max": 3
       },
       {
         "key": "mid",
         "label": "Medium (4–6)",
-        "color": "#8a8c56",
+        "color": colors_asc.purple4,
         "min": 4,
         "max": 6
       },
       {
         "key": "high",
         "label": "High (7–10)",
-        "color": "#2ecc71",
+        "color": colors_asc.purple7,
         "min": 7,
         "max": 10
       }
@@ -2815,7 +2630,7 @@ export const variableConfig =
       {
         "key": "yes",
         "label": "Yes",
-        "color": "#2ecc71",
+        "color": colors_asc.purple7,
         "values": [
           "Yes"
         ]
@@ -2823,7 +2638,7 @@ export const variableConfig =
       {
         "key": "no",
         "label": "No",
-        "color": "#e74c3c",
+        "color": colors_asc.purple1,
         "values": [
           "No"
         ]
@@ -2831,7 +2646,7 @@ export const variableConfig =
       {
         "key": "no_answer",
         "label": "No Answer",
-        "color": "#55505f",
+        "color": NO_ANSWER_COLOR,
         "values": [
           "(Saw, skipped)",
           "(Refused)",
@@ -2852,7 +2667,7 @@ export const variableConfig =
       {
         "key": "yes",
         "label": "Yes",
-        "color": "#2ecc71",
+        "color": colors_asc.purple7,
         "values": [
           "Yes"
         ]
@@ -2860,7 +2675,7 @@ export const variableConfig =
       {
         "key": "no",
         "label": "No",
-        "color": "#e74c3c",
+        "color": colors_asc.purple1,
         "values": [
           "No"
         ]
@@ -2868,7 +2683,7 @@ export const variableConfig =
       {
         "key": "no_answer",
         "label": "No Answer",
-        "color": "#55505f",
+        "color": NO_ANSWER_COLOR,
         "values": [
           "(Saw, skipped)",
           "(Refused)",
@@ -2889,7 +2704,7 @@ export const variableConfig =
       {
         "key": "yes",
         "label": "Yes",
-        "color": "#2ecc71",
+        "color": colors_asc.purple7,
         "values": [
           "Yes"
         ]
@@ -2897,7 +2712,7 @@ export const variableConfig =
       {
         "key": "no",
         "label": "No",
-        "color": "#e74c3c",
+        "color": colors_asc.purple1,
         "values": [
           "No"
         ]
@@ -2905,7 +2720,7 @@ export const variableConfig =
       {
         "key": "no_answer",
         "label": "No Answer",
-        "color": "#55505f",
+        "color": NO_ANSWER_COLOR,
         "values": [
           "(Saw, skipped)",
           "(Refused)",
@@ -2930,21 +2745,21 @@ export const variableConfig =
       {
         "key": "low",
         "label": "Low (0–3)",
-        "color": "#e74c3c",
+        "color": colors_asc.purple0,
         "min": 0,
         "max": 3
       },
       {
         "key": "mid",
         "label": "Medium (4–6)",
-        "color": "#8a8c56",
+        "color": colors_asc.purple4,
         "min": 4,
         "max": 6
       },
       {
         "key": "high",
         "label": "High (7–10)",
-        "color": "#2ecc71",
+        "color": colors_asc.purple7,
         "min": 7,
         "max": 10
       }
@@ -2966,21 +2781,21 @@ export const variableConfig =
       {
         "key": "low",
         "label": "Low (0–3)",
-        "color": "#e74c3c",
+        "color": colors_asc.purple0,
         "min": 0,
         "max": 3
       },
       {
         "key": "mid",
         "label": "Medium (4–6)",
-        "color": "#8a8c56",
+        "color": colors_asc.purple4,
         "min": 4,
         "max": 6
       },
       {
         "key": "high",
         "label": "High (7–10)",
-        "color": "#2ecc71",
+        "color": colors_asc.purple7,
         "min": 7,
         "max": 10
       }
@@ -2998,7 +2813,7 @@ export const variableConfig =
       {
         "key": "yes",
         "label": "Yes",
-        "color": "#e74c3c",
+        "color": colors_asc.purple7,
         "values": [
           "Yes"
         ]
@@ -3006,7 +2821,7 @@ export const variableConfig =
       {
         "key": "no",
         "label": "No",
-        "color": "#2ecc71",
+        "color": colors_asc.purple1,
         "values": [
           "No"
         ]
@@ -3014,7 +2829,7 @@ export const variableConfig =
       {
         "key": "no_answer",
         "label": "No Answer",
-        "color": "#55505f",
+        "color": NO_ANSWER_COLOR,
         "values": [
           "(Saw, skipped)",
           "(Refused)",
@@ -3033,41 +2848,27 @@ export const variableConfig =
     "type": "categorical",
     "categories": [
       {
-        "key": "none_at_all",
-        "label": "None at All",
-        "color": "#2ecc71",
+        "key": "low",
+        "label": "None at All / Not Very Much",
+        "color": colors_asc.purple1,
         "values": [
-          "None at all"
-        ]
-      },
-      {
-        "key": "not_very_much",
-        "label": "Not Very Much",
-        "color": "#6ca15f",
-        "values": [
+          "None at all",
           "Not very much"
         ]
       },
       {
-        "key": "some",
-        "label": "Some",
-        "color": "#a9774e",
+        "key": "high",
+        "label": "Some / A Lot",
+        "color": colors_asc.purple7,
         "values": [
-          "Some"
-        ]
-      },
-      {
-        "key": "a_lot",
-        "label": "A Lot",
-        "color": "#e74c3c",
-        "values": [
+          "Some",
           "A lot"
         ]
       },
       {
         "key": "no_answer",
         "label": "No Answer",
-        "color": "#55505f",
+        "color": NO_ANSWER_COLOR,
         "values": [
           "(Saw, skipped)",
           "(Refused)",
@@ -3086,41 +2887,27 @@ export const variableConfig =
     "type": "categorical",
     "categories": [
       {
-        "key": "not_at_all",
-        "label": "Not at All",
-        "color": "#2ecc71",
+        "key": "low",
+        "label": "Not at All / Not Very Much",
+        "color": colors_asc.purple1,
         "values": [
-          "Not at all"
-        ]
-      },
-      {
-        "key": "not_very_much",
-        "label": "Not Very Much",
-        "color": "#6ca15f",
-        "values": [
+          "Not at all",
           "Not very much"
         ]
       },
       {
-        "key": "some",
-        "label": "Some",
-        "color": "#a9774e",
+        "key": "high",
+        "label": "Some / A Lot",
+        "color": colors_asc.purple7,
         "values": [
-          "Some"
-        ]
-      },
-      {
-        "key": "a_lot",
-        "label": "A Lot",
-        "color": "#e74c3c",
-        "values": [
+          "Some",
           "A lot"
         ]
       },
       {
         "key": "no_answer",
         "label": "No Answer",
-        "color": "#55505f",
+        "color": NO_ANSWER_COLOR,
         "values": [
           "(Saw, skipped)",
           "(Refused)",
@@ -3141,7 +2928,7 @@ export const variableConfig =
       {
         "key": "yes",
         "label": "Yes",
-        "color": "#e74c3c",
+        "color": colors_asc.purple7,
         "values": [
           "Yes"
         ]
@@ -3149,7 +2936,7 @@ export const variableConfig =
       {
         "key": "no",
         "label": "No",
-        "color": "#2ecc71",
+        "color": colors_asc.purple1,
         "values": [
           "No"
         ]
@@ -3157,7 +2944,7 @@ export const variableConfig =
       {
         "key": "no_answer",
         "label": "No Answer",
-        "color": "#55505f",
+        "color": NO_ANSWER_COLOR,
         "values": [
           "(Saw, skipped)",
           "(Refused)",
@@ -3175,41 +2962,27 @@ export const variableConfig =
     "type": "categorical",
     "categories": [
       {
-        "key": "not_at_all",
-        "label": "Not at All",
-        "color": "#2ecc71",
+        "key": "low",
+        "label": "Not at All / Several Days",
+        "color": colors_asc.purple1,
         "values": [
-          "Not at all"
-        ]
-      },
-      {
-        "key": "several_days",
-        "label": "Several Days",
-        "color": "#6ca15f",
-        "values": [
+          "Not at all",
           "Several days"
         ]
       },
       {
-        "key": "more_than_half_the_days",
-        "label": "More Than Half the Days",
-        "color": "#a9774e",
+        "key": "high",
+        "label": "More Than Half the Days / Nearly Every Day",
+        "color": colors_asc.purple7,
         "values": [
-          "More than half the days"
-        ]
-      },
-      {
-        "key": "nearly_every_day",
-        "label": "Nearly Every Day",
-        "color": "#e74c3c",
-        "values": [
+          "More than half the days",
           "Nearly every day"
         ]
       },
       {
         "key": "no_answer",
         "label": "No Answer",
-        "color": "#55505f",
+        "color": NO_ANSWER_COLOR,
         "values": [
           "(Saw, skipped)",
           "(Refused)",
@@ -3228,41 +3001,27 @@ export const variableConfig =
     "type": "categorical",
     "categories": [
       {
-        "key": "not_at_all",
-        "label": "Not at All",
-        "color": "#2ecc71",
+        "key": "low",
+        "label": "Not at All / Several Days",
+        "color": colors_asc.purple1,
         "values": [
-          "Not at all"
-        ]
-      },
-      {
-        "key": "several_days",
-        "label": "Several Days",
-        "color": "#6ca15f",
-        "values": [
+          "Not at all",
           "Several days"
         ]
       },
       {
-        "key": "more_than_half_the_days",
-        "label": "More Than Half the Days",
-        "color": "#a9774e",
+        "key": "high",
+        "label": "More Than Half the Days / Nearly Every Day",
+        "color": colors_asc.purple7,
         "values": [
-          "More than half the days"
-        ]
-      },
-      {
-        "key": "nearly_every_day",
-        "label": "Nearly Every Day",
-        "color": "#e74c3c",
-        "values": [
+          "More than half the days",
           "Nearly every day"
         ]
       },
       {
         "key": "no_answer",
         "label": "No Answer",
-        "color": "#55505f",
+        "color": NO_ANSWER_COLOR,
         "values": [
           "(Saw, skipped)",
           "(Refused)",
@@ -3281,41 +3040,27 @@ export const variableConfig =
     "type": "categorical",
     "categories": [
       {
-        "key": "not_at_all",
-        "label": "Not at All",
-        "color": "#2ecc71",
+        "key": "low",
+        "label": "Not at All / Several Days",
+        "color": colors_asc.purple1,
         "values": [
-          "Not at all"
-        ]
-      },
-      {
-        "key": "several_days",
-        "label": "Several Days",
-        "color": "#6ca15f",
-        "values": [
+          "Not at all",
           "Several days"
         ]
       },
       {
-        "key": "more_than_half_the_days",
-        "label": "More Than Half the Days",
-        "color": "#a9774e",
+        "key": "high",
+        "label": "More Than Half the Days / Nearly Every Day",
+        "color": colors_asc.purple7,
         "values": [
-          "More than half the days"
-        ]
-      },
-      {
-        "key": "nearly_every_day",
-        "label": "Nearly Every Day",
-        "color": "#e74c3c",
-        "values": [
+          "More than half the days",
           "Nearly every day"
         ]
       },
       {
         "key": "no_answer",
         "label": "No Answer",
-        "color": "#55505f",
+        "color": NO_ANSWER_COLOR,
         "values": [
           "(Saw, skipped)",
           "(Refused)",
@@ -3340,21 +3085,21 @@ export const variableConfig =
       {
         "key": "low",
         "label": "Low (0–3)",
-        "color": "#2ecc71",
+        "color": colors_asc.purple0,
         "min": 0,
         "max": 3
       },
       {
         "key": "mid",
         "label": "Medium (4–6)",
-        "color": "#8a8c56",
+        "color": colors_asc.purple4,
         "min": 4,
         "max": 6
       },
       {
         "key": "high",
         "label": "High (7–10)",
-        "color": "#e74c3c",
+        "color": colors_asc.purple7,
         "min": 7,
         "max": 10
       }
@@ -3370,41 +3115,27 @@ export const variableConfig =
     "type": "categorical",
     "categories": [
       {
-        "key": "not_at_all",
-        "label": "Not at All",
-        "color": "#2ecc71",
+        "key": "low",
+        "label": "Not at All / Not Very Much",
+        "color": colors_asc.purple1,
         "values": [
-          "Not at all"
-        ]
-      },
-      {
-        "key": "not_very_much",
-        "label": "Not Very Much",
-        "color": "#6ca15f",
-        "values": [
+          "Not at all",
           "Not very much"
         ]
       },
       {
-        "key": "some",
-        "label": "Some",
-        "color": "#a9774e",
+        "key": "high",
+        "label": "Some / A Lot",
+        "color": colors_asc.purple7,
         "values": [
-          "Some"
-        ]
-      },
-      {
-        "key": "a_lot",
-        "label": "A Lot",
-        "color": "#e74c3c",
-        "values": [
+          "Some",
           "A lot"
         ]
       },
       {
         "key": "no_answer",
         "label": "No Answer",
-        "color": "#55505f",
+        "color": NO_ANSWER_COLOR,
         "values": [
           "(Saw, skipped)",
           "(Refused)",
@@ -3429,21 +3160,21 @@ export const variableConfig =
       {
         "key": "low",
         "label": "Low (0–3)",
-        "color": "#2ecc71",
+        "color": colors_asc.purple0,
         "min": 0,
         "max": 3
       },
       {
         "key": "mid",
         "label": "Medium (4–6)",
-        "color": "#8a8c56",
+        "color": colors_asc.purple4,
         "min": 4,
         "max": 6
       },
       {
         "key": "high",
         "label": "High (7–10)",
-        "color": "#e74c3c",
+        "color": colors_asc.purple7,
         "min": 7,
         "max": 10
       }
@@ -3465,21 +3196,21 @@ export const variableConfig =
       {
         "key": "low",
         "label": "Low (0–3)",
-        "color": "#2ecc71",
+        "color": colors_asc.purple0,
         "min": 0,
         "max": 3
       },
       {
         "key": "mid",
         "label": "Medium (4–6)",
-        "color": "#8a8c56",
+        "color": colors_asc.purple4,
         "min": 4,
         "max": 6
       },
       {
         "key": "high",
         "label": "High (7–10)",
-        "color": "#e74c3c",
+        "color": colors_asc.purple7,
         "min": 7,
         "max": 10
       }
@@ -3500,28 +3231,21 @@ export const variableConfig =
       {
         "key": "0",
         "label": "None",
-        "color": "#2ecc71",
+        "color": colors_asc.purple0,
         "min": 0,
         "max": 0
       },
       {
-        "key": "1_9",
-        "label": "1–9",
-        "color": "#f1c40f",
+        "key": "1_19",
+        "label": "1–19",
+        "color": colors_asc.purple4,
         "min": 1,
-        "max": 9
-      },
-      {
-        "key": "10_19",
-        "label": "10–19",
-        "color": "#ec8826",
-        "min": 10,
         "max": 19
       },
       {
         "key": "20_plus",
         "label": "20+",
-        "color": "#e74c3c",
+        "color": colors_asc.purple7,
         "min": 20,
         "max": 100
       }
@@ -3543,28 +3267,21 @@ export const variableConfig =
       {
         "key": "0",
         "label": "None",
-        "color": "#2ecc71",
+        "color": colors_asc.purple0,
         "min": 0,
         "max": 0
       },
       {
-        "key": "1_3",
-        "label": "1–3",
-        "color": "#f1c40f",
+        "key": "1_7",
+        "label": "1–7",
+        "color": colors_asc.purple4,
         "min": 1,
-        "max": 3
-      },
-      {
-        "key": "4_7",
-        "label": "4–7",
-        "color": "#ec8826",
-        "min": 4,
         "max": 7
       },
       {
         "key": "8_plus",
         "label": "8+",
-        "color": "#e74c3c",
+        "color": colors_asc.purple7,
         "min": 8,
         "max": 100
       }
@@ -3592,28 +3309,21 @@ export const variableConfig =
       {
         "key": "0",
         "label": "0 Days",
-        "color": "#e74c3c",
+        "color": colors_asc.purple0,
         "min": 0,
         "max": 0
       },
       {
-        "key": "1_2",
-        "label": "1–2 Days",
-        "color": "#a9774e",
+        "key": "1_4",
+        "label": "1–4 Days",
+        "color": colors_asc.purple4,
         "min": 1,
-        "max": 2
-      },
-      {
-        "key": "3_4",
-        "label": "3–4 Days",
-        "color": "#6ca15f",
-        "min": 3,
         "max": 4
       },
       {
         "key": "5_7",
         "label": "5–7 Days",
-        "color": "#2ecc71",
+        "color": colors_asc.purple7,
         "min": 5,
         "max": 7
       }
@@ -3631,7 +3341,7 @@ export const variableConfig =
       {
         "key": "yes",
         "label": "Yes",
-        "color": "#2ecc71",
+        "color": colors_asc.purple7,
         "values": [
           "Yes"
         ]
@@ -3639,7 +3349,7 @@ export const variableConfig =
       {
         "key": "no",
         "label": "No",
-        "color": "#e74c3c",
+        "color": colors_asc.purple1,
         "values": [
           "No"
         ]
@@ -3647,7 +3357,7 @@ export const variableConfig =
       {
         "key": "no_answer",
         "label": "No Answer",
-        "color": "#55505f",
+        "color": NO_ANSWER_COLOR,
         "values": [
           "(Saw, skipped)",
           "(Refused)",
@@ -3672,21 +3382,21 @@ export const variableConfig =
       {
         "key": "low",
         "label": "Low (0–3)",
-        "color": "#e74c3c",
+        "color": colors_asc.purple0,
         "min": 0,
         "max": 3
       },
       {
         "key": "mid",
         "label": "Medium (4–6)",
-        "color": "#8a8c56",
+        "color": colors_asc.purple4,
         "min": 4,
         "max": 6
       },
       {
         "key": "high",
         "label": "High (7–10)",
-        "color": "#2ecc71",
+        "color": colors_asc.purple7,
         "min": 7,
         "max": 10
       }
@@ -3708,21 +3418,21 @@ export const variableConfig =
       {
         "key": "low",
         "label": "Low (0–3)",
-        "color": "#e74c3c",
+        "color": colors_asc.purple0,
         "min": 0,
         "max": 3
       },
       {
         "key": "mid",
         "label": "Medium (4–6)",
-        "color": "#8a8c56",
+        "color": colors_asc.purple4,
         "min": 4,
         "max": 6
       },
       {
         "key": "high",
         "label": "High (7–10)",
-        "color": "#2ecc71",
+        "color": colors_asc.purple7,
         "min": 7,
         "max": 10
       }
@@ -3744,21 +3454,21 @@ export const variableConfig =
       {
         "key": "low",
         "label": "Low (0–3)",
-        "color": "#e74c3c",
+        "color": colors_asc.purple0,
         "min": 0,
         "max": 3
       },
       {
         "key": "mid",
         "label": "Medium (4–6)",
-        "color": "#8a8c56",
+        "color": colors_asc.purple4,
         "min": 4,
         "max": 6
       },
       {
         "key": "high",
         "label": "High (7–10)",
-        "color": "#2ecc71",
+        "color": colors_asc.purple7,
         "min": 7,
         "max": 10
       }
@@ -3780,21 +3490,21 @@ export const variableConfig =
       {
         "key": "low",
         "label": "Low (0–3)",
-        "color": "#e74c3c",
+        "color": colors_asc.purple0,
         "min": 0,
         "max": 3
       },
       {
         "key": "mid",
         "label": "Medium (4–6)",
-        "color": "#8a8c56",
+        "color": colors_asc.purple4,
         "min": 4,
         "max": 6
       },
       {
         "key": "high",
         "label": "High (7–10)",
-        "color": "#2ecc71",
+        "color": colors_asc.purple7,
         "min": 7,
         "max": 10
       }
@@ -3810,49 +3520,35 @@ export const variableConfig =
     "type": "categorical",
     "categories": [
       {
-        "key": "none",
-        "label": "None",
-        "color": "#e74c3c",
+        "key": "low",
+        "label": "None / Not Very Many",
+        "color": colors_asc.purple0,
         "values": [
-          "None"
-        ]
-      },
-      {
-        "key": "not_very_many",
-        "label": "Not Very Many",
-        "color": "#b96c49",
-        "values": [
+          "None",
           "Not very many"
         ]
       },
       {
-        "key": "some",
+        "key": "medium",
         "label": "Some",
-        "color": "#8a8c56",
+        "color": colors_asc.purple4,
         "values": [
           "Some"
         ]
       },
       {
-        "key": "most",
-        "label": "Most",
-        "color": "#5cac64",
+        "key": "high",
+        "label": "Most / All",
+        "color": colors_asc.purple7,
         "values": [
-          "Most"
-        ]
-      },
-      {
-        "key": "all",
-        "label": "All",
-        "color": "#2ecc71",
-        "values": [
+          "Most",
           "All"
         ]
       },
       {
         "key": "no_answer",
         "label": "No Answer",
-        "color": "#55505f",
+        "color": NO_ANSWER_COLOR,
         "values": [
           "(Saw, skipped)",
           "(Refused)",
@@ -3873,7 +3569,7 @@ export const variableConfig =
       {
         "key": "yes",
         "label": "Yes",
-        "color": "#2ecc71",
+        "color": colors_asc.purple7,
         "values": [
           "Yes"
         ]
@@ -3881,7 +3577,7 @@ export const variableConfig =
       {
         "key": "no",
         "label": "No",
-        "color": "#e74c3c",
+        "color": colors_asc.purple1,
         "values": [
           "No"
         ]
@@ -3889,7 +3585,7 @@ export const variableConfig =
       {
         "key": "not_applicable",
         "label": "Not Applicable",
-        "color": "#95a5a6",
+        "color": NOT_APPLICABLE_COLOR,
         "values": [
           "(Does not apply)"
         ]
@@ -3897,7 +3593,7 @@ export const variableConfig =
       {
         "key": "no_answer",
         "label": "No Answer",
-        "color": "#55505f",
+        "color": NO_ANSWER_COLOR,
         "values": [
           "(Saw, skipped)",
           "(Refused)",
@@ -3917,7 +3613,7 @@ export const variableConfig =
       {
         "key": "yes",
         "label": "Yes",
-        "color": "#2ecc71",
+        "color": colors_asc.purple7,
         "values": [
           "Yes"
         ]
@@ -3925,7 +3621,7 @@ export const variableConfig =
       {
         "key": "no",
         "label": "No",
-        "color": "#e74c3c",
+        "color": colors_asc.purple1,
         "values": [
           "No"
         ]
@@ -3933,7 +3629,7 @@ export const variableConfig =
       {
         "key": "not_applicable",
         "label": "Not Applicable",
-        "color": "#95a5a6",
+        "color": NOT_APPLICABLE_COLOR,
         "values": [
           "(Does not apply)"
         ]
@@ -3941,7 +3637,7 @@ export const variableConfig =
       {
         "key": "no_answer",
         "label": "No Answer",
-        "color": "#55505f",
+        "color": NO_ANSWER_COLOR,
         "values": [
           "(Saw, skipped)",
           "(Refused)",
@@ -3959,41 +3655,27 @@ export const variableConfig =
     "type": "categorical",
     "categories": [
       {
-        "key": "very_good",
-        "label": "Very Good",
-        "color": "#2ecc71",
+        "key": "good",
+        "label": "Very Good / Somewhat Good",
+        "color": colors_asc.purple7,
         "values": [
-          "Very good"
-        ]
-      },
-      {
-        "key": "somewhat_good",
-        "label": "Somewhat Good",
-        "color": "#6ca15f",
-        "values": [
+          "Very good",
           "Somewhat good"
         ]
       },
       {
-        "key": "somewhat_bad",
-        "label": "Somewhat Bad",
-        "color": "#a9774e",
+        "key": "bad",
+        "label": "Somewhat Bad / Very Bad",
+        "color": colors_asc.purple1,
         "values": [
-          "Somewhat bad"
-        ]
-      },
-      {
-        "key": "very_bad",
-        "label": "Very Bad",
-        "color": "#e74c3c",
-        "values": [
+          "Somewhat bad",
           "Very bad"
         ]
       },
       {
         "key": "not_applicable",
         "label": "Not Applicable",
-        "color": "#95a5a6",
+        "color": NOT_APPLICABLE_COLOR,
         "values": [
           "(Does not apply)"
         ]
@@ -4001,7 +3683,7 @@ export const variableConfig =
       {
         "key": "no_answer",
         "label": "No Answer",
-        "color": "#55505f",
+        "color": NO_ANSWER_COLOR,
         "values": [
           "(Saw, skipped)",
           "(Refused)",
@@ -4019,41 +3701,27 @@ export const variableConfig =
     "type": "categorical",
     "categories": [
       {
-        "key": "very_good",
-        "label": "Very Good",
-        "color": "#2ecc71",
+        "key": "good",
+        "label": "Very Good / Somewhat Good",
+        "color": colors_asc.purple7,
         "values": [
-          "Very good"
-        ]
-      },
-      {
-        "key": "somewhat_good",
-        "label": "Somewhat Good",
-        "color": "#6ca15f",
-        "values": [
+          "Very good",
           "Somewhat good"
         ]
       },
       {
-        "key": "somewhat_bad",
-        "label": "Somewhat Bad",
-        "color": "#a9774e",
+        "key": "bad",
+        "label": "Somewhat Bad / Very Bad",
+        "color": colors_asc.purple1,
         "values": [
-          "Somewhat bad"
-        ]
-      },
-      {
-        "key": "very_bad",
-        "label": "Very Bad",
-        "color": "#e74c3c",
-        "values": [
+          "Somewhat bad",
           "Very bad"
         ]
       },
       {
         "key": "not_applicable",
         "label": "Not Applicable",
-        "color": "#95a5a6",
+        "color": NOT_APPLICABLE_COLOR,
         "values": [
           "(Does not apply)"
         ]
@@ -4061,7 +3729,7 @@ export const variableConfig =
       {
         "key": "no_answer",
         "label": "No Answer",
-        "color": "#55505f",
+        "color": NO_ANSWER_COLOR,
         "values": [
           "(Saw, skipped)",
           "(Refused)",
@@ -4079,49 +3747,35 @@ export const variableConfig =
     "type": "categorical",
     "categories": [
       {
-        "key": "excellent",
-        "label": "Excellent",
-        "color": "#2ecc71",
+        "key": "high",
+        "label": "Excellent / Very Good",
+        "color": colors_asc.purple7,
         "values": [
-          "Excellent"
-        ]
-      },
-      {
-        "key": "very_good",
-        "label": "Very Good",
-        "color": "#5cac64",
-        "values": [
+          "Excellent",
           "Very good"
         ]
       },
       {
-        "key": "good",
+        "key": "medium",
         "label": "Good",
-        "color": "#8a8c56",
+        "color": colors_asc.purple4,
         "values": [
           "Good"
         ]
       },
       {
-        "key": "fair",
-        "label": "Fair",
-        "color": "#b96c49",
+        "key": "low",
+        "label": "Fair / Poor",
+        "color": colors_asc.purple0,
         "values": [
-          "Fair"
-        ]
-      },
-      {
-        "key": "poor",
-        "label": "Poor",
-        "color": "#e74c3c",
-        "values": [
+          "Fair",
           "Poor"
         ]
       },
       {
         "key": "no_answer",
         "label": "No Answer",
-        "color": "#55505f",
+        "color": NO_ANSWER_COLOR,
         "values": [
           "(Saw, skipped)",
           "(Refused)",
@@ -4141,7 +3795,7 @@ export const variableConfig =
       {
         "key": "yes",
         "label": "Yes",
-        "color": "#e74c3c",
+        "color": colors_asc.purple7,
         "values": [
           "Yes"
         ]
@@ -4149,7 +3803,7 @@ export const variableConfig =
       {
         "key": "no",
         "label": "No",
-        "color": "#2ecc71",
+        "color": colors_asc.purple1,
         "values": [
           "No"
         ]
@@ -4157,7 +3811,7 @@ export const variableConfig =
       {
         "key": "not_applicable",
         "label": "Not Applicable",
-        "color": "#95a5a6",
+        "color": NOT_APPLICABLE_COLOR,
         "values": [
           "(Does not apply)"
         ]
@@ -4165,7 +3819,7 @@ export const variableConfig =
       {
         "key": "no_answer",
         "label": "No Answer",
-        "color": "#55505f",
+        "color": NO_ANSWER_COLOR,
         "values": [
           "(Saw, skipped)",
           "(Refused)",
@@ -4183,41 +3837,27 @@ export const variableConfig =
     "type": "categorical",
     "categories": [
       {
-        "key": "lived_comfortably",
-        "label": "Lived Comfortably",
-        "color": "#2ecc71",
+        "key": "comfortable",
+        "label": "Lived Comfortably / Got By",
+        "color": colors_asc.purple1,
         "values": [
-          "Lived comfortably"
-        ]
-      },
-      {
-        "key": "got_by",
-        "label": "Got By",
-        "color": "#6ca15f",
-        "values": [
+          "Lived comfortably",
           "Got by"
         ]
       },
       {
-        "key": "found_it_difficult",
-        "label": "Found It Difficult",
-        "color": "#a9774e",
+        "key": "struggling",
+        "label": "Found It Difficult / Very Difficult",
+        "color": colors_asc.purple7,
         "values": [
-          "Found it difficult"
-        ]
-      },
-      {
-        "key": "found_it_very_difficult",
-        "label": "Found It Very Difficult",
-        "color": "#e74c3c",
-        "values": [
+          "Found it difficult",
           "Found it very difficult"
         ]
       },
       {
         "key": "no_answer",
         "label": "No Answer",
-        "color": "#55505f",
+        "color": NO_ANSWER_COLOR,
         "values": [
           "(Saw, skipped)",
           "(Refused)",
@@ -4235,33 +3875,26 @@ export const variableConfig =
     "type": "categorical",
     "categories": [
       {
-        "key": "never",
-        "label": "Never",
-        "color": "#aed6f1",
+        "key": "rarely",
+        "label": "Never / Less Than Once a Month",
+        "color": colors_asc.purple0,
         "values": [
-          "Never"
-        ]
-      },
-      {
-        "key": "less_than_once_a_month",
-        "label": "Less Than Once a Month",
-        "color": "#7daac8",
-        "values": [
+          "Never",
           "Less than once a month"
         ]
       },
       {
-        "key": "13_times_a_month",
+        "key": "monthly",
         "label": "1–3 Times a Month",
-        "color": "#4b7e9f",
+        "color": colors_asc.purple4,
         "values": [
           "One to three times a month"
         ]
       },
       {
-        "key": "at_least_once_a_week",
+        "key": "weekly_plus",
         "label": "At Least Once a Week",
-        "color": "#1a5276",
+        "color": colors_asc.purple7,
         "values": [
           "At least once a week"
         ]
@@ -4269,7 +3902,7 @@ export const variableConfig =
       {
         "key": "no_answer",
         "label": "No Answer",
-        "color": "#55505f",
+        "color": NO_ANSWER_COLOR,
         "values": [
           "(Saw, skipped)",
           "(Refused)",
@@ -4287,33 +3920,26 @@ export const variableConfig =
     "type": "categorical",
     "categories": [
       {
-        "key": "never",
-        "label": "Never",
-        "color": "#aed6f1",
+        "key": "rarely",
+        "label": "Never / Less Than Once a Month",
+        "color": colors_asc.purple0,
         "values": [
-          "Never"
-        ]
-      },
-      {
-        "key": "lt_month",
-        "label": "Less Than Once a Month",
-        "color": "#7daac8",
-        "values": [
+          "Never",
           "Less than once a month"
         ]
       },
       {
-        "key": "1_3_month",
+        "key": "monthly",
         "label": "1–3 Times a Month",
-        "color": "#4b7e9f",
+        "color": colors_asc.purple4,
         "values": [
           "One to three times a month"
         ]
       },
       {
-        "key": "weekly",
+        "key": "weekly_plus",
         "label": "At Least Once a Week",
-        "color": "#1a5276",
+        "color": colors_asc.purple7,
         "values": [
           "At least once a week"
         ]
@@ -4321,7 +3947,7 @@ export const variableConfig =
       {
         "key": "not_applicable",
         "label": "Not Applicable",
-        "color": "#95a5a6",
+        "color": NOT_APPLICABLE_COLOR,
         "values": [
           "(Does not apply)"
         ]
@@ -4329,7 +3955,7 @@ export const variableConfig =
       {
         "key": "no_answer",
         "label": "No Answer",
-        "color": "#55505f",
+        "color": NO_ANSWER_COLOR,
         "values": [
           "(Saw, skipped)",
           "(Refused)",
@@ -4347,33 +3973,26 @@ export const variableConfig =
     "type": "categorical",
     "categories": [
       {
-        "key": "never",
-        "label": "Never",
-        "color": "#aed6f1",
+        "key": "rarely",
+        "label": "Never / Less Than Once a Month",
+        "color": colors_asc.purple0,
         "values": [
-          "Never"
-        ]
-      },
-      {
-        "key": "lt_month",
-        "label": "Less Than Once a Month",
-        "color": "#7daac8",
-        "values": [
+          "Never",
           "Less than once a month"
         ]
       },
       {
-        "key": "1_3_month",
+        "key": "monthly",
         "label": "1–3 Times a Month",
-        "color": "#4b7e9f",
+        "color": colors_asc.purple4,
         "values": [
           "One to three times a month"
         ]
       },
       {
-        "key": "weekly",
+        "key": "weekly_plus",
         "label": "At Least Once a Week",
-        "color": "#1a5276",
+        "color": colors_asc.purple7,
         "values": [
           "At least once a week"
         ]
@@ -4381,7 +4000,7 @@ export const variableConfig =
       {
         "key": "not_applicable",
         "label": "Not Applicable",
-        "color": "#95a5a6",
+        "color": NOT_APPLICABLE_COLOR,
         "values": [
           "(Does not apply)"
         ]
@@ -4389,7 +4008,7 @@ export const variableConfig =
       {
         "key": "no_answer",
         "label": "No Answer",
-        "color": "#55505f",
+        "color": NO_ANSWER_COLOR,
         "values": [
           "(Saw, skipped)",
           "(Refused)",
@@ -4407,65 +4026,37 @@ export const variableConfig =
     "type": "categorical",
     "categories": [
       {
-        "key": "disagree_strongly",
-        "label": "Disagree Strongly",
-        "color": "#d7bde2",
+        "key": "disagree",
+        "label": "Disagree",
+        "color": colors_diverging.purple0,
         "values": [
-          "Disagree strongly"
-        ]
-      },
-      {
-        "key": "disagree_moderately",
-        "label": "Disagree Moderately",
-        "color": "#c5a6d2",
-        "values": [
-          "Disagree moderately"
-        ]
-      },
-      {
-        "key": "disagree_a_little",
-        "label": "Disagree a Little",
-        "color": "#b38fc2",
-        "values": [
+          "Disagree strongly",
+          "Disagree moderately",
           "Disagree a little"
         ]
       },
       {
         "key": "neutral",
         "label": "Neutral",
-        "color": "#a278b2",
+        "color": colors_diverging.purple4,
         "values": [
           "Neither agree nor disagree"
         ]
       },
       {
-        "key": "agree_a_little",
-        "label": "Agree a Little",
-        "color": "#9062a3",
+        "key": "agree",
+        "label": "Agree",
+        "color": colors_diverging.purple7,
         "values": [
-          "Agree a little"
-        ]
-      },
-      {
-        "key": "agree_moderately",
-        "label": "Agree Moderately",
-        "color": "#7e4b93",
-        "values": [
-          "Agree moderately"
-        ]
-      },
-      {
-        "key": "agree_strongly",
-        "label": "Agree Strongly",
-        "color": "#6c3483",
-        "values": [
+          "Agree a little",
+          "Agree moderately",
           "Agree strongly"
         ]
       },
       {
         "key": "no_answer",
         "label": "No Answer",
-        "color": "#55505f",
+        "color": NO_ANSWER_COLOR,
         "values": [
           "(Saw, skipped)",
           "(Refused)",
@@ -4483,65 +4074,37 @@ export const variableConfig =
     "type": "categorical",
     "categories": [
       {
-        "key": "disagree_strongly",
-        "label": "Disagree Strongly",
-        "color": "#d7bde2",
+        "key": "disagree",
+        "label": "Disagree",
+        "color": colors_diverging.purple0,
         "values": [
-          "Disagree strongly"
-        ]
-      },
-      {
-        "key": "disagree_moderately",
-        "label": "Disagree Moderately",
-        "color": "#c5a6d2",
-        "values": [
-          "Disagree moderately"
-        ]
-      },
-      {
-        "key": "disagree_a_little",
-        "label": "Disagree a Little",
-        "color": "#b38fc2",
-        "values": [
+          "Disagree strongly",
+          "Disagree moderately",
           "Disagree a little"
         ]
       },
       {
         "key": "neutral",
         "label": "Neutral",
-        "color": "#a278b2",
+        "color": colors_diverging.purple4,
         "values": [
           "Neither agree nor disagree"
         ]
       },
       {
-        "key": "agree_a_little",
-        "label": "Agree a Little",
-        "color": "#9062a3",
+        "key": "agree",
+        "label": "Agree",
+        "color": colors_diverging.purple7,
         "values": [
-          "Agree a little"
-        ]
-      },
-      {
-        "key": "agree_moderately",
-        "label": "Agree Moderately",
-        "color": "#7e4b93",
-        "values": [
-          "Agree moderately"
-        ]
-      },
-      {
-        "key": "agree_strongly",
-        "label": "Agree Strongly",
-        "color": "#6c3483",
-        "values": [
+          "Agree a little",
+          "Agree moderately",
           "Agree strongly"
         ]
       },
       {
         "key": "no_answer",
         "label": "No Answer",
-        "color": "#55505f",
+        "color": NO_ANSWER_COLOR,
         "values": [
           "(Saw, skipped)",
           "(Refused)",
@@ -4559,65 +4122,37 @@ export const variableConfig =
     "type": "categorical",
     "categories": [
       {
-        "key": "disagree_strongly",
-        "label": "Disagree Strongly",
-        "color": "#d7bde2",
+        "key": "disagree",
+        "label": "Disagree",
+        "color": colors_diverging.purple0,
         "values": [
-          "Disagree strongly"
-        ]
-      },
-      {
-        "key": "disagree_moderately",
-        "label": "Disagree Moderately",
-        "color": "#c5a6d2",
-        "values": [
-          "Disagree moderately"
-        ]
-      },
-      {
-        "key": "disagree_a_little",
-        "label": "Disagree a Little",
-        "color": "#b38fc2",
-        "values": [
+          "Disagree strongly",
+          "Disagree moderately",
           "Disagree a little"
         ]
       },
       {
         "key": "neutral",
         "label": "Neutral",
-        "color": "#a278b2",
+        "color": colors_diverging.purple4,
         "values": [
           "Neither agree nor disagree"
         ]
       },
       {
-        "key": "agree_a_little",
-        "label": "Agree a Little",
-        "color": "#9062a3",
+        "key": "agree",
+        "label": "Agree",
+        "color": colors_diverging.purple7,
         "values": [
-          "Agree a little"
-        ]
-      },
-      {
-        "key": "agree_moderately",
-        "label": "Agree Moderately",
-        "color": "#7e4b93",
-        "values": [
-          "Agree moderately"
-        ]
-      },
-      {
-        "key": "agree_strongly",
-        "label": "Agree Strongly",
-        "color": "#6c3483",
-        "values": [
+          "Agree a little",
+          "Agree moderately",
           "Agree strongly"
         ]
       },
       {
         "key": "no_answer",
         "label": "No Answer",
-        "color": "#55505f",
+        "color": NO_ANSWER_COLOR,
         "values": [
           "(Saw, skipped)",
           "(Refused)",
@@ -4635,65 +4170,37 @@ export const variableConfig =
     "type": "categorical",
     "categories": [
       {
-        "key": "disagree_strongly",
-        "label": "Disagree Strongly",
-        "color": "#d7bde2",
+        "key": "disagree",
+        "label": "Disagree",
+        "color": colors_diverging.purple0,
         "values": [
-          "Disagree strongly"
-        ]
-      },
-      {
-        "key": "disagree_moderately",
-        "label": "Disagree Moderately",
-        "color": "#c5a6d2",
-        "values": [
-          "Disagree moderately"
-        ]
-      },
-      {
-        "key": "disagree_a_little",
-        "label": "Disagree a Little",
-        "color": "#b38fc2",
-        "values": [
+          "Disagree strongly",
+          "Disagree moderately",
           "Disagree a little"
         ]
       },
       {
         "key": "neutral",
         "label": "Neutral",
-        "color": "#a278b2",
+        "color": colors_diverging.purple4,
         "values": [
           "Neither agree nor disagree"
         ]
       },
       {
-        "key": "agree_a_little",
-        "label": "Agree a Little",
-        "color": "#9062a3",
+        "key": "agree",
+        "label": "Agree",
+        "color": colors_diverging.purple7,
         "values": [
-          "Agree a little"
-        ]
-      },
-      {
-        "key": "agree_moderately",
-        "label": "Agree Moderately",
-        "color": "#7e4b93",
-        "values": [
-          "Agree moderately"
-        ]
-      },
-      {
-        "key": "agree_strongly",
-        "label": "Agree Strongly",
-        "color": "#6c3483",
-        "values": [
+          "Agree a little",
+          "Agree moderately",
           "Agree strongly"
         ]
       },
       {
         "key": "no_answer",
         "label": "No Answer",
-        "color": "#55505f",
+        "color": NO_ANSWER_COLOR,
         "values": [
           "(Saw, skipped)",
           "(Refused)",
@@ -4711,65 +4218,37 @@ export const variableConfig =
     "type": "categorical",
     "categories": [
       {
-        "key": "disagree_strongly",
-        "label": "Disagree Strongly",
-        "color": "#d7bde2",
+        "key": "disagree",
+        "label": "Disagree",
+        "color": colors_diverging.purple0,
         "values": [
-          "Disagree strongly"
-        ]
-      },
-      {
-        "key": "disagree_moderately",
-        "label": "Disagree Moderately",
-        "color": "#c5a6d2",
-        "values": [
-          "Disagree moderately"
-        ]
-      },
-      {
-        "key": "disagree_a_little",
-        "label": "Disagree a Little",
-        "color": "#b38fc2",
-        "values": [
+          "Disagree strongly",
+          "Disagree moderately",
           "Disagree a little"
         ]
       },
       {
         "key": "neutral",
         "label": "Neutral",
-        "color": "#a278b2",
+        "color": colors_diverging.purple4,
         "values": [
           "Neither agree nor disagree"
         ]
       },
       {
-        "key": "agree_a_little",
-        "label": "Agree a Little",
-        "color": "#9062a3",
+        "key": "agree",
+        "label": "Agree",
+        "color": colors_diverging.purple7,
         "values": [
-          "Agree a little"
-        ]
-      },
-      {
-        "key": "agree_moderately",
-        "label": "Agree Moderately",
-        "color": "#7e4b93",
-        "values": [
-          "Agree moderately"
-        ]
-      },
-      {
-        "key": "agree_strongly",
-        "label": "Agree Strongly",
-        "color": "#6c3483",
-        "values": [
+          "Agree a little",
+          "Agree moderately",
           "Agree strongly"
         ]
       },
       {
         "key": "no_answer",
         "label": "No Answer",
-        "color": "#55505f",
+        "color": NO_ANSWER_COLOR,
         "values": [
           "(Saw, skipped)",
           "(Refused)",
@@ -4787,65 +4266,37 @@ export const variableConfig =
     "type": "categorical",
     "categories": [
       {
-        "key": "disagree_strongly",
-        "label": "Disagree Strongly",
-        "color": "#d7bde2",
+        "key": "disagree",
+        "label": "Disagree",
+        "color": colors_diverging.purple0,
         "values": [
-          "Disagree strongly"
-        ]
-      },
-      {
-        "key": "disagree_moderately",
-        "label": "Disagree Moderately",
-        "color": "#c5a6d2",
-        "values": [
-          "Disagree moderately"
-        ]
-      },
-      {
-        "key": "disagree_a_little",
-        "label": "Disagree a Little",
-        "color": "#b38fc2",
-        "values": [
+          "Disagree strongly",
+          "Disagree moderately",
           "Disagree a little"
         ]
       },
       {
         "key": "neutral",
         "label": "Neutral",
-        "color": "#a278b2",
+        "color": colors_diverging.purple4,
         "values": [
           "Neither agree nor disagree"
         ]
       },
       {
-        "key": "agree_a_little",
-        "label": "Agree a Little",
-        "color": "#9062a3",
+        "key": "agree",
+        "label": "Agree",
+        "color": colors_diverging.purple7,
         "values": [
-          "Agree a little"
-        ]
-      },
-      {
-        "key": "agree_moderately",
-        "label": "Agree Moderately",
-        "color": "#7e4b93",
-        "values": [
-          "Agree moderately"
-        ]
-      },
-      {
-        "key": "agree_strongly",
-        "label": "Agree Strongly",
-        "color": "#6c3483",
-        "values": [
+          "Agree a little",
+          "Agree moderately",
           "Agree strongly"
         ]
       },
       {
         "key": "no_answer",
         "label": "No Answer",
-        "color": "#55505f",
+        "color": NO_ANSWER_COLOR,
         "values": [
           "(Saw, skipped)",
           "(Refused)",
@@ -4863,65 +4314,37 @@ export const variableConfig =
     "type": "categorical",
     "categories": [
       {
-        "key": "disagree_strongly",
-        "label": "Disagree Strongly",
-        "color": "#d7bde2",
+        "key": "disagree",
+        "label": "Disagree",
+        "color": colors_diverging.purple0,
         "values": [
-          "Disagree strongly"
-        ]
-      },
-      {
-        "key": "disagree_moderately",
-        "label": "Disagree Moderately",
-        "color": "#c5a6d2",
-        "values": [
-          "Disagree moderately"
-        ]
-      },
-      {
-        "key": "disagree_a_little",
-        "label": "Disagree a Little",
-        "color": "#b38fc2",
-        "values": [
+          "Disagree strongly",
+          "Disagree moderately",
           "Disagree a little"
         ]
       },
       {
         "key": "neutral",
         "label": "Neutral",
-        "color": "#a278b2",
+        "color": colors_diverging.purple4,
         "values": [
           "Neither agree nor disagree"
         ]
       },
       {
-        "key": "agree_a_little",
-        "label": "Agree a Little",
-        "color": "#9062a3",
+        "key": "agree",
+        "label": "Agree",
+        "color": colors_diverging.purple7,
         "values": [
-          "Agree a little"
-        ]
-      },
-      {
-        "key": "agree_moderately",
-        "label": "Agree Moderately",
-        "color": "#7e4b93",
-        "values": [
-          "Agree moderately"
-        ]
-      },
-      {
-        "key": "agree_strongly",
-        "label": "Agree Strongly",
-        "color": "#6c3483",
-        "values": [
+          "Agree a little",
+          "Agree moderately",
           "Agree strongly"
         ]
       },
       {
         "key": "no_answer",
         "label": "No Answer",
-        "color": "#55505f",
+        "color": NO_ANSWER_COLOR,
         "values": [
           "(Saw, skipped)",
           "(Refused)",
@@ -4939,65 +4362,37 @@ export const variableConfig =
     "type": "categorical",
     "categories": [
       {
-        "key": "disagree_strongly",
-        "label": "Disagree Strongly",
-        "color": "#d7bde2",
+        "key": "disagree",
+        "label": "Disagree",
+        "color": colors_diverging.purple0,
         "values": [
-          "Disagree strongly"
-        ]
-      },
-      {
-        "key": "disagree_moderately",
-        "label": "Disagree Moderately",
-        "color": "#c5a6d2",
-        "values": [
-          "Disagree moderately"
-        ]
-      },
-      {
-        "key": "disagree_a_little",
-        "label": "Disagree a Little",
-        "color": "#b38fc2",
-        "values": [
+          "Disagree strongly",
+          "Disagree moderately",
           "Disagree a little"
         ]
       },
       {
         "key": "neutral",
         "label": "Neutral",
-        "color": "#a278b2",
+        "color": colors_diverging.purple4,
         "values": [
           "Neither agree nor disagree"
         ]
       },
       {
-        "key": "agree_a_little",
-        "label": "Agree a Little",
-        "color": "#9062a3",
+        "key": "agree",
+        "label": "Agree",
+        "color": colors_diverging.purple7,
         "values": [
-          "Agree a little"
-        ]
-      },
-      {
-        "key": "agree_moderately",
-        "label": "Agree Moderately",
-        "color": "#7e4b93",
-        "values": [
-          "Agree moderately"
-        ]
-      },
-      {
-        "key": "agree_strongly",
-        "label": "Agree Strongly",
-        "color": "#6c3483",
-        "values": [
+          "Agree a little",
+          "Agree moderately",
           "Agree strongly"
         ]
       },
       {
         "key": "no_answer",
         "label": "No Answer",
-        "color": "#55505f",
+        "color": NO_ANSWER_COLOR,
         "values": [
           "(Saw, skipped)",
           "(Refused)",
@@ -5015,65 +4410,37 @@ export const variableConfig =
     "type": "categorical",
     "categories": [
       {
-        "key": "disagree_strongly",
-        "label": "Disagree Strongly",
-        "color": "#d7bde2",
+        "key": "disagree",
+        "label": "Disagree",
+        "color": colors_diverging.purple0,
         "values": [
-          "Disagree strongly"
-        ]
-      },
-      {
-        "key": "disagree_moderately",
-        "label": "Disagree Moderately",
-        "color": "#c5a6d2",
-        "values": [
-          "Disagree moderately"
-        ]
-      },
-      {
-        "key": "disagree_a_little",
-        "label": "Disagree a Little",
-        "color": "#b38fc2",
-        "values": [
+          "Disagree strongly",
+          "Disagree moderately",
           "Disagree a little"
         ]
       },
       {
         "key": "neutral",
         "label": "Neutral",
-        "color": "#a278b2",
+        "color": colors_diverging.purple4,
         "values": [
           "Neither agree nor disagree"
         ]
       },
       {
-        "key": "agree_a_little",
-        "label": "Agree a Little",
-        "color": "#9062a3",
+        "key": "agree",
+        "label": "Agree",
+        "color": colors_diverging.purple7,
         "values": [
-          "Agree a little"
-        ]
-      },
-      {
-        "key": "agree_moderately",
-        "label": "Agree Moderately",
-        "color": "#7e4b93",
-        "values": [
-          "Agree moderately"
-        ]
-      },
-      {
-        "key": "agree_strongly",
-        "label": "Agree Strongly",
-        "color": "#6c3483",
-        "values": [
+          "Agree a little",
+          "Agree moderately",
           "Agree strongly"
         ]
       },
       {
         "key": "no_answer",
         "label": "No Answer",
-        "color": "#55505f",
+        "color": NO_ANSWER_COLOR,
         "values": [
           "(Saw, skipped)",
           "(Refused)",
@@ -5091,65 +4458,37 @@ export const variableConfig =
     "type": "categorical",
     "categories": [
       {
-        "key": "disagree_strongly",
-        "label": "Disagree Strongly",
-        "color": "#d7bde2",
+        "key": "disagree",
+        "label": "Disagree",
+        "color": colors_diverging.purple0,
         "values": [
-          "Disagree strongly"
-        ]
-      },
-      {
-        "key": "disagree_moderately",
-        "label": "Disagree Moderately",
-        "color": "#c5a6d2",
-        "values": [
-          "Disagree moderately"
-        ]
-      },
-      {
-        "key": "disagree_a_little",
-        "label": "Disagree a Little",
-        "color": "#b38fc2",
-        "values": [
+          "Disagree strongly",
+          "Disagree moderately",
           "Disagree a little"
         ]
       },
       {
         "key": "neutral",
         "label": "Neutral",
-        "color": "#a278b2",
+        "color": colors_diverging.purple4,
         "values": [
           "Neither agree nor disagree"
         ]
       },
       {
-        "key": "agree_a_little",
-        "label": "Agree a Little",
-        "color": "#9062a3",
+        "key": "agree",
+        "label": "Agree",
+        "color": colors_diverging.purple7,
         "values": [
-          "Agree a little"
-        ]
-      },
-      {
-        "key": "agree_moderately",
-        "label": "Agree Moderately",
-        "color": "#7e4b93",
-        "values": [
-          "Agree moderately"
-        ]
-      },
-      {
-        "key": "agree_strongly",
-        "label": "Agree Strongly",
-        "color": "#6c3483",
-        "values": [
+          "Agree a little",
+          "Agree moderately",
           "Agree strongly"
         ]
       },
       {
         "key": "no_answer",
         "label": "No Answer",
-        "color": "#55505f",
+        "color": NO_ANSWER_COLOR,
         "values": [
           "(Saw, skipped)",
           "(Refused)",
@@ -5173,21 +4512,21 @@ export const variableConfig =
       {
         "key": "low",
         "label": "Low (0–3)",
-        "color": "#e74c3c",
+        "color": colors_asc.purple0,
         "min": 0,
         "max": 3
       },
       {
         "key": "mid",
         "label": "Medium (4–6)",
-        "color": "#8a8c56",
+        "color": colors_asc.purple4,
         "min": 4,
         "max": 6
       },
       {
         "key": "high",
         "label": "High (7–10)",
-        "color": "#2ecc71",
+        "color": colors_asc.purple7,
         "min": 7,
         "max": 10
       }

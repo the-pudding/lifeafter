@@ -19,7 +19,7 @@
 		<div class="loading">{loadingMessage}</div>
 	{:else}
 		<label class="field">
-			<span>Color by</span>
+			<!-- <span>Color by</span> -->
 			<select bind:value={selectedVariable}>
 				{#each variableOptions as group (group.parent)}
 					<optgroup label={group.parent}>
@@ -42,7 +42,7 @@
 			</div>
 		{/if}
 
-		<div class="button-row">
+		<!-- <div class="button-row">
 			<button
 				class="mode-toggle"
 				class:active={positionMode === "Y1"}
@@ -57,14 +57,14 @@
 			>
 				Y2
 			</button>
-		</div>
+		</div> -->
 
-		{#if mode === "walk"}
+		<!-- {#if mode === "walk"}
 			{#if currentAge !== null}
 				<div class="current-age">Age {currentAge}</div>
 			{/if}
 			<div class="instructions">Drag to steer &nbsp;·&nbsp; scroll to walk</div>
-		{/if}
+		{/if} -->
 	{/if}
 </div>
 
@@ -84,20 +84,21 @@
 <style>
 	.panel {
 		position: absolute;
-		top: 1.5rem;
-		left: 1.5rem;
+		top: 0rem;
+		left: 0;
 		display: flex;
 		flex-direction: column;
 		gap: 0.75rem;
-		padding: 0.75rem 1rem;
-		background: rgba(10, 5, 16, 0.6);
-		border: 1px solid rgba(255, 255, 255, 0.1);
+		padding: 1rem 1rem;
+		/* background: rgba(10, 5, 16, 0.6); */
+		/* border: 1px solid rgba(255, 255, 255, 0.1); */
 		border-radius: 0.5rem;
 		color: #eee;
 		font-size: 0.8rem;
 		line-height: 1.6;
-		backdrop-filter: blur(4px);
-		max-width: 16rem;
+		backdrop-filter: blur(3px);
+		/* width: 100%; */
+		max-width: 100%;
 	}
 
 	.field {
@@ -108,39 +109,44 @@
 
 	.field span {
 		color: #a99cb8;
-		font-size: 0.7rem;
+		font-size: 1rem;
 		text-transform: uppercase;
-		letter-spacing: 0.04em;
 	}
 
 	.field select {
+		font-size: 1.1rem !important;
 		background: rgba(255, 255, 255, 0.08);
-		color: #eee;
+		color: white;
 		border: 1px solid rgba(255, 255, 255, 0.15);
-		border-radius: 0.35rem;
+		border-radius: 0;
 		padding: 0.3rem 0.4rem;
-		font-size: 0.8rem;
-		max-width: 100%;
+		max-width: 320px;
 	}
 
-	.legend {
-		display: flex;
-		flex-direction: column;
-		gap: 0.25rem;
-	}
+.legend {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+	margin-left: 0px;
+	color: var(--color-light-purple);
+    gap: 0.5rem; /* tighter gap between items */
+    font-size: 1rem; /* larger text size */
+	text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
+}
 
-	.legend-row {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-	}
+.legend-row {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem; /* reduced space between swatch and label */
+}
 
-	.swatch {
-		width: 0.7rem;
-		height: 0.7rem;
-		border-radius: 50%;
-		flex: none;
-	}
+.swatch {
+    width: 0.85rem; /* slightly enlarged to balance the bigger text */
+    height: 0.85rem;
+	border: 2px solid #000;
+    /* border-radius: 50%; */
+    flex: none;
+}
 
 	.button-row {
 		display: flex;
