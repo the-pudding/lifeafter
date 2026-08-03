@@ -42,22 +42,22 @@
 			</div>
 		{/if}
 
-		<!-- <div class="button-row">
+		<div class="button-row">
 			<button
 				class="mode-toggle"
 				class:active={positionMode === "Y1"}
 				onclick={() => (positionMode = "Y1")}
 			>
-				Y1
+				Wave 1
 			</button>
 			<button
 				class="mode-toggle"
 				class:active={positionMode === "Y2"}
 				onclick={() => (positionMode = "Y2")}
 			>
-				Y2
+				Wave 2
 			</button>
-		</div> -->
+		</div>
 
 		<!-- {#if mode === "walk"}
 			{#if currentAge !== null}
@@ -70,9 +70,9 @@
 
 {#if !loadingMessage}
 	<!-- Positions the toggle button over the real minimap <canvas> that
-	     Main.lifedeath.svelte draws separately (see .minimap-canvas /
-	     MINIMAP_WIDTH_PX / MINIMAP_HEIGHT_PX there — these px values must
-	     match). This div itself ignores pointer events so drag-to-steer/
+	     Minimap.lifedeath.svelte draws separately (see its own
+	     .minimap-canvas — this div's own width/height must match that box).
+	     This div itself ignores pointer events so drag-to-steer/
 	     scroll-to-walk still reach the 3D canvas underneath; only the button re-enables them. -->
 	<div class="minimap">
 		<button class="minimap-toggle" onclick={() => (mode = mode === "walk" ? "topdown" : "walk")}>
@@ -86,6 +86,7 @@
 		position: absolute;
 		top: 0rem;
 		left: 0;
+		z-index: 10;
 		display: flex;
 		flex-direction: column;
 		gap: 0.75rem;
@@ -196,14 +197,15 @@
 	}
 
 	/* Just an anchor for the toggle button below — the minimap itself is a
-	   real <canvas> (see .minimap-canvas in Main.lifedeath.svelte), which
-	   draws its own border; this div positions nothing but the button. */
+	   real <canvas> (see Minimap.lifedeath.svelte), which draws its own
+	   border; this div positions nothing but the button. */
 	.minimap {
 		position: absolute;
 		right: 24px;
 		bottom: 24px;
-		width: 120px;
-		height: 240px;
+		width: 136px;
+		height: 252px;
+		z-index: 10;
 		pointer-events: none;
 	}
 

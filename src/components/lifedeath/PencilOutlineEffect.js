@@ -451,8 +451,8 @@ class PencilOutlineEffect {
 			renderer.shadowMap.enabled = currentShadowMapEnabled;
 		};
 
-		this.setSize = function (width, height) {
-			renderer.setSize(width, height);
+		this.setSize = function (width, height, updateStyle) {
+			renderer.setSize(width, height, updateStyle);
 		};
 	}
 }

@@ -116,7 +116,10 @@ svg {
 
 .story-overlay p {
 	margin: 0 0 8px;
-	font-size: 1.3em;
+	/* Shrinks smoothly on narrow screens (down to 0.8rem) instead of
+	   staying a fixed 1.3em and eating into the limited vertical space
+	   there — caps back at the original 1.3rem on wide/desktop screens. */
+	font-size: clamp(0.8rem, 0.5rem + 2.5vw, 1.3rem);
 	line-height: 1.8em;
 	background: rgba(0,0,0,0.8);
 	padding: 3px;
