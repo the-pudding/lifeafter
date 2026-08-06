@@ -45,8 +45,59 @@
 		return String(raw);
 	}
 
+	// Most numeric variables' top bucket is a real scale ceiling (LIFE_SAT's
+	// "High (7-10)" truly stops at 10) — but a few (NUM_CHILDREN's "3+",
+	// CIGARETTES' "20+") use a wildly wide top bucket (span 27, say,
+	// against the previous bucket's span of 1) purely as an open-ended
+	// catch-all, not a real bound — its stated max (30) is arbitrary and
+	// would leave every realistic value looking near-empty. Detected by
+	// comparing the top bucket's own span to the one before it; when it's
+	// disproportionately wider, the bucket's start (3) is used as the
+	// effective ceiling instead of its stated end, so landing in that
+	// bucket simply reads as "maxed out."
+	function effectiveMaxFor(config) {
+		const sorted = [...config.ranges].sort((a, b) => a.min - b.min);
+		const last = sorted[sorted.length - 1];
+		const secondLast = sorted[sorted.length - 2];
+		if (secondLast) {
+			const lastSpan = last.max - last.min;
+			const secondLastSpan = secondLast.max - secondLast.min || 1;
+			if (lastSpan > secondLastSpan * 3) return last.min;
+		}
+		return last.max;
+	}
+
+	// A numeric variable's own full scale, spanning its ranges' own
+	// low/high buckets (see variable_config.js — e.g. LIFE_SAT's
+	// low/mid/high buckets span 0-10 overall) — the range-bar below fills
+	// against THIS span, not some fixed 0-10 assumption, since not every
+	// numeric variable (NUM_CHILDREN, say) is actually a 0-10 scale.
+	function numericScaleFor(config) {
+		if (config.type !== "numeric" || !config.ranges?.length) return null;
+		const min = Math.min(...config.ranges.map((r) => r.min));
+		const max = effectiveMaxFor(config);
+		return max > min ? { min, max } : null;
+	}
+
+	// 0..1 fill fraction for the range bar, clamped in case a raw value
+	// happens to fall outside its own configured ranges.
+	function fillFractionFor(value, scale) {
+		return Math.max(0, Math.min(1, (value - scale.min) / (scale.max - scale.min)));
+	}
+
+	// Small discrete counts (kids/adults in the household; Health &
+	// Habits' cigarette/drink/exercise-day counts) read better as a row
+	// of filled pips — one dot per unit, no fixed total/empty ones since
+	// there's no real ceiling to measure against — than a continuous bar,
+	// where "63% full" wouldn't mean anything for "3 children."
+	function isPipVariable(key, config) {
+		return (
+			config.parent === "Health & Habits" || key === "NUM_CHILDREN" || key === "NUM_HOUSEHOLD"
+		);
+	}
+
 	const age = $derived(person?.[wave === "Y1" ? "AGE_Y1" : "AGE_Y2"] ?? null);
-	const waveYearLabel = $derived(wave === "Y1" ? "Wave 1" : "Wave 2");
+	const waveYearLabel = $derived(wave === "Y1" ? "2022-23" : "2024");
 
 	function genderNoun(genderRaw) {
 		if (genderRaw === "Male") return "man";
@@ -89,7 +140,7 @@
 					: afterDeathLabel === "No"
 						? "do not believe"
 						: "are unsure whether";
-			sentence += ` In ${waveKey === "Y1" ? "Wave 1" : "Wave 2"}, they ${belief} there is life after death.`;
+			sentence += ` In ${waveKey === "Y1" ? "2022-23" : "2024"}, they ${belief} there is life after death.`;
 		}
 		return sentence;
 	}
@@ -107,15 +158,15 @@
 	onmousedown={(e) => e.stopPropagation()}
 	onkeydown={(e) => e.stopPropagation()}
 >
-	<button class="detailsClose" onclick={onclose}>Click to close</button>
+	<button class="detailsClose" onclick={onclose}>Close panel</button>
 	<div class="modalData">
 		{#if person}
 			<div class="wave-toggle-row">
 				<button class="wave-toggle" class:active={wave === "Y1"} onclick={() => (wave = "Y1")}>
-					Wave 1
+					2022-23
 				</button>
 				<button class="wave-toggle" class:active={wave === "Y2"} onclick={() => (wave = "Y2")}>
-					Wave 2
+					2024
 				</button>
 			</div>
 
@@ -135,9 +186,43 @@
 					{#each rows as { key, label }}
 						{@const config = variableConfig[key]}
 						{@const column = columnForWave(key, wave)}
+						{@const isPip = isPipVariable(key, config)}
+						{@const scale = !isPip ? numericScaleFor(config) : null}
+						{@const numericValue =
+							isPip || scale ? parseNumericValue(key, person[column]) : null}
 						<div class="stat">
 							<span class="statLabel">{label}</span>
-							<span class="statValue">{formatValue(key, config, column)}</span>
+							{#if isPip && numericValue !== null}
+								{#if numericValue === 0}
+									<span class="statValue">None</span>
+								{:else}
+									<div class="pipRow" role="img" aria-label="{numericValue}">
+										{#each { length: numericValue } as _}
+											<span class="pip pip--filled"></span>
+										{/each}
+									</div>
+								{/if}
+							{:else if scale && numericValue !== null}
+								{@const fraction = fillFractionFor(numericValue, scale)}
+								<div class="rangeBar" role="img" aria-label="{formatValue(key, config, column)} of {scale.min} to {scale.max}">
+									<div class="rangeBarFill" style="width: {fraction * 100}%">
+										{#if fraction >= 0.22}
+											<span class="rangeBarValue rangeBarValue--inside"
+												>{formatValue(key, config, column)}</span
+											>
+										{/if}
+									</div>
+									{#if fraction < 0.22}
+										<span
+											class="rangeBarValue rangeBarValue--outside"
+											style="left: {fraction * 100}%"
+											>{formatValue(key, config, column)}</span
+										>
+									{/if}
+								</div>
+							{:else}
+								<span class="statValue">{formatValue(key, config, column)}</span>
+							{/if}
 						</div>
 					{/each}
 				{/if}
@@ -145,12 +230,13 @@
 		{/if}
 	</div>
 	<div class="fixed_spacer"></div>
-	<div class="spacer"></div>
+	<!-- <div class="spacer"></div> -->
 </div>
 
 <style>
 	.shelf {
 		display: block;
+		font-family: var(--font-sans);
 		position: fixed;
 		left: -380px;
 		top: 0px;
@@ -187,23 +273,28 @@
 		font-size: 15px;
 		display: block;
 		cursor: pointer;
-		color: black;
+		color: rgba(255,255,255,0.8);
 		font-weight: bold;
-		background: var(--color-light-purple);
+		font-family: var(--font-mono);
+		background: #000;
 		padding: 10px 5px;
-		border: 5px solid #000;
-		border-top: 10px solid #000;
+		border: none;
+		border-bottom: 1px solid rgba(255,255,255,0.2);
 		border-radius: 0;
 		text-align: center;
 		position: sticky;
 		top: 0px;
 		width: 100%;
 		box-sizing: border-box;
-		opacity: 0.9;
+		/* Sticky, but with no z-index it still stacks in plain DOM order —
+		   later content scrolling underneath (e.g. a .rangeBarValue--outside
+		   label, itself position:absolute) could paint over it once it
+		   scrolled up to y=0. This keeps it on top regardless. */
+		z-index: 20;
 	}
 	.detailsClose:hover {
-		text-decoration: underline;
-		opacity: 1;
+		/* background: #221030; */
+		color: #fff;
 	}
 	.modalData {
 		padding: 20px;
@@ -258,6 +349,70 @@
 		display: block;
 		color: rgba(255, 255, 255, 1);
 	}
+	/* A numeric variable's own value shown as how full a bar is (see
+	   numericScaleFor/fillFractionFor) instead of a bare number — the
+	   track is the variable's own full min..max span, same purple accent
+	   as .wave-toggle.active for one consistent "this app's accent color"
+	   throughout the modal. */
+	.rangeBar {
+		position: relative;
+		margin-top: 3px;
+		height: 18px;
+		background: rgba(255, 255, 255, 0.08);
+		border: 1px solid rgba(255, 255, 255, 0.15);
+	}
+	.rangeBarFill {
+		position: relative;
+		height: 100%;
+		min-width: 2px;
+		background: #9d00ff;
+		display: flex;
+		align-items: center;
+		justify-content: flex-end;
+		box-sizing: border-box;
+		transition: width 200ms ease-out;
+	}
+	.rangeBarValue {
+		font-size: 0.72rem;
+		white-space: nowrap;
+	}
+	/* Enough fill to fit the label inside it — right-aligned near the
+	   fill's own leading (right) edge, over the accent color. */
+	.rangeBarValue--inside {
+		padding-right: 4px;
+		color: #fff;
+	}
+	/* Not enough fill — the label sits just past the bar's own leading
+	   edge instead, over the track rather than the (too-thin) fill. */
+	.rangeBarValue--outside {
+		position: absolute;
+		top: 50%;
+		transform: translateY(-50%);
+		margin-left: 4px;
+		color: rgba(255, 255, 255, 0.85);
+	}
+	/* Small discrete counts (see isPipVariable) — one dot per unit, filled
+	   up to the value, same track/fill colors as .rangeBar for one
+	   consistent "this is how full/many" visual language. */
+	.pipRow {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 4px;
+		margin-top: 4px;
+	}
+	.pip {
+		width: 9px;
+		height: 9px;
+		border-radius: 50%;
+		background: rgba(255, 255, 255, 0.08);
+		border: 1px solid rgba(255, 255, 255, 0.25);
+		box-sizing: border-box;
+		flex: none;
+	}
+	.pip--filled {
+		background: #9d00ff;
+		border-color: #9d00ff;
+	}
 	.fixed_spacer {
 		position: sticky;
 		bottom: 0px;
@@ -267,6 +422,7 @@
 		width: 100%;
 	}
 	.spacer {
+		background: #0a0510;
 		height: 100px;
 		display: block;
 	}

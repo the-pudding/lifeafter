@@ -1,9 +1,9 @@
 <script>
 	let {
-		title = "Title TK",
-		description = "Description TK",
-		url = "https://pudding.cool",
-		keywords = "",
+		title = "Life after death?",
+		description = "Humans around the world wrestling with what comes after it all",
+		url = "https://pudding.cool/2026/09/lifeafter",
+		keywords = "afterlife, global flourishing study, religion, worldwide beliefs, heaven, hell, agnostic",
 		preloadFont = []
 	} = $props();
 </script>

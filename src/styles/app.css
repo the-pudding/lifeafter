@@ -46,7 +46,9 @@
 	--color-input-fg: var(--color-gray-900);
 	--color-placeholder: var(--color-gray-500);
 	--color-light-purple: #b9a0b4;
-
+	--color-no-belief: #d6791c;
+	--color-unsure: #7a1ea8;
+	--color-belief: #e60b9a;
 	/* "1" second duration */
 	--1s: 1ms;
 }
@@ -95,23 +97,45 @@ svg {
 }
 
 .lifedeath-room {
-	font-family: var(--font-sans);
+	font-family: var(--font-mono);
 }
 
 .story-overlay {
 	font-family: var(--font-mono);
 	font-weight: 100;
 	position: absolute;
-	bottom: 10%;
+	bottom: 10px;
 	left: 50%;
 	max-width: 95%;
 	width: 600px;
-	transform: translate(-50%, -50%);
+	transform: translateX(-50%);
 	z-index: 10;
 	text-align: left;
-	pointer-events: none;
+	/* pointer-events: none; */
 	color: #fff;
-	text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
+	padding: 5px;
+}
+
+/* Below this width the minimap (bottom-right, see Minimap.lifedeath.svelte's
+   own `min(124px, 30vw)` mobile size) starts eating into the same
+   horizontal band this box's default 600px/95vw width assumes is free —
+   shrunk to leave it clear, with its own left/right padding so the text
+   doesn't run flush up against either the screen edge or that reserved space. */
+@media (max-width: 800px) {
+	.story-overlay {
+		box-sizing: border-box;
+		width: calc(100% - 140px);
+		max-width: calc(100% - 140px);
+		left: 5px;
+		bottom: 0px;
+		transform: translateX(0%);
+	}
+	.story-overlay.no_map {
+		max-width: 95%;
+		width: 600px;
+		left: 50%;
+		transform: translateX(-50%);
+	}
 }
 
 .story-overlay p {
@@ -119,8 +143,114 @@ svg {
 	/* Shrinks smoothly on narrow screens (down to 0.8rem) instead of
 	   staying a fixed 1.3em and eating into the limited vertical space
 	   there — caps back at the original 1.3rem on wide/desktop screens. */
-	font-size: clamp(0.8rem, 0.5rem + 2.5vw, 1.3rem);
+	font-size: 20px;
 	line-height: 1.8em;
 	background: rgba(0,0,0,0.8);
 	padding: 3px;
+	margin-block-start: 1.2em;
+    margin-block-end: 1.2em;
+    margin-inline-start: 0px;
+    margin-inline-end: 0px;
 }
+@media (max-width: 1800px) {
+	.story-overlay p {
+		font-size: 18px;
+	}
+}
+@media (max-width: 1200px) {
+	.story-overlay p {
+		font-size: 16px;
+	}
+}
+@media (max-width: 800px) {
+	.story-overlay p {
+		font-size: 14px;
+	}
+}
+@media (max-width: 600px) {
+	.story-overlay p {
+		font-size: 13px;
+	}
+}
+/* Base container styling */
+.story-overlay p .hints {
+    text-align: center;
+    font-style: italic;
+    /* display: inline-flex;  */
+    align-items: center;
+    justify-content: center;
+	font-size: 14px;
+	text-transform: uppercase;
+	padding: 10px 0;
+	margin-left: -3em;
+}
+
+/* Shared ::before styling for all 3 icons */
+.story-overlay p .hints.click::before,
+.story-overlay p .hints.scroll::before,
+.story-overlay p .hints.pan::before {
+    content: "";
+    display: inline-block;
+    width: 2em;
+    height: 2em;
+    margin-right: 1em;
+	margin-bottom: -7px;
+    background-color: #df5fff; 
+    -webkit-mask-size: contain;
+    mask-size: contain;
+    -webkit-mask-position: center;
+    mask-position: center;
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+}
+
+/* 1. Click: Hand Select Cursor (Static) */
+.story-overlay p .hints.click::before {
+    -webkit-mask-image: url("assets/app/click.svg");
+    mask-image: url("assets/app/click.svg");
+}
+/* 2. Scroll: Down Arrow with downward animation */
+.story-overlay p .hints.scroll::before {
+    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M20 12l-1.41-1.41L13 16.17V4h-2v12.17l-5.58-5.59L4 12l8 8 8-8z'/%3E%3C/svg%3E");
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M20 12l-1.41-1.41L13 16.17V4h-2v12.17l-5.58-5.59L4 12l8 8 8-8z'/%3E%3C/svg%3E");
+    animation: scrollSubtle 1.5s ease-in-out infinite;
+}
+
+/* 3. Pan: Side-to-side Arrow with horizontal animation */
+.story-overlay p .hints.pan::before {
+    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M22 12l-4-4v3H6V8l-4 4 4 4v-3h12v3z'/%3E%3C/svg%3E");
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M22 12l-4-4v3H6V8l-4 4 4 4v-3h12v3z'/%3E%3C/svg%3E");
+    animation: panSubtle 2s ease-in-out infinite;
+}
+
+/* --- Animations --- */
+
+/* Bobs up and down subtly */
+@keyframes scrollSubtle {
+    0%, 100% {
+        transform: translateY(-2px);
+    }
+    50% {
+        transform: translateY(2px);
+    }
+}
+
+/* Glides left and right subtly */
+@keyframes panSubtle {
+    0%, 100% {
+        transform: translateX(-3px);
+    }
+    50% {
+        transform: translateX(3px);
+    }
+}
+.story-overlay p .unsure {
+	background: var(--color-unsure);
+}
+.story-overlay p .no_belief {
+	background: var(--color-no-belief);
+}
+.story-overlay p .belief {
+	background: var(--color-belief);
+}
+

@@ -23,60 +23,34 @@
 //     as-is. ranges: [{ key, label, color, min, max }, ...] bucket the
 //     resulting number — this is the "give ranges for each category" knob.
 //
-// COLOR RULE (this pass) — three palettes, used for three different jobs:
+// COLOR RULE (this pass) — one shared 5-color spectrum, PALETTE, for
+// every job the old three separate palettes (colors_div, colors_asc,
+// colors_diverging) used to split across: ordinal scales (low -> high,
+// disagree -> agree) read across it start-to-end, and purely qualitative
+// variables (GENDER, MARITAL_STATUS, ...) just pick whichever 2-5 of its
+// five stops read most distinctly against each other for that variable's
+// own category count — nothing here is order-sensitive for those.
 //
-//   - `colors_asc`: Highest values map to a bright pink/purple (#ff00d4), 
-//     and smoothly descend into a dark, highly desaturated purple to 
-//     maintain the "more is brighter" rule while ensuring high contrast.
+// Every stop is a fully saturated, bright color on purpose (the old
+// colors_asc/colors_diverging faded their low end down into a near-black
+// desaturated purple to signal "low" — but a dark, muted swatch is
+// exactly the hardest kind of color to actually differentiate from
+// another dark, muted swatch at a glance, which was the original
+// complaint). Ordered start-to-end: warm amber/orange, coral (its own
+// transitional stop), vivid purple (the midpoint), magenta (transitional
+// again), bright pink.
 //
-//   - `colors_diverging`: Positive/Agreement maps to bright pink/purple,
-//     fading into a neutral desaturated purple midpoint, and diverging 
-//     down into a bright orange (#ff9514) for Negative/Disagreement.
-//
-//   - `colors_div`: the 9-swatch qualitative palette. 0-index colors are 
-//     the brightest/most vibrant (used for dominant groups/religions), 
-//     while higher indices fade into darker, desaturated tones.
-//
-//   - "No Answer" stays a fixed neutral gray (#55505f) and
-//     "(Does not apply)" stays a fixed muted plum (#4a4550) in every
-//     variable.
-
-export const colors_div = {
-  "purple0": "#c118ff", // Bright Purple
-  "purple1": "#7c4099", // Desaturated Purple
-  "purple2": "#3b2647", // Dark Desaturated Purple
-  "pink0": "#ff00d4",   // Bright Pink
-  "pink1": "#ad4096",   // Desaturated Pink/Purple
-  "pink2": "#472640",   // Dark Desaturated Pink
-  "orange0": "#ff9514", // Bright Orange
-  "orange1": "#a67138", // Desaturated Orange
-  "orange2": "#4a3621", // Dark Desaturated Orange
-}
-
-// Ascending: #ff00d4 -> Dark Desaturated Purple.
-// Brightness strictly decreases as values go down.
-export const colors_asc = {
-  "purple0": "#171521", // Lowest (Darkest, desaturated purple)
-  "purple1": "#2c2838",
-  "purple2": "#473d52",
-  "purple3": "#664d6e",
-  "purple4": "#87538a", // Mid (Desaturated purple)
-  "purple5": "#b044a6",
-  "purple6": "#d620bd",
-  "purple7": "#ff00d4", // Highest (Brightest pink/purple)
-}
-
-// Diverging: #ff9514 (Orange) -> Desaturated Purple -> #ff00d4 (Pink/Purple).
-export const colors_diverging = {
-  "purple0": "#ffc782", // Disagree (Orange)
-  "purple1": "#e09056",
-  "purple2": "#d27255",
-  "purple3": "#b86586",
-  "purple4": "#823b70", // Neutral (Desaturated purple)
-  "purple5": "#ab268f",
-  "purple6": "#d411b0",
-  "purple7": "#ff00d4", // Agree (Bright pink/purple)
-}
+// "No Answer" stays a fixed neutral gray (#55505f) and "(Does not
+// apply)" stays a fixed muted plum (#4a4550) in every variable — outside
+// PALETTE entirely, so they read as "no data," not as another data point
+// on the spectrum.
+export const PALETTE = [
+  "#ffb200", // 0 — warm amber/orange
+  "#ff6a5c", // 1 — coral
+  "#9b4dff", // 2 — vivid purple
+  "#e13cc9", // 3 — magenta
+  "#ff29d8"  // 4 — bright pink
+];
 
 export const PARENT_ORDER = [
 	"Demographics & Background",
@@ -106,7 +80,7 @@ export const variableConfig =
       {
         "key": "female",
         "label": "Female",
-        "color": colors_div.pink0,
+        "color": PALETTE[4],
         "values": [
           "Female"
         ]
@@ -114,7 +88,7 @@ export const variableConfig =
       {
         "key": "male",
         "label": "Male",
-        "color": colors_div.purple1,
+        "color": PALETTE[1],
         "values": [
           "Male"
         ]
@@ -122,7 +96,7 @@ export const variableConfig =
       {
         "key": "other",
         "label": "Other",
-        "color": colors_div.orange1,
+        "color": PALETTE[0],
         "values": [
           "Other"
         ]
@@ -152,21 +126,21 @@ export const variableConfig =
   //     {
   //       "key": "18_44",
   //       "label": "18–44",
-  //       "color": colors_asc.purple0,
+  //       "color": PALETTE[0],
   //       "min": 18,
   //       "max": 44
   //     },
   //     {
   //       "key": "45_64",
   //       "label": "45–64",
-  //       "color": colors_asc.purple4,
+  //       "color": PALETTE[2],
   //       "min": 45,
   //       "max": 64
   //     },
   //     {
   //       "key": "65_plus",
   //       "label": "65+",
-  //       "color": colors_asc.purple7,
+  //       "color": PALETTE[4],
   //       "min": 65,
   //       "max": 120
   //     }
@@ -184,7 +158,7 @@ export const variableConfig =
       {
         "key": "married_partnered",
         "label": "Married/Partnered",
-        "color": colors_div.pink0,
+        "color": PALETTE[4],
         "values": [
           "Married",
           "Domestic partner"
@@ -193,7 +167,7 @@ export const variableConfig =
       {
         "key": "single",
         "label": "Single",
-        "color": colors_diverging.purple3,
+        "color": PALETTE[2],
         "values": [
           "Single/Never been married"
         ]
@@ -201,7 +175,7 @@ export const variableConfig =
       {
         "key": "divorced_separated",
         "label": "Divorced/Separated",
-        "color": colors_div.purple1,
+        "color": PALETTE[1],
         "values": [
           "Divorced",
           "Separated"
@@ -210,7 +184,7 @@ export const variableConfig =
       {
         "key": "widowed",
         "label": "Widowed",
-        "color": colors_div.orange0,
+        "color": PALETTE[0],
         "values": [
           "Widowed"
         ]
@@ -239,7 +213,7 @@ export const variableConfig =
       {
         "key": "elementary_or_less",
         "label": "K8 or less",
-        "color": colors_diverging.purple1,
+        "color": PALETTE[1],
         "values": [
           "Completed elementary education or less (up to 8 years of basic education)"
         ]
@@ -247,7 +221,7 @@ export const variableConfig =
       {
         "key": "secondary_some_post_secondary",
         "label": "Some HS or college",
-        "color": colors_div.purple0,
+        "color": PALETTE[2],
         "values": [
           "Some secondary education, completed secondary education, or some post-secondary"
         ]
@@ -255,7 +229,7 @@ export const variableConfig =
       {
         "key": "completed_4_year_degree",
         "label": "4-year degree or more",
-        "color": colors_asc.purple7,
+        "color": PALETTE[4],
         "values": [
           "Completed four years of education beyond high school and/or received a 4-year co"
         ]
@@ -284,7 +258,7 @@ export const variableConfig =
       {
         "key": "employed",
         "label": "Employed / Self-Employed",
-        "color": colors_div.purple0,
+        "color": PALETTE[2],
         "values": [
           "Employed for an employer",
           "Self-employed"
@@ -293,7 +267,7 @@ export const variableConfig =
       {
         "key": "retired",
         "label": "Retired",
-        "color": colors_div.pink0,
+        "color": PALETTE[4],
         "values": [
           "Retired"
         ]
@@ -301,7 +275,7 @@ export const variableConfig =
       {
         "key": "homemaker",
         "label": "Homemaker",
-        "color": colors_div.orange0,
+        "color": PALETTE[0],
         "values": [
           "Homemaker"
         ]
@@ -309,7 +283,7 @@ export const variableConfig =
       {
         "key": "student",
         "label": "Student",
-        "color": colors_div.purple1,
+        "color": PALETTE[1],
         "values": [
           "Student"
         ]
@@ -317,7 +291,7 @@ export const variableConfig =
       {
         "key": "unemployed",
         "label": "Unemployed",
-        "color": colors_div.pink1,
+        "color": PALETTE[3],
         "values": [
           "Unemployed and looking for a job"
         ]
@@ -325,7 +299,7 @@ export const variableConfig =
       {
         "key": "other",
         "label": "Other",
-        "color": colors_div.orange1,
+        "color": PALETTE[0],
         "values": [
           "None of these/Other"
         ]
@@ -356,7 +330,7 @@ export const variableConfig =
   //     {
   //       "key": "no_income",
   //       "label": "No Household Income",
-  //       "color": colors_asc.purple6,
+  //       "color": PALETTE[3],
   //       "values": [
   //         "(None/No household income)"
   //       ]
@@ -387,7 +361,7 @@ export const variableConfig =
       {
         "key": "comfortable",
         "label": "Comfortable / Getting By",
-        "color": colors_asc.purple7,
+        "color": PALETTE[4],
         "values": [
           "Living comfortably on present income",
           "Getting by on present income"
@@ -396,7 +370,7 @@ export const variableConfig =
       {
         "key": "struggling",
         "label": "Finding It Difficult",
-        "color": colors_asc.purple1,
+        "color": PALETTE[1],
         "values": [
           "Finding it difficult on present income",
           "Finding it very difficult on present income"
@@ -429,21 +403,21 @@ export const variableConfig =
       {
         "key": "0",
         "label": "0",
-        "color": colors_asc.purple0,
+        "color": PALETTE[0],
         "min": 0,
         "max": 0
       },
       {
         "key": "1_2",
         "label": "1–2",
-        "color": colors_asc.purple4,
+        "color": PALETTE[2],
         "min": 1,
         "max": 2
       },
       {
         "key": "3_plus",
         "label": "3+",
-        "color": colors_asc.purple7,
+        "color": PALETTE[4],
         "min": 3,
         "max": 30
       }
@@ -464,21 +438,21 @@ export const variableConfig =
       {
         "key": "1",
         "label": "1",
-        "color": colors_asc.purple0,
+        "color": PALETTE[0],
         "min": 1,
         "max": 1
       },
       {
         "key": "2_3",
         "label": "2–3",
-        "color": colors_asc.purple4,
+        "color": PALETTE[2],
         "min": 2,
         "max": 3
       },
       {
         "key": "4_plus",
         "label": "4+",
-        "color": colors_asc.purple7,
+        "color": PALETTE[4],
         "min": 4,
         "max": 100
       }
@@ -495,7 +469,7 @@ export const variableConfig =
       {
         "key": "urban",
         "label": "Urban (City / Suburb)",
-        "color": colors_asc.purple7,
+        "color": PALETTE[4],
         "values": [
           "A large city",
           "A suburb of a large city"
@@ -504,7 +478,7 @@ export const variableConfig =
       {
         "key": "rural",
         "label": "Rural / Small Town",
-        "color": colors_asc.purple1,
+        "color": PALETTE[1],
         "values": [
           "A small town or village",
           "A rural area or on a farm"
@@ -534,7 +508,7 @@ export const variableConfig =
       {
         "key": "born_here",
         "label": "Born Here",
-        "color": colors_asc.purple7,
+        "color": PALETTE[4],
         "values": [
           "Born in this country"
         ]
@@ -542,7 +516,7 @@ export const variableConfig =
       {
         "key": "born_abroad",
         "label": "Born Abroad",
-        "color": colors_asc.purple1,
+        "color": PALETTE[1],
         "values": [
           "Born in another country"
         ]
@@ -595,7 +569,7 @@ export const variableConfig =
       {
         "key": "none",
         "label": "No Second Identity",
-        "color": colors_asc.purple4,
+        "color": PALETTE[2],
         "values": [
           "(No other response)"
         ]
@@ -626,7 +600,7 @@ export const variableConfig =
       {
         "key": "no_party",
         "label": "Do Not Feel Close to Any Party",
-        "color": colors_asc.purple4,
+        "color": PALETTE[2],
         "values": [
           "Do not feel close to any party"
         ]
@@ -656,7 +630,7 @@ export const variableConfig =
       {
         "key": "disagree",
         "label": "Disagree",
-        "color": colors_diverging.purple0,
+        "color": PALETTE[0],
         "values": [
           "Strongly disagree",
           "Somewhat disagree"
@@ -665,7 +639,7 @@ export const variableConfig =
       {
         "key": "neutral",
         "label": "Neutral",
-        "color": colors_diverging.purple4,
+        "color": PALETTE[2],
         "values": [
           "Neither agree nor disagree"
         ]
@@ -673,7 +647,7 @@ export const variableConfig =
       {
         "key": "agree",
         "label": "Agree",
-        "color": colors_diverging.purple7,
+        "color": PALETTE[4],
         "values": [
           "Somewhat agree",
           "Strongly agree"
@@ -702,7 +676,7 @@ export const variableConfig =
       {
         "key": "disagree",
         "label": "Disagree",
-        "color": colors_diverging.purple0,
+        "color": PALETTE[0],
         "values": [
           "Strongly disagree",
           "Somewhat disagree"
@@ -711,7 +685,7 @@ export const variableConfig =
       {
         "key": "neutral",
         "label": "Neutral",
-        "color": colors_diverging.purple4,
+        "color": PALETTE[2],
         "values": [
           "Neither agree nor disagree"
         ]
@@ -719,7 +693,7 @@ export const variableConfig =
       {
         "key": "agree",
         "label": "Agree",
-        "color": colors_diverging.purple7,
+        "color": PALETTE[4],
         "values": [
           "Somewhat agree",
           "Strongly agree"
@@ -748,7 +722,7 @@ export const variableConfig =
       {
         "key": "agree",
         "label": "Agree",
-        "color": colors_diverging.purple7,
+        "color": PALETTE[4],
         "values": [
           "Agree"
         ]
@@ -756,7 +730,7 @@ export const variableConfig =
       {
         "key": "unsure",
         "label": "Unsure",
-        "color": colors_diverging.purple4,
+        "color": PALETTE[2],
         "values": [
           "Unsure"
         ]
@@ -764,7 +738,7 @@ export const variableConfig =
       {
         "key": "disagree",
         "label": "Disagree",
-        "color": colors_diverging.purple0,
+        "color": PALETTE[0],
         "values": [
           "Disagree"
         ]
@@ -793,7 +767,7 @@ export const variableConfig =
       {
         "key": "rarely",
         "label": "Never / Rarely",
-        "color": colors_asc.purple1,
+        "color": PALETTE[1],
         "values": [
           "Never",
           "Rarely"
@@ -802,7 +776,7 @@ export const variableConfig =
       {
         "key": "often",
         "label": "Often / Always",
-        "color": colors_asc.purple7,
+        "color": PALETTE[4],
         "values": [
           "Often",
           "Always"
@@ -829,40 +803,42 @@ export const variableConfig =
     "parent": "Religion & Spirituality",
     "type": "categorical",
     "categories": [
-      {
-        "key": "yes",
-        "label": "Yes",
-        "color": colors_diverging.purple7,
-        "values": [
-          "Yes"
-        ]
-      },
-      {
-        "key": "unsure",
-        "label": "Unsure",
-        "color": colors_diverging.purple4,
-        "values": [
-          "Unsure"
-        ]
-      },
-      {
+       {
         "key": "no",
         "label": "No",
-        "color": colors_diverging.purple0,
+        "color": PALETTE[0],
         "values": [
           "No"
         ]
       },
       {
-        "key": "no_answer",
-        "label": "No Answer",
-        "color": NO_ANSWER_COLOR,
+        "key": "unsure",
+        "label": "Unsure",
+        "color": PALETTE[2],
         "values": [
-          "(Saw, skipped)",
-          "(Refused)",
-          "(DK)"
+          "Unsure"
+        ]
+      },
+       {
+        "key": "yes",
+        "label": "Yes",
+        "color": PALETTE[4],
+        "values": [
+          "Yes"
         ]
       }
+    
+      // ,
+      // {
+      //   "key": "no_answer",
+      //   "label": "No Answer",
+      //   "color": NO_ANSWER_COLOR,
+      //   "values": [
+      //     "(Saw, skipped)",
+      //     "(Refused)",
+      //     "(DK)"
+      //   ]
+      // }
     ],
     "columns": [
       "AFTER_DEATH_Y1",
@@ -877,7 +853,7 @@ export const variableConfig =
       {
         "key": "rarely",
         "label": "Never / A Few Times a Year",
-        "color": colors_asc.purple0,
+        "color": PALETTE[0],
         "values": [
           "Never",
           "A few times a year"
@@ -886,7 +862,7 @@ export const variableConfig =
       {
         "key": "monthly",
         "label": "1–3 Times a Month",
-        "color": colors_asc.purple4,
+        "color": PALETTE[2],
         "values": [
           "One to three times a month"
         ]
@@ -894,7 +870,7 @@ export const variableConfig =
       {
         "key": "weekly_plus",
         "label": "Weekly or More",
-        "color": colors_asc.purple7,
+        "color": PALETTE[4],
         "values": [
           "Once a week",
           "More than once a week"
@@ -924,7 +900,7 @@ export const variableConfig =
       {
         "key": "one_god",
         "label": "One God",
-        "color": colors_div.purple0,
+        "color": PALETTE[2],
         "values": [
           "One God"
         ]
@@ -932,7 +908,7 @@ export const variableConfig =
       {
         "key": "more_than_one_god",
         "label": "More Than One God",
-        "color": colors_div.pink0,
+        "color": PALETTE[4],
         "values": [
           "More than one god"
         ]
@@ -940,7 +916,7 @@ export const variableConfig =
       {
         "key": "impersonal_spiritual_force",
         "label": "Impersonal Spiritual Force",
-        "color": colors_div.orange0,
+        "color": PALETTE[0],
         "values": [
           "An impersonal spiritual force"
         ]
@@ -948,7 +924,7 @@ export const variableConfig =
       {
         "key": "unsure",
         "label": "Unsure",
-        "color": colors_div.purple1,
+        "color": PALETTE[1],
         "values": [
           "Unsure"
         ]
@@ -956,7 +932,7 @@ export const variableConfig =
       {
         "key": "none_of_these",
         "label": "None of These",
-        "color": colors_div.pink1,
+        "color": PALETTE[3],
         "values": [
           "None of these"
         ]
@@ -985,7 +961,7 @@ export const variableConfig =
       {
         "key": "agree",
         "label": "Agree",
-        "color": colors_diverging.purple7,
+        "color": PALETTE[4],
         "values": [
           "Agree"
         ]
@@ -993,7 +969,7 @@ export const variableConfig =
       {
         "key": "unsure",
         "label": "Unsure",
-        "color": colors_diverging.purple4,
+        "color": PALETTE[2],
         "values": [
           "Unsure"
         ]
@@ -1001,7 +977,7 @@ export const variableConfig =
       {
         "key": "disagree",
         "label": "Disagree",
-        "color": colors_diverging.purple0,
+        "color": PALETTE[0],
         "values": [
           "Disagree"
         ]
@@ -1038,7 +1014,7 @@ export const variableConfig =
       {
         "key": "rarely",
         "label": "Never / Rarely",
-        "color": colors_asc.purple1,
+        "color": PALETTE[1],
         "values": [
           "Never",
           "Rarely"
@@ -1047,7 +1023,7 @@ export const variableConfig =
       {
         "key": "often",
         "label": "Often / Always",
-        "color": colors_asc.purple7,
+        "color": PALETTE[4],
         "values": [
           "Often",
           "Always"
@@ -1077,7 +1053,7 @@ export const variableConfig =
       {
         "key": "agree",
         "label": "Agree",
-        "color": colors_diverging.purple7,
+        "color": PALETTE[4],
         "values": [
           "Agree"
         ]
@@ -1085,7 +1061,7 @@ export const variableConfig =
       {
         "key": "unsure",
         "label": "Unsure",
-        "color": colors_diverging.purple4,
+        "color": PALETTE[2],
         "values": [
           "Unsure"
         ]
@@ -1093,7 +1069,7 @@ export const variableConfig =
       {
         "key": "disagree",
         "label": "Disagree",
-        "color": colors_diverging.purple0,
+        "color": PALETTE[0],
         "values": [
           "Disagree"
         ]
@@ -1130,7 +1106,7 @@ export const variableConfig =
       {
         "key": "agree",
         "label": "Agree",
-        "color": colors_diverging.purple7,
+        "color": PALETTE[4],
         "values": [
           "Agree"
         ]
@@ -1138,7 +1114,7 @@ export const variableConfig =
       {
         "key": "unsure",
         "label": "Unsure",
-        "color": colors_diverging.purple4,
+        "color": PALETTE[2],
         "values": [
           "Unsure"
         ]
@@ -1146,7 +1122,7 @@ export const variableConfig =
       {
         "key": "disagree",
         "label": "Disagree",
-        "color": colors_diverging.purple0,
+        "color": PALETTE[0],
         "values": [
           "Disagree"
         ]
@@ -1183,7 +1159,7 @@ export const variableConfig =
       {
         "key": "rarely",
         "label": "Never / A Few Times a Year",
-        "color": colors_asc.purple0,
+        "color": PALETTE[0],
         "values": [
           "Never",
           "A few times a year"
@@ -1192,7 +1168,7 @@ export const variableConfig =
       {
         "key": "monthly",
         "label": "1–3 Times a Month",
-        "color": colors_asc.purple4,
+        "color": PALETTE[2],
         "values": [
           "One to three times a month"
         ]
@@ -1200,7 +1176,7 @@ export const variableConfig =
       {
         "key": "weekly_plus",
         "label": "Weekly or More",
-        "color": colors_asc.purple7,
+        "color": PALETTE[4],
         "values": [
           "Once a week",
           "More than once a week"
@@ -1230,7 +1206,7 @@ export const variableConfig =
       {
         "key": "agree",
         "label": "Agree",
-        "color": colors_diverging.purple7,
+        "color": PALETTE[4],
         "values": [
           "Agree"
         ]
@@ -1238,7 +1214,7 @@ export const variableConfig =
       {
         "key": "unsure",
         "label": "Unsure",
-        "color": colors_diverging.purple4,
+        "color": PALETTE[2],
         "values": [
           "Unsure"
         ]
@@ -1246,7 +1222,7 @@ export const variableConfig =
       {
         "key": "disagree",
         "label": "Disagree",
-        "color": colors_diverging.purple0,
+        "color": PALETTE[0],
         "values": [
           "Disagree"
         ]
@@ -1283,7 +1259,7 @@ export const variableConfig =
       {
         "key": "agree",
         "label": "Agree",
-        "color": colors_diverging.purple7,
+        "color": PALETTE[4],
         "values": [
           "Agree"
         ]
@@ -1291,7 +1267,7 @@ export const variableConfig =
       {
         "key": "unsure",
         "label": "Unsure",
-        "color": colors_diverging.purple4,
+        "color": PALETTE[2],
         "values": [
           "Unsure"
         ]
@@ -1299,7 +1275,7 @@ export const variableConfig =
       {
         "key": "disagree",
         "label": "Disagree",
-        "color": colors_diverging.purple0,
+        "color": PALETTE[0],
         "values": [
           "Disagree"
         ]
@@ -1336,7 +1312,7 @@ export const variableConfig =
       {
         "key": "rarely",
         "label": "Never / Sometimes",
-        "color": colors_asc.purple1,
+        "color": PALETTE[1],
         "values": [
           "Never",
           "Sometimes"
@@ -1345,7 +1321,7 @@ export const variableConfig =
       {
         "key": "daily",
         "label": "About Once a Day or More",
-        "color": colors_asc.purple7,
+        "color": PALETTE[4],
         "values": [
           "About once a day",
           "More than once a day"
@@ -1375,7 +1351,7 @@ export const variableConfig =
       {
         "key": "yes",
         "label": "Yes",
-        "color": colors_asc.purple7,
+        "color": PALETTE[4],
         "values": [
           "Yes"
         ]
@@ -1383,7 +1359,7 @@ export const variableConfig =
       {
         "key": "no",
         "label": "No",
-        "color": colors_asc.purple1,
+        "color": PALETTE[1],
         "values": [
           "No"
         ]
@@ -1412,7 +1388,7 @@ export const variableConfig =
       {
         "key": "yes",
         "label": "Yes",
-        "color": colors_asc.purple7,
+        "color": PALETTE[4],
         "values": [
           "Yes"
         ]
@@ -1420,7 +1396,7 @@ export const variableConfig =
       {
         "key": "no",
         "label": "No",
-        "color": colors_asc.purple1,
+        "color": PALETTE[1],
         "values": [
           "No"
         ]
@@ -1448,7 +1424,7 @@ export const variableConfig =
       {
         "key": "christianity",
         "label": "Christianity",
-        "color": colors_div.purple0,
+        "color": PALETTE[2],
         "values": [
           "Christianity"
         ]
@@ -1456,7 +1432,7 @@ export const variableConfig =
       {
         "key": "islam",
         "label": "Islam",
-        "color": colors_div.pink0,
+        "color": PALETTE[4],
         "values": [
           "Islam"
         ]
@@ -1464,7 +1440,7 @@ export const variableConfig =
       {
         "key": "hinduism",
         "label": "Hinduism",
-        "color": colors_div.orange0,
+        "color": PALETTE[0],
         "values": [
           "Hinduism"
         ]
@@ -1472,7 +1448,7 @@ export const variableConfig =
       {
         "key": "buddhism",
         "label": "Buddhism",
-        "color": colors_div.purple1,
+        "color": PALETTE[1],
         "values": [
           "Buddhism"
         ]
@@ -1480,7 +1456,7 @@ export const variableConfig =
       {
         "key": "judaism",
         "label": "Judaism",
-        "color": colors_div.pink1,
+        "color": PALETTE[3],
         "values": [
           "Judaism"
         ]
@@ -1488,7 +1464,7 @@ export const variableConfig =
       {
         "key": "none",
         "label": "No Religion / Atheist / Agnostic",
-        "color": colors_div.orange1,
+        "color": PALETTE[0],
         "values": [
           "No religion/Atheist/Agnostic"
         ]
@@ -1496,7 +1472,7 @@ export const variableConfig =
       {
         "key": "other",
         "label": "Other Religion",
-        "color": colors_div.purple2,
+        "color": PALETTE[2],
         "values": [
           "Some other religion",
           "Primal, Animist, or Folk religion",
@@ -1532,7 +1508,7 @@ export const variableConfig =
       {
         "key": "christianity",
         "label": "Christianity",
-        "color": colors_div.purple0,
+        "color": PALETTE[2],
         "values": [
           "Christianity"
         ]
@@ -1540,7 +1516,7 @@ export const variableConfig =
       {
         "key": "islam",
         "label": "Islam",
-        "color": colors_div.pink0,
+        "color": PALETTE[4],
         "values": [
           "Islam"
         ]
@@ -1548,7 +1524,7 @@ export const variableConfig =
       {
         "key": "hinduism",
         "label": "Hinduism",
-        "color": colors_div.orange0,
+        "color": PALETTE[0],
         "values": [
           "Hinduism"
         ]
@@ -1556,7 +1532,7 @@ export const variableConfig =
       {
         "key": "buddhism",
         "label": "Buddhism",
-        "color": colors_div.purple1,
+        "color": PALETTE[1],
         "values": [
           "Buddhism"
         ]
@@ -1564,7 +1540,7 @@ export const variableConfig =
       {
         "key": "judaism",
         "label": "Judaism",
-        "color": colors_div.pink1,
+        "color": PALETTE[3],
         "values": [
           "Judaism"
         ]
@@ -1572,7 +1548,7 @@ export const variableConfig =
       {
         "key": "none",
         "label": "No Religion / Atheist / Agnostic",
-        "color": colors_div.orange1,
+        "color": PALETTE[0],
         "values": [
           "No religion/Atheist/Agnostic"
         ]
@@ -1580,7 +1556,7 @@ export const variableConfig =
       {
         "key": "other",
         "label": "Other Religion",
-        "color": colors_div.purple2,
+        "color": PALETTE[2],
         "values": [
           "Some other religion",
           "Primal, Animist, or Folk religion",
@@ -1619,7 +1595,7 @@ export const variableConfig =
       {
         "key": "catholic",
         "label": "Catholic",
-        "color": colors_asc.purple4,
+        "color": PALETTE[2],
         "values": [
           "Catholic"
         ]
@@ -1648,7 +1624,7 @@ export const variableConfig =
       {
         "key": "atheist",
         "label": "Atheist",
-        "color": colors_div.purple0,
+        "color": PALETTE[2],
         "values": [
           "Atheist – do not believe in any god"
         ]
@@ -1656,7 +1632,7 @@ export const variableConfig =
       {
         "key": "agnostic",
         "label": "Agnostic",
-        "color": colors_div.pink0,
+        "color": PALETTE[4],
         "values": [
           "Agnostic – unsure whether a God or gods exist"
         ]
@@ -1664,7 +1640,7 @@ export const variableConfig =
       {
         "key": "neither",
         "label": "Neither",
-        "color": colors_div.orange0,
+        "color": PALETTE[0],
         "values": [
           "Neither"
         ]
@@ -1692,7 +1668,7 @@ export const variableConfig =
       {
         "key": "religious",
         "label": "Religious",
-        "color": colors_div.purple0,
+        "color": PALETTE[2],
         "values": [
           "Religious"
         ]
@@ -1700,7 +1676,7 @@ export const variableConfig =
       {
         "key": "spiritual",
         "label": "Spiritual",
-        "color": colors_div.pink0,
+        "color": PALETTE[4],
         "values": [
           "Spiritual"
         ]
@@ -1708,7 +1684,7 @@ export const variableConfig =
       {
         "key": "both",
         "label": "Both",
-        "color": colors_div.orange0,
+        "color": PALETTE[0],
         "values": [
           "Both"
         ]
@@ -1716,7 +1692,7 @@ export const variableConfig =
       {
         "key": "neither",
         "label": "Neither",
-        "color": colors_div.purple1,
+        "color": PALETTE[1],
         "values": [
           "Neither"
         ]
@@ -1744,7 +1720,7 @@ export const variableConfig =
       {
         "key": "rarely",
         "label": "Never / Sometimes",
-        "color": colors_asc.purple1,
+        "color": PALETTE[1],
         "values": [
           "Never",
           "Sometimes"
@@ -1753,7 +1729,7 @@ export const variableConfig =
       {
         "key": "daily",
         "label": "About Once a Day or More",
-        "color": colors_asc.purple7,
+        "color": PALETTE[4],
         "values": [
           "About once a day",
           "More than once a day"
@@ -1783,7 +1759,7 @@ export const variableConfig =
       {
         "key": "agree",
         "label": "Agree",
-        "color": colors_diverging.purple7,
+        "color": PALETTE[4],
         "values": [
           "Agree"
         ]
@@ -1791,7 +1767,7 @@ export const variableConfig =
       {
         "key": "unsure",
         "label": "Unsure",
-        "color": colors_diverging.purple4,
+        "color": PALETTE[2],
         "values": [
           "Unsure"
         ]
@@ -1799,7 +1775,7 @@ export const variableConfig =
       {
         "key": "disagree",
         "label": "Disagree",
-        "color": colors_diverging.purple0,
+        "color": PALETTE[0],
         "values": [
           "Disagree"
         ]
@@ -1840,21 +1816,21 @@ export const variableConfig =
   //     {
   //       "key": "low",
   //       "label": "Low (0–3)",
-  //       "color": colors_asc.purple0,
+  //       "color": PALETTE[0],
   //       "min": 0,
   //       "max": 3
   //     },
   //     {
   //       "key": "mid",
   //       "label": "Medium (4–6)",
-  //       "color": colors_asc.purple4,
+  //       "color": PALETTE[2],
   //       "min": 4,
   //       "max": 6
   //     },
   //     {
   //       "key": "high",
   //       "label": "High (7–10)",
-  //       "color": colors_asc.purple7,
+  //       "color": PALETTE[4],
   //       "min": 7,
   //       "max": 10
   //     }
@@ -1875,21 +1851,21 @@ export const variableConfig =
   //     {
   //       "key": "low",
   //       "label": "Low (0–3)",
-  //       "color": colors_asc.purple0,
+  //       "color": PALETTE[0],
   //       "min": 0,
   //       "max": 3
   //     },
   //     {
   //       "key": "mid",
   //       "label": "Medium (4–6)",
-  //       "color": colors_asc.purple4,
+  //       "color": PALETTE[2],
   //       "min": 4,
   //       "max": 6
   //     },
   //     {
   //       "key": "high",
   //       "label": "High (7–10)",
-  //       "color": colors_asc.purple7,
+  //       "color": PALETTE[4],
   //       "min": 7,
   //       "max": 10
   //     }
@@ -1910,21 +1886,21 @@ export const variableConfig =
   //     {
   //       "key": "low",
   //       "label": "Low (0–3)",
-  //       "color": colors_asc.purple0,
+  //       "color": PALETTE[0],
   //       "min": 0,
   //       "max": 3
   //     },
   //     {
   //       "key": "mid",
   //       "label": "Medium (4–6)",
-  //       "color": colors_asc.purple4,
+  //       "color": PALETTE[2],
   //       "min": 4,
   //       "max": 6
   //     },
   //     {
   //       "key": "high",
   //       "label": "High (7–10)",
-  //       "color": colors_asc.purple7,
+  //       "color": PALETTE[4],
   //       "min": 7,
   //       "max": 10
   //     }
@@ -1945,21 +1921,21 @@ export const variableConfig =
   //     {
   //       "key": "low",
   //       "label": "Low (0–3)",
-  //       "color": colors_asc.purple0,
+  //       "color": PALETTE[0],
   //       "min": 0,
   //       "max": 3
   //     },
   //     {
   //       "key": "mid",
   //       "label": "Medium (4–6)",
-  //       "color": colors_asc.purple4,
+  //       "color": PALETTE[2],
   //       "min": 4,
   //       "max": 6
   //     },
   //     {
   //       "key": "high",
   //       "label": "High (7–10)",
-  //       "color": colors_asc.purple7,
+  //       "color": PALETTE[4],
   //       "min": 7,
   //       "max": 10
   //     }
@@ -1980,21 +1956,21 @@ export const variableConfig =
   //     {
   //       "key": "low",
   //       "label": "Low (0–3)",
-  //       "color": colors_asc.purple0,
+  //       "color": PALETTE[0],
   //       "min": 0,
   //       "max": 3
   //     },
   //     {
   //       "key": "mid",
   //       "label": "Medium (4–6)",
-  //       "color": colors_asc.purple4,
+  //       "color": PALETTE[2],
   //       "min": 4,
   //       "max": 6
   //     },
   //     {
   //       "key": "high",
   //       "label": "High (7–10)",
-  //       "color": colors_asc.purple7,
+  //       "color": PALETTE[4],
   //       "min": 7,
   //       "max": 10
   //     }
@@ -2015,21 +1991,21 @@ export const variableConfig =
   //     {
   //       "key": "low",
   //       "label": "Low (0–3)",
-  //       "color": colors_asc.purple0,
+  //       "color": PALETTE[0],
   //       "min": 0,
   //       "max": 3
   //     },
   //     {
   //       "key": "mid",
   //       "label": "Medium (4–6)",
-  //       "color": colors_asc.purple4,
+  //       "color": PALETTE[2],
   //       "min": 4,
   //       "max": 6
   //     },
   //     {
   //       "key": "high",
   //       "label": "High (7–10)",
-  //       "color": colors_asc.purple7,
+  //       "color": PALETTE[4],
   //       "min": 7,
   //       "max": 10
   //     }
@@ -2050,21 +2026,21 @@ export const variableConfig =
   //     {
   //       "key": "low",
   //       "label": "Low (0–3)",
-  //       "color": colors_asc.purple0,
+  //       "color": PALETTE[0],
   //       "min": 0,
   //       "max": 3
   //     },
   //     {
   //       "key": "mid",
   //       "label": "Medium (4–6)",
-  //       "color": colors_asc.purple4,
+  //       "color": PALETTE[2],
   //       "min": 4,
   //       "max": 6
   //     },
   //     {
   //       "key": "high",
   //       "label": "High (7–10)",
-  //       "color": colors_asc.purple7,
+  //       "color": PALETTE[4],
   //       "min": 7,
   //       "max": 10
   //     }
@@ -2085,21 +2061,21 @@ export const variableConfig =
       {
         "key": "low",
         "label": "Low (0–3)",
-        "color": colors_asc.purple0,
+        "color": PALETTE[0],
         "min": 0,
         "max": 3
       },
       {
         "key": "mid",
         "label": "Medium (4–6)",
-        "color": colors_asc.purple4,
+        "color": PALETTE[2],
         "min": 4,
         "max": 6
       },
       {
         "key": "high",
         "label": "High (7–10)",
-        "color": colors_asc.purple7,
+        "color": PALETTE[4],
         "min": 7,
         "max": 10
       }
@@ -2121,21 +2097,21 @@ export const variableConfig =
       {
         "key": "low",
         "label": "Low (0–3)",
-        "color": colors_asc.purple0,
+        "color": PALETTE[0],
         "min": 0,
         "max": 3
       },
       {
         "key": "mid",
         "label": "Medium (4–6)",
-        "color": colors_asc.purple4,
+        "color": PALETTE[2],
         "min": 4,
         "max": 6
       },
       {
         "key": "high",
         "label": "High (7–10)",
-        "color": colors_asc.purple7,
+        "color": PALETTE[4],
         "min": 7,
         "max": 10
       }
@@ -2157,21 +2133,21 @@ export const variableConfig =
       {
         "key": "low",
         "label": "Low (0–3)",
-        "color": colors_asc.purple0,
+        "color": PALETTE[0],
         "min": 0,
         "max": 3
       },
       {
         "key": "mid",
         "label": "Medium (4–6)",
-        "color": colors_asc.purple4,
+        "color": PALETTE[2],
         "min": 4,
         "max": 6
       },
       {
         "key": "high",
         "label": "High (7–10)",
-        "color": colors_asc.purple7,
+        "color": PALETTE[4],
         "min": 7,
         "max": 10
       }
@@ -2193,21 +2169,21 @@ export const variableConfig =
       {
         "key": "low",
         "label": "Low (0–3)",
-        "color": colors_asc.purple0,
+        "color": PALETTE[0],
         "min": 0,
         "max": 3
       },
       {
         "key": "mid",
         "label": "Medium (4–6)",
-        "color": colors_asc.purple4,
+        "color": PALETTE[2],
         "min": 4,
         "max": 6
       },
       {
         "key": "high",
         "label": "High (7–10)",
-        "color": colors_asc.purple7,
+        "color": PALETTE[4],
         "min": 7,
         "max": 10
       }
@@ -2229,21 +2205,21 @@ export const variableConfig =
       {
         "key": "low",
         "label": "Low (0–3)",
-        "color": colors_asc.purple0,
+        "color": PALETTE[0],
         "min": 0,
         "max": 3
       },
       {
         "key": "mid",
         "label": "Medium (4–6)",
-        "color": colors_asc.purple4,
+        "color": PALETTE[2],
         "min": 4,
         "max": 6
       },
       {
         "key": "high",
         "label": "High (7–10)",
-        "color": colors_asc.purple7,
+        "color": PALETTE[4],
         "min": 7,
         "max": 10
       }
@@ -2265,21 +2241,21 @@ export const variableConfig =
       {
         "key": "low",
         "label": "Low (0–3)",
-        "color": colors_asc.purple0,
+        "color": PALETTE[0],
         "min": 0,
         "max": 3
       },
       {
         "key": "mid",
         "label": "Medium (4–6)",
-        "color": colors_asc.purple4,
+        "color": PALETTE[2],
         "min": 4,
         "max": 6
       },
       {
         "key": "high",
         "label": "High (7–10)",
-        "color": colors_asc.purple7,
+        "color": PALETTE[4],
         "min": 7,
         "max": 10
       }
@@ -2301,21 +2277,21 @@ export const variableConfig =
       {
         "key": "low",
         "label": "Low (0–3)",
-        "color": colors_asc.purple0,
+        "color": PALETTE[0],
         "min": 0,
         "max": 3
       },
       {
         "key": "mid",
         "label": "Medium (4–6)",
-        "color": colors_asc.purple4,
+        "color": PALETTE[2],
         "min": 4,
         "max": 6
       },
       {
         "key": "high",
         "label": "High (7–10)",
-        "color": colors_asc.purple7,
+        "color": PALETTE[4],
         "min": 7,
         "max": 10
       }
@@ -2333,7 +2309,7 @@ export const variableConfig =
       {
         "key": "rarely",
         "label": "Never / Rarely",
-        "color": colors_asc.purple1,
+        "color": PALETTE[1],
         "values": [
           "Never",
           "Rarely"
@@ -2342,7 +2318,7 @@ export const variableConfig =
       {
         "key": "often",
         "label": "Often / Always",
-        "color": colors_asc.purple7,
+        "color": PALETTE[4],
         "values": [
           "Often",
           "Always"
@@ -2376,21 +2352,21 @@ export const variableConfig =
       {
         "key": "low",
         "label": "Low (0–3)",
-        "color": colors_asc.purple0,
+        "color": PALETTE[0],
         "min": 0,
         "max": 3
       },
       {
         "key": "mid",
         "label": "Medium (4–6)",
-        "color": colors_asc.purple4,
+        "color": PALETTE[2],
         "min": 4,
         "max": 6
       },
       {
         "key": "high",
         "label": "High (7–10)",
-        "color": colors_asc.purple7,
+        "color": PALETTE[4],
         "min": 7,
         "max": 10
       }
@@ -2412,21 +2388,21 @@ export const variableConfig =
       {
         "key": "low",
         "label": "Low (0–3)",
-        "color": colors_asc.purple0,
+        "color": PALETTE[0],
         "min": 0,
         "max": 3
       },
       {
         "key": "mid",
         "label": "Medium (4–6)",
-        "color": colors_asc.purple4,
+        "color": PALETTE[2],
         "min": 4,
         "max": 6
       },
       {
         "key": "high",
         "label": "High (7–10)",
-        "color": colors_asc.purple7,
+        "color": PALETTE[4],
         "min": 7,
         "max": 10
       }
@@ -2444,7 +2420,7 @@ export const variableConfig =
       {
         "key": "rarely",
         "label": "Never / Rarely",
-        "color": colors_asc.purple1,
+        "color": PALETTE[1],
         "values": [
           "Never",
           "Rarely"
@@ -2453,7 +2429,7 @@ export const variableConfig =
       {
         "key": "often",
         "label": "Often / Always",
-        "color": colors_asc.purple7,
+        "color": PALETTE[4],
         "values": [
           "Often",
           "Always"
@@ -2483,7 +2459,7 @@ export const variableConfig =
       {
         "key": "rarely",
         "label": "Never / Rarely",
-        "color": colors_asc.purple1,
+        "color": PALETTE[1],
         "values": [
           "Never",
           "Rarely"
@@ -2492,7 +2468,7 @@ export const variableConfig =
       {
         "key": "often",
         "label": "Often / Always",
-        "color": colors_asc.purple7,
+        "color": PALETTE[4],
         "values": [
           "Often",
           "Always"
@@ -2526,21 +2502,21 @@ export const variableConfig =
       {
         "key": "low",
         "label": "Low (0–3)",
-        "color": colors_asc.purple0,
+        "color": PALETTE[0],
         "min": 0,
         "max": 3
       },
       {
         "key": "mid",
         "label": "Medium (4–6)",
-        "color": colors_asc.purple4,
+        "color": PALETTE[2],
         "min": 4,
         "max": 6
       },
       {
         "key": "high",
         "label": "High (7–10)",
-        "color": colors_asc.purple7,
+        "color": PALETTE[4],
         "min": 7,
         "max": 10
       }
@@ -2562,21 +2538,21 @@ export const variableConfig =
       {
         "key": "low",
         "label": "Low (0–3)",
-        "color": colors_asc.purple0,
+        "color": PALETTE[0],
         "min": 0,
         "max": 3
       },
       {
         "key": "mid",
         "label": "Medium (4–6)",
-        "color": colors_asc.purple4,
+        "color": PALETTE[2],
         "min": 4,
         "max": 6
       },
       {
         "key": "high",
         "label": "High (7–10)",
-        "color": colors_asc.purple7,
+        "color": PALETTE[4],
         "min": 7,
         "max": 10
       }
@@ -2598,21 +2574,21 @@ export const variableConfig =
       {
         "key": "low",
         "label": "Low (0–3)",
-        "color": colors_asc.purple0,
+        "color": PALETTE[0],
         "min": 0,
         "max": 3
       },
       {
         "key": "mid",
         "label": "Medium (4–6)",
-        "color": colors_asc.purple4,
+        "color": PALETTE[2],
         "min": 4,
         "max": 6
       },
       {
         "key": "high",
         "label": "High (7–10)",
-        "color": colors_asc.purple7,
+        "color": PALETTE[4],
         "min": 7,
         "max": 10
       }
@@ -2630,7 +2606,7 @@ export const variableConfig =
       {
         "key": "yes",
         "label": "Yes",
-        "color": colors_asc.purple7,
+        "color": PALETTE[4],
         "values": [
           "Yes"
         ]
@@ -2638,7 +2614,7 @@ export const variableConfig =
       {
         "key": "no",
         "label": "No",
-        "color": colors_asc.purple1,
+        "color": PALETTE[1],
         "values": [
           "No"
         ]
@@ -2667,7 +2643,7 @@ export const variableConfig =
       {
         "key": "yes",
         "label": "Yes",
-        "color": colors_asc.purple7,
+        "color": PALETTE[4],
         "values": [
           "Yes"
         ]
@@ -2675,7 +2651,7 @@ export const variableConfig =
       {
         "key": "no",
         "label": "No",
-        "color": colors_asc.purple1,
+        "color": PALETTE[1],
         "values": [
           "No"
         ]
@@ -2704,7 +2680,7 @@ export const variableConfig =
       {
         "key": "yes",
         "label": "Yes",
-        "color": colors_asc.purple7,
+        "color": PALETTE[4],
         "values": [
           "Yes"
         ]
@@ -2712,7 +2688,7 @@ export const variableConfig =
       {
         "key": "no",
         "label": "No",
-        "color": colors_asc.purple1,
+        "color": PALETTE[1],
         "values": [
           "No"
         ]
@@ -2745,21 +2721,21 @@ export const variableConfig =
       {
         "key": "low",
         "label": "Low (0–3)",
-        "color": colors_asc.purple0,
+        "color": PALETTE[0],
         "min": 0,
         "max": 3
       },
       {
         "key": "mid",
         "label": "Medium (4–6)",
-        "color": colors_asc.purple4,
+        "color": PALETTE[2],
         "min": 4,
         "max": 6
       },
       {
         "key": "high",
         "label": "High (7–10)",
-        "color": colors_asc.purple7,
+        "color": PALETTE[4],
         "min": 7,
         "max": 10
       }
@@ -2781,21 +2757,21 @@ export const variableConfig =
       {
         "key": "low",
         "label": "Low (0–3)",
-        "color": colors_asc.purple0,
+        "color": PALETTE[0],
         "min": 0,
         "max": 3
       },
       {
         "key": "mid",
         "label": "Medium (4–6)",
-        "color": colors_asc.purple4,
+        "color": PALETTE[2],
         "min": 4,
         "max": 6
       },
       {
         "key": "high",
         "label": "High (7–10)",
-        "color": colors_asc.purple7,
+        "color": PALETTE[4],
         "min": 7,
         "max": 10
       }
@@ -2813,7 +2789,7 @@ export const variableConfig =
       {
         "key": "yes",
         "label": "Yes",
-        "color": colors_asc.purple7,
+        "color": PALETTE[4],
         "values": [
           "Yes"
         ]
@@ -2821,7 +2797,7 @@ export const variableConfig =
       {
         "key": "no",
         "label": "No",
-        "color": colors_asc.purple1,
+        "color": PALETTE[1],
         "values": [
           "No"
         ]
@@ -2850,7 +2826,7 @@ export const variableConfig =
       {
         "key": "low",
         "label": "None at All / Not Very Much",
-        "color": colors_asc.purple1,
+        "color": PALETTE[1],
         "values": [
           "None at all",
           "Not very much"
@@ -2859,7 +2835,7 @@ export const variableConfig =
       {
         "key": "high",
         "label": "Some / A Lot",
-        "color": colors_asc.purple7,
+        "color": PALETTE[4],
         "values": [
           "Some",
           "A lot"
@@ -2889,7 +2865,7 @@ export const variableConfig =
       {
         "key": "low",
         "label": "Not at All / Not Very Much",
-        "color": colors_asc.purple1,
+        "color": PALETTE[1],
         "values": [
           "Not at all",
           "Not very much"
@@ -2898,7 +2874,7 @@ export const variableConfig =
       {
         "key": "high",
         "label": "Some / A Lot",
-        "color": colors_asc.purple7,
+        "color": PALETTE[4],
         "values": [
           "Some",
           "A lot"
@@ -2928,7 +2904,7 @@ export const variableConfig =
       {
         "key": "yes",
         "label": "Yes",
-        "color": colors_asc.purple7,
+        "color": PALETTE[4],
         "values": [
           "Yes"
         ]
@@ -2936,7 +2912,7 @@ export const variableConfig =
       {
         "key": "no",
         "label": "No",
-        "color": colors_asc.purple1,
+        "color": PALETTE[1],
         "values": [
           "No"
         ]
@@ -2964,7 +2940,7 @@ export const variableConfig =
       {
         "key": "low",
         "label": "Not at All / Several Days",
-        "color": colors_asc.purple1,
+        "color": PALETTE[1],
         "values": [
           "Not at all",
           "Several days"
@@ -2973,7 +2949,7 @@ export const variableConfig =
       {
         "key": "high",
         "label": "More Than Half the Days / Nearly Every Day",
-        "color": colors_asc.purple7,
+        "color": PALETTE[4],
         "values": [
           "More than half the days",
           "Nearly every day"
@@ -3003,7 +2979,7 @@ export const variableConfig =
       {
         "key": "low",
         "label": "Not at All / Several Days",
-        "color": colors_asc.purple1,
+        "color": PALETTE[1],
         "values": [
           "Not at all",
           "Several days"
@@ -3012,7 +2988,7 @@ export const variableConfig =
       {
         "key": "high",
         "label": "More Than Half the Days / Nearly Every Day",
-        "color": colors_asc.purple7,
+        "color": PALETTE[4],
         "values": [
           "More than half the days",
           "Nearly every day"
@@ -3042,7 +3018,7 @@ export const variableConfig =
       {
         "key": "low",
         "label": "Not at All / Several Days",
-        "color": colors_asc.purple1,
+        "color": PALETTE[1],
         "values": [
           "Not at all",
           "Several days"
@@ -3051,7 +3027,7 @@ export const variableConfig =
       {
         "key": "high",
         "label": "More Than Half the Days / Nearly Every Day",
-        "color": colors_asc.purple7,
+        "color": PALETTE[4],
         "values": [
           "More than half the days",
           "Nearly every day"
@@ -3085,21 +3061,21 @@ export const variableConfig =
       {
         "key": "low",
         "label": "Low (0–3)",
-        "color": colors_asc.purple0,
+        "color": PALETTE[0],
         "min": 0,
         "max": 3
       },
       {
         "key": "mid",
         "label": "Medium (4–6)",
-        "color": colors_asc.purple4,
+        "color": PALETTE[2],
         "min": 4,
         "max": 6
       },
       {
         "key": "high",
         "label": "High (7–10)",
-        "color": colors_asc.purple7,
+        "color": PALETTE[4],
         "min": 7,
         "max": 10
       }
@@ -3117,7 +3093,7 @@ export const variableConfig =
       {
         "key": "low",
         "label": "Not at All / Not Very Much",
-        "color": colors_asc.purple1,
+        "color": PALETTE[1],
         "values": [
           "Not at all",
           "Not very much"
@@ -3126,7 +3102,7 @@ export const variableConfig =
       {
         "key": "high",
         "label": "Some / A Lot",
-        "color": colors_asc.purple7,
+        "color": PALETTE[4],
         "values": [
           "Some",
           "A lot"
@@ -3160,21 +3136,21 @@ export const variableConfig =
       {
         "key": "low",
         "label": "Low (0–3)",
-        "color": colors_asc.purple0,
+        "color": PALETTE[0],
         "min": 0,
         "max": 3
       },
       {
         "key": "mid",
         "label": "Medium (4–6)",
-        "color": colors_asc.purple4,
+        "color": PALETTE[2],
         "min": 4,
         "max": 6
       },
       {
         "key": "high",
         "label": "High (7–10)",
-        "color": colors_asc.purple7,
+        "color": PALETTE[4],
         "min": 7,
         "max": 10
       }
@@ -3196,21 +3172,21 @@ export const variableConfig =
       {
         "key": "low",
         "label": "Low (0–3)",
-        "color": colors_asc.purple0,
+        "color": PALETTE[0],
         "min": 0,
         "max": 3
       },
       {
         "key": "mid",
         "label": "Medium (4–6)",
-        "color": colors_asc.purple4,
+        "color": PALETTE[2],
         "min": 4,
         "max": 6
       },
       {
         "key": "high",
         "label": "High (7–10)",
-        "color": colors_asc.purple7,
+        "color": PALETTE[4],
         "min": 7,
         "max": 10
       }
@@ -3231,21 +3207,21 @@ export const variableConfig =
       {
         "key": "0",
         "label": "None",
-        "color": colors_asc.purple0,
+        "color": PALETTE[0],
         "min": 0,
         "max": 0
       },
       {
         "key": "1_19",
         "label": "1–19",
-        "color": colors_asc.purple4,
+        "color": PALETTE[2],
         "min": 1,
         "max": 19
       },
       {
         "key": "20_plus",
         "label": "20+",
-        "color": colors_asc.purple7,
+        "color": PALETTE[4],
         "min": 20,
         "max": 100
       }
@@ -3267,21 +3243,21 @@ export const variableConfig =
       {
         "key": "0",
         "label": "None",
-        "color": colors_asc.purple0,
+        "color": PALETTE[0],
         "min": 0,
         "max": 0
       },
       {
         "key": "1_7",
         "label": "1–7",
-        "color": colors_asc.purple4,
+        "color": PALETTE[2],
         "min": 1,
         "max": 7
       },
       {
         "key": "8_plus",
         "label": "8+",
-        "color": colors_asc.purple7,
+        "color": PALETTE[4],
         "min": 8,
         "max": 100
       }
@@ -3309,21 +3285,21 @@ export const variableConfig =
       {
         "key": "0",
         "label": "0 Days",
-        "color": colors_asc.purple0,
+        "color": PALETTE[0],
         "min": 0,
         "max": 0
       },
       {
         "key": "1_4",
         "label": "1–4 Days",
-        "color": colors_asc.purple4,
+        "color": PALETTE[2],
         "min": 1,
         "max": 4
       },
       {
         "key": "5_7",
         "label": "5–7 Days",
-        "color": colors_asc.purple7,
+        "color": PALETTE[4],
         "min": 5,
         "max": 7
       }
@@ -3341,7 +3317,7 @@ export const variableConfig =
       {
         "key": "yes",
         "label": "Yes",
-        "color": colors_asc.purple7,
+        "color": PALETTE[4],
         "values": [
           "Yes"
         ]
@@ -3349,7 +3325,7 @@ export const variableConfig =
       {
         "key": "no",
         "label": "No",
-        "color": colors_asc.purple1,
+        "color": PALETTE[1],
         "values": [
           "No"
         ]
@@ -3382,21 +3358,21 @@ export const variableConfig =
       {
         "key": "low",
         "label": "Low (0–3)",
-        "color": colors_asc.purple0,
+        "color": PALETTE[0],
         "min": 0,
         "max": 3
       },
       {
         "key": "mid",
         "label": "Medium (4–6)",
-        "color": colors_asc.purple4,
+        "color": PALETTE[2],
         "min": 4,
         "max": 6
       },
       {
         "key": "high",
         "label": "High (7–10)",
-        "color": colors_asc.purple7,
+        "color": PALETTE[4],
         "min": 7,
         "max": 10
       }
@@ -3418,21 +3394,21 @@ export const variableConfig =
       {
         "key": "low",
         "label": "Low (0–3)",
-        "color": colors_asc.purple0,
+        "color": PALETTE[0],
         "min": 0,
         "max": 3
       },
       {
         "key": "mid",
         "label": "Medium (4–6)",
-        "color": colors_asc.purple4,
+        "color": PALETTE[2],
         "min": 4,
         "max": 6
       },
       {
         "key": "high",
         "label": "High (7–10)",
-        "color": colors_asc.purple7,
+        "color": PALETTE[4],
         "min": 7,
         "max": 10
       }
@@ -3454,21 +3430,21 @@ export const variableConfig =
       {
         "key": "low",
         "label": "Low (0–3)",
-        "color": colors_asc.purple0,
+        "color": PALETTE[0],
         "min": 0,
         "max": 3
       },
       {
         "key": "mid",
         "label": "Medium (4–6)",
-        "color": colors_asc.purple4,
+        "color": PALETTE[2],
         "min": 4,
         "max": 6
       },
       {
         "key": "high",
         "label": "High (7–10)",
-        "color": colors_asc.purple7,
+        "color": PALETTE[4],
         "min": 7,
         "max": 10
       }
@@ -3490,21 +3466,21 @@ export const variableConfig =
       {
         "key": "low",
         "label": "Low (0–3)",
-        "color": colors_asc.purple0,
+        "color": PALETTE[0],
         "min": 0,
         "max": 3
       },
       {
         "key": "mid",
         "label": "Medium (4–6)",
-        "color": colors_asc.purple4,
+        "color": PALETTE[2],
         "min": 4,
         "max": 6
       },
       {
         "key": "high",
         "label": "High (7–10)",
-        "color": colors_asc.purple7,
+        "color": PALETTE[4],
         "min": 7,
         "max": 10
       }
@@ -3522,7 +3498,7 @@ export const variableConfig =
       {
         "key": "low",
         "label": "None / Not Very Many",
-        "color": colors_asc.purple0,
+        "color": PALETTE[0],
         "values": [
           "None",
           "Not very many"
@@ -3531,7 +3507,7 @@ export const variableConfig =
       {
         "key": "medium",
         "label": "Some",
-        "color": colors_asc.purple4,
+        "color": PALETTE[2],
         "values": [
           "Some"
         ]
@@ -3539,7 +3515,7 @@ export const variableConfig =
       {
         "key": "high",
         "label": "Most / All",
-        "color": colors_asc.purple7,
+        "color": PALETTE[4],
         "values": [
           "Most",
           "All"
@@ -3569,7 +3545,7 @@ export const variableConfig =
       {
         "key": "yes",
         "label": "Yes",
-        "color": colors_asc.purple7,
+        "color": PALETTE[4],
         "values": [
           "Yes"
         ]
@@ -3577,7 +3553,7 @@ export const variableConfig =
       {
         "key": "no",
         "label": "No",
-        "color": colors_asc.purple1,
+        "color": PALETTE[1],
         "values": [
           "No"
         ]
@@ -3613,7 +3589,7 @@ export const variableConfig =
       {
         "key": "yes",
         "label": "Yes",
-        "color": colors_asc.purple7,
+        "color": PALETTE[4],
         "values": [
           "Yes"
         ]
@@ -3621,7 +3597,7 @@ export const variableConfig =
       {
         "key": "no",
         "label": "No",
-        "color": colors_asc.purple1,
+        "color": PALETTE[1],
         "values": [
           "No"
         ]
@@ -3657,7 +3633,7 @@ export const variableConfig =
       {
         "key": "good",
         "label": "Very Good / Somewhat Good",
-        "color": colors_asc.purple7,
+        "color": PALETTE[4],
         "values": [
           "Very good",
           "Somewhat good"
@@ -3666,7 +3642,7 @@ export const variableConfig =
       {
         "key": "bad",
         "label": "Somewhat Bad / Very Bad",
-        "color": colors_asc.purple1,
+        "color": PALETTE[1],
         "values": [
           "Somewhat bad",
           "Very bad"
@@ -3703,7 +3679,7 @@ export const variableConfig =
       {
         "key": "good",
         "label": "Very Good / Somewhat Good",
-        "color": colors_asc.purple7,
+        "color": PALETTE[4],
         "values": [
           "Very good",
           "Somewhat good"
@@ -3712,7 +3688,7 @@ export const variableConfig =
       {
         "key": "bad",
         "label": "Somewhat Bad / Very Bad",
-        "color": colors_asc.purple1,
+        "color": PALETTE[1],
         "values": [
           "Somewhat bad",
           "Very bad"
@@ -3749,7 +3725,7 @@ export const variableConfig =
       {
         "key": "high",
         "label": "Excellent / Very Good",
-        "color": colors_asc.purple7,
+        "color": PALETTE[4],
         "values": [
           "Excellent",
           "Very good"
@@ -3758,7 +3734,7 @@ export const variableConfig =
       {
         "key": "medium",
         "label": "Good",
-        "color": colors_asc.purple4,
+        "color": PALETTE[2],
         "values": [
           "Good"
         ]
@@ -3766,7 +3742,7 @@ export const variableConfig =
       {
         "key": "low",
         "label": "Fair / Poor",
-        "color": colors_asc.purple0,
+        "color": PALETTE[0],
         "values": [
           "Fair",
           "Poor"
@@ -3795,7 +3771,7 @@ export const variableConfig =
       {
         "key": "yes",
         "label": "Yes",
-        "color": colors_asc.purple7,
+        "color": PALETTE[4],
         "values": [
           "Yes"
         ]
@@ -3803,7 +3779,7 @@ export const variableConfig =
       {
         "key": "no",
         "label": "No",
-        "color": colors_asc.purple1,
+        "color": PALETTE[1],
         "values": [
           "No"
         ]
@@ -3839,7 +3815,7 @@ export const variableConfig =
       {
         "key": "comfortable",
         "label": "Lived Comfortably / Got By",
-        "color": colors_asc.purple1,
+        "color": PALETTE[1],
         "values": [
           "Lived comfortably",
           "Got by"
@@ -3848,7 +3824,7 @@ export const variableConfig =
       {
         "key": "struggling",
         "label": "Found It Difficult / Very Difficult",
-        "color": colors_asc.purple7,
+        "color": PALETTE[4],
         "values": [
           "Found it difficult",
           "Found it very difficult"
@@ -3877,7 +3853,7 @@ export const variableConfig =
       {
         "key": "rarely",
         "label": "Never / Less Than Once a Month",
-        "color": colors_asc.purple0,
+        "color": PALETTE[0],
         "values": [
           "Never",
           "Less than once a month"
@@ -3886,7 +3862,7 @@ export const variableConfig =
       {
         "key": "monthly",
         "label": "1–3 Times a Month",
-        "color": colors_asc.purple4,
+        "color": PALETTE[2],
         "values": [
           "One to three times a month"
         ]
@@ -3894,7 +3870,7 @@ export const variableConfig =
       {
         "key": "weekly_plus",
         "label": "At Least Once a Week",
-        "color": colors_asc.purple7,
+        "color": PALETTE[4],
         "values": [
           "At least once a week"
         ]
@@ -3922,7 +3898,7 @@ export const variableConfig =
       {
         "key": "rarely",
         "label": "Never / Less Than Once a Month",
-        "color": colors_asc.purple0,
+        "color": PALETTE[0],
         "values": [
           "Never",
           "Less than once a month"
@@ -3931,7 +3907,7 @@ export const variableConfig =
       {
         "key": "monthly",
         "label": "1–3 Times a Month",
-        "color": colors_asc.purple4,
+        "color": PALETTE[2],
         "values": [
           "One to three times a month"
         ]
@@ -3939,7 +3915,7 @@ export const variableConfig =
       {
         "key": "weekly_plus",
         "label": "At Least Once a Week",
-        "color": colors_asc.purple7,
+        "color": PALETTE[4],
         "values": [
           "At least once a week"
         ]
@@ -3975,7 +3951,7 @@ export const variableConfig =
       {
         "key": "rarely",
         "label": "Never / Less Than Once a Month",
-        "color": colors_asc.purple0,
+        "color": PALETTE[0],
         "values": [
           "Never",
           "Less than once a month"
@@ -3984,7 +3960,7 @@ export const variableConfig =
       {
         "key": "monthly",
         "label": "1–3 Times a Month",
-        "color": colors_asc.purple4,
+        "color": PALETTE[2],
         "values": [
           "One to three times a month"
         ]
@@ -3992,7 +3968,7 @@ export const variableConfig =
       {
         "key": "weekly_plus",
         "label": "At Least Once a Week",
-        "color": colors_asc.purple7,
+        "color": PALETTE[4],
         "values": [
           "At least once a week"
         ]
@@ -4028,7 +4004,7 @@ export const variableConfig =
       {
         "key": "disagree",
         "label": "Disagree",
-        "color": colors_diverging.purple0,
+        "color": PALETTE[0],
         "values": [
           "Disagree strongly",
           "Disagree moderately",
@@ -4038,7 +4014,7 @@ export const variableConfig =
       {
         "key": "neutral",
         "label": "Neutral",
-        "color": colors_diverging.purple4,
+        "color": PALETTE[2],
         "values": [
           "Neither agree nor disagree"
         ]
@@ -4046,7 +4022,7 @@ export const variableConfig =
       {
         "key": "agree",
         "label": "Agree",
-        "color": colors_diverging.purple7,
+        "color": PALETTE[4],
         "values": [
           "Agree a little",
           "Agree moderately",
@@ -4076,7 +4052,7 @@ export const variableConfig =
       {
         "key": "disagree",
         "label": "Disagree",
-        "color": colors_diverging.purple0,
+        "color": PALETTE[0],
         "values": [
           "Disagree strongly",
           "Disagree moderately",
@@ -4086,7 +4062,7 @@ export const variableConfig =
       {
         "key": "neutral",
         "label": "Neutral",
-        "color": colors_diverging.purple4,
+        "color": PALETTE[2],
         "values": [
           "Neither agree nor disagree"
         ]
@@ -4094,7 +4070,7 @@ export const variableConfig =
       {
         "key": "agree",
         "label": "Agree",
-        "color": colors_diverging.purple7,
+        "color": PALETTE[4],
         "values": [
           "Agree a little",
           "Agree moderately",
@@ -4124,7 +4100,7 @@ export const variableConfig =
       {
         "key": "disagree",
         "label": "Disagree",
-        "color": colors_diverging.purple0,
+        "color": PALETTE[0],
         "values": [
           "Disagree strongly",
           "Disagree moderately",
@@ -4134,7 +4110,7 @@ export const variableConfig =
       {
         "key": "neutral",
         "label": "Neutral",
-        "color": colors_diverging.purple4,
+        "color": PALETTE[2],
         "values": [
           "Neither agree nor disagree"
         ]
@@ -4142,7 +4118,7 @@ export const variableConfig =
       {
         "key": "agree",
         "label": "Agree",
-        "color": colors_diverging.purple7,
+        "color": PALETTE[4],
         "values": [
           "Agree a little",
           "Agree moderately",
@@ -4172,7 +4148,7 @@ export const variableConfig =
       {
         "key": "disagree",
         "label": "Disagree",
-        "color": colors_diverging.purple0,
+        "color": PALETTE[0],
         "values": [
           "Disagree strongly",
           "Disagree moderately",
@@ -4182,7 +4158,7 @@ export const variableConfig =
       {
         "key": "neutral",
         "label": "Neutral",
-        "color": colors_diverging.purple4,
+        "color": PALETTE[2],
         "values": [
           "Neither agree nor disagree"
         ]
@@ -4190,7 +4166,7 @@ export const variableConfig =
       {
         "key": "agree",
         "label": "Agree",
-        "color": colors_diverging.purple7,
+        "color": PALETTE[4],
         "values": [
           "Agree a little",
           "Agree moderately",
@@ -4220,7 +4196,7 @@ export const variableConfig =
       {
         "key": "disagree",
         "label": "Disagree",
-        "color": colors_diverging.purple0,
+        "color": PALETTE[0],
         "values": [
           "Disagree strongly",
           "Disagree moderately",
@@ -4230,7 +4206,7 @@ export const variableConfig =
       {
         "key": "neutral",
         "label": "Neutral",
-        "color": colors_diverging.purple4,
+        "color": PALETTE[2],
         "values": [
           "Neither agree nor disagree"
         ]
@@ -4238,7 +4214,7 @@ export const variableConfig =
       {
         "key": "agree",
         "label": "Agree",
-        "color": colors_diverging.purple7,
+        "color": PALETTE[4],
         "values": [
           "Agree a little",
           "Agree moderately",
@@ -4268,7 +4244,7 @@ export const variableConfig =
       {
         "key": "disagree",
         "label": "Disagree",
-        "color": colors_diverging.purple0,
+        "color": PALETTE[0],
         "values": [
           "Disagree strongly",
           "Disagree moderately",
@@ -4278,7 +4254,7 @@ export const variableConfig =
       {
         "key": "neutral",
         "label": "Neutral",
-        "color": colors_diverging.purple4,
+        "color": PALETTE[2],
         "values": [
           "Neither agree nor disagree"
         ]
@@ -4286,7 +4262,7 @@ export const variableConfig =
       {
         "key": "agree",
         "label": "Agree",
-        "color": colors_diverging.purple7,
+        "color": PALETTE[4],
         "values": [
           "Agree a little",
           "Agree moderately",
@@ -4316,7 +4292,7 @@ export const variableConfig =
       {
         "key": "disagree",
         "label": "Disagree",
-        "color": colors_diverging.purple0,
+        "color": PALETTE[0],
         "values": [
           "Disagree strongly",
           "Disagree moderately",
@@ -4326,7 +4302,7 @@ export const variableConfig =
       {
         "key": "neutral",
         "label": "Neutral",
-        "color": colors_diverging.purple4,
+        "color": PALETTE[2],
         "values": [
           "Neither agree nor disagree"
         ]
@@ -4334,7 +4310,7 @@ export const variableConfig =
       {
         "key": "agree",
         "label": "Agree",
-        "color": colors_diverging.purple7,
+        "color": PALETTE[4],
         "values": [
           "Agree a little",
           "Agree moderately",
@@ -4364,7 +4340,7 @@ export const variableConfig =
       {
         "key": "disagree",
         "label": "Disagree",
-        "color": colors_diverging.purple0,
+        "color": PALETTE[0],
         "values": [
           "Disagree strongly",
           "Disagree moderately",
@@ -4374,7 +4350,7 @@ export const variableConfig =
       {
         "key": "neutral",
         "label": "Neutral",
-        "color": colors_diverging.purple4,
+        "color": PALETTE[2],
         "values": [
           "Neither agree nor disagree"
         ]
@@ -4382,7 +4358,7 @@ export const variableConfig =
       {
         "key": "agree",
         "label": "Agree",
-        "color": colors_diverging.purple7,
+        "color": PALETTE[4],
         "values": [
           "Agree a little",
           "Agree moderately",
@@ -4412,7 +4388,7 @@ export const variableConfig =
       {
         "key": "disagree",
         "label": "Disagree",
-        "color": colors_diverging.purple0,
+        "color": PALETTE[0],
         "values": [
           "Disagree strongly",
           "Disagree moderately",
@@ -4422,7 +4398,7 @@ export const variableConfig =
       {
         "key": "neutral",
         "label": "Neutral",
-        "color": colors_diverging.purple4,
+        "color": PALETTE[2],
         "values": [
           "Neither agree nor disagree"
         ]
@@ -4430,7 +4406,7 @@ export const variableConfig =
       {
         "key": "agree",
         "label": "Agree",
-        "color": colors_diverging.purple7,
+        "color": PALETTE[4],
         "values": [
           "Agree a little",
           "Agree moderately",
@@ -4460,7 +4436,7 @@ export const variableConfig =
       {
         "key": "disagree",
         "label": "Disagree",
-        "color": colors_diverging.purple0,
+        "color": PALETTE[0],
         "values": [
           "Disagree strongly",
           "Disagree moderately",
@@ -4470,7 +4446,7 @@ export const variableConfig =
       {
         "key": "neutral",
         "label": "Neutral",
-        "color": colors_diverging.purple4,
+        "color": PALETTE[2],
         "values": [
           "Neither agree nor disagree"
         ]
@@ -4478,7 +4454,7 @@ export const variableConfig =
       {
         "key": "agree",
         "label": "Agree",
-        "color": colors_diverging.purple7,
+        "color": PALETTE[4],
         "values": [
           "Agree a little",
           "Agree moderately",
@@ -4512,21 +4488,21 @@ export const variableConfig =
       {
         "key": "low",
         "label": "Low (0–3)",
-        "color": colors_asc.purple0,
+        "color": PALETTE[0],
         "min": 0,
         "max": 3
       },
       {
         "key": "mid",
         "label": "Medium (4–6)",
-        "color": colors_asc.purple4,
+        "color": PALETTE[2],
         "min": 4,
         "max": 6
       },
       {
         "key": "high",
         "label": "High (7–10)",
-        "color": colors_asc.purple7,
+        "color": PALETTE[4],
         "min": 7,
         "max": 10
       }

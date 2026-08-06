@@ -10,11 +10,28 @@
 		mode = $bindable(),
 		positionMode = $bindable(),
 		currentAge = null,
-		loadingMessage = ""
+		loadingMessage = "",
+		hideMap = false,
+		panelHeight = $bindable(0)
 	} = $props();
+
+	let panelEl;
+	// Reports this panel's own real rendered height back up to Main so the
+	// top-down minimap (see Minimap.lifedeath.svelte's panelClear prop) can
+	// clear it exactly — its content (legend row count, wrapped text) varies
+	// with the selected variable and viewport width, so a guessed fixed
+	// value drifts out of sync; measuring is the only thing that stays correct.
+	$effect(() => {
+		if (!panelEl) return;
+		const resizeObserver = new ResizeObserver(() => {
+			panelHeight = panelEl.offsetHeight;
+		});
+		resizeObserver.observe(panelEl);
+		return () => resizeObserver.disconnect();
+	});
 </script>
 
-<div class="panel">
+<div class="panel" bind:this={panelEl}>
 	{#if loadingMessage}
 		<div class="loading">{loadingMessage}</div>
 	{:else}
@@ -48,14 +65,14 @@
 				class:active={positionMode === "Y1"}
 				onclick={() => (positionMode = "Y1")}
 			>
-				Wave 1
+				2022-23
 			</button>
 			<button
 				class="mode-toggle"
 				class:active={positionMode === "Y2"}
 				onclick={() => (positionMode = "Y2")}
 			>
-				Wave 2
+				2024
 			</button>
 		</div>
 
@@ -68,13 +85,15 @@
 	{/if}
 </div>
 
-{#if !loadingMessage}
-	<!-- Positions the toggle button over the real minimap <canvas> that
-	     Minimap.lifedeath.svelte draws separately (see its own
-	     .minimap-canvas — this div's own width/height must match that box).
-	     This div itself ignores pointer events so drag-to-steer/
-	     scroll-to-walk still reach the 3D canvas underneath; only the button re-enables them. -->
-	<div class="minimap">
+{#if !loadingMessage && !hideMap}
+	<!-- Tracks whichever small box currently sits at this corner — the
+	     minimap in walk mode (Minimap.lifedeath.svelte's own
+	     .minimap-canvas), or the walk-view preview in top-down mode
+	     (Main's own canvas.webgl-canvas.topdown-active) — see
+	     class:topdown-active below. This div itself ignores pointer
+	     events so drag-to-steer/scroll-to-walk still reach the 3D canvas
+	     underneath; only the button re-enables them. -->
+	<div class="minimap" class:topdown-active={mode === "topdown"}>
 		<button class="minimap-toggle" onclick={() => (mode = mode === "walk" ? "topdown" : "walk")}>
 			{mode === "walk" ? "Top-down view" : "Back to walk view"}
 		</button>
@@ -116,6 +135,11 @@
 
 	.field select {
 		font-size: 1.1rem !important;
+		/* reset.css's own `select { font-family: var(--font-form) }` rule
+		   otherwise wins over .lifedeath-room's mono font (app.css) —
+		   form controls don't automatically inherit page font in every
+		   browser, and that reset rule targets the bare tag directly. */
+		font-family: inherit;
 		background: rgba(255, 255, 255, 0.08);
 		color: white;
 		border: 1px solid rgba(255, 255, 255, 0.15);
@@ -132,7 +156,6 @@
 	color: var(--color-light-purple);
     gap: 0.5rem; /* tighter gap between items */
     font-size: 1rem; /* larger text size */
-	text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
 }
 
 .legend-row {
@@ -196,34 +219,67 @@
 		font-size: 0.8rem;
 	}
 
-	/* Just an anchor for the toggle button below — the minimap itself is a
-	   real <canvas> (see Minimap.lifedeath.svelte), which draws its own
-	   border; this div positions nothing but the button. */
+	/* Just an anchor for the toggle button below — the minimap/preview
+	   itself is a real <canvas> (Minimap.lifedeath.svelte /
+	   Main.lifedeath.svelte respectively), which draws its own border;
+	   this div positions nothing but the button. Tracks the walk-mode
+	   minimap corner box by default (Minimap.lifedeath.svelte's own
+	   .minimap-canvas: right: 10px, width: 124px, mobile-capped below) —
+	   the topdown-active variant below instead tracks the topdown-mode
+	   walk-view preview (Main's own canvas.webgl-canvas.topdown-active:
+	   right: 24px, width: 200px), so the button always sits under
+	   whichever of the two boxes is actually shown at this corner. */
 	.minimap {
 		position: absolute;
-		right: 24px;
-		bottom: 24px;
-		width: 136px;
-		height: 252px;
-		z-index: 10;
+		right: 10px;
+		bottom: 10px;
+		width: 124px;
+		z-index: 999;
 		pointer-events: none;
+	}
+
+	.minimap.topdown-active {
+		right: 24px;
+		width: 200px;
+	}
+
+	@media (max-width: 640px) {
+		.minimap {
+			width: min(124px, 30vw);
+		}
+		.minimap.topdown-active {
+			/* The webgl preview is hidden entirely on mobile topdown (see
+			   Main's own @media rule) — the enlarged minimap is the only
+			   thing left at this corner there, centered and sized by its
+			   own JS (see Minimap.lifedeath.svelte's layoutMinimapBox), not
+			   a fixed box this could track directly — spanning the full
+			   width instead of guessing at that is the simpler, still-
+			   correct fallback. */
+			right: 0;
+			left: 0;
+			width: auto;
+		}
 	}
 
 	.minimap-toggle {
 		position: absolute;
-		left: 50%;
-		bottom: -1rem;
-		transform: translateX(-50%);
+		right: 0;
+		left: 0;
+		bottom: 7px;
+		width: 100%;
+		text-align: center;
 		pointer-events: auto;
 		background: rgba(10, 5, 16, 0.85);
 		color: #eee;
 		border: 1px solid rgba(255, 255, 255, 0.2);
-		border-radius: 999px;
-		padding: 0.3rem 0.7rem;
-		font-size: 0.7rem;
-		white-space: nowrap;
+		padding: 8px 6px;
+		border-radius: 0px;
+		font-family: var(--font-mono);
+		font-size: 14px !important;
 		cursor: pointer;
 		backdrop-filter: blur(4px);
+		z-index: 999;
+		box-sizing: border-box;
 	}
 
 	.minimap-toggle:hover {

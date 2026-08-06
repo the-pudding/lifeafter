@@ -2,55 +2,79 @@
   "hed": "life after death?",
   "all": [
     {
-      "age": "18",
-      "age_end": "22",
-      "text": "Everyone you see in this room answered questions about some of their most profound beliefs—including whether they believe in an afterlife."
+      "age": "16",
+      "age_end": "17.5",
+      "text": "<div class=\"hints click\">Click on a door.</div>"
     },
     {
       "age": "25",
       "age_end": "30",
+      "var_color": "DISCRIMINATED",
+      "wave": "1",
       "text": "Keep walking. The people are organized by age—youngest people here, in the front, and older people in the back."
-    },
-    {
-      "age": "30",
-      "age_end": "35",
-      "text": "This is some text for all age 30"
-    }
-  ],
-  "unsure": [
-    {
-      "age": "22",
-      "age_end": "25",
-      "text": "Here, in the middle, are people who aren’t sure."
-    },
-    {
-      "age": "35",
-      "age_end": "40",
-      "text": "This is some text for unsure age 35"
-    }
-  ],
-  "yes": [
-    {
-      "age": "22",
-      "age_end": "25",
-      "text": "Here, on the right, are people who believe there is life after death."
-    },
-    {
-      "age": "35",
-      "age_end": "40",
-      "text": "This is some text for yes age 35"
     }
   ],
   "no": [
     {
-      "age": "22",
-      "age_end": "25",
-      "text": "Here, on the left, are people who believe there is no life after death."
+      "age": "18",
+      "age_end": "19",
+      "hide_panel": "true",
+      "hide_map": "true",
+      "text": "Everyone you see around you also <span class=no_belief>does not believe</span> in an afterlife.\r\n\r\n\r\n<div class=\"hints scroll\">Scroll to walk</div>"
     },
     {
-      "age": "35",
-      "age_end": "40",
-      "text": "This is some text for no age 35"
+      "age": "19",
+      "age_end": "20",
+      "hide_panel": "true",
+      "hide_map": "true",
+      "text": "You heretic! Just kidding.\r\n\r\n\r\n<div class=\"hints scroll\">Scroll to walk</div>"
+    },
+    {
+      "age": "20",
+      "age_end": "22",
+      "text": "To your immediate right are people who are <span class=unsure>unsure</span> after an afterlife. On the far right are people who <span class=belief>believe</span> in an afterlife.\r\n\r\n\r\n<div class=\"hints pan\">Drag to pan</div>"
+    }
+  ],
+  "unsure": [
+    {
+      "age": "18",
+      "age_end": "19",
+      "hide_panel": "true",
+      "hide_map": "true",
+      "text": "Everyone you see around you is also <span class=unsure>unsure</span> if there’s an afterlife. \r\n\r\n\r\n<div class=\"hints scroll\">Scroll to walk</div>"
+    },
+    {
+      "age": "19",
+      "age_end": "20",
+      "hide_panel": "true",
+      "hide_map": "true",
+      "text": "You have plenty of fence-sitters with you here.\r\n\r\n\r\n<div class=\"hints scroll\">Scroll to walk</div>"
+    },
+    {
+      "age": "20",
+      "age_end": "22",
+      "text": "To your left are people who <span class=no_belief>don’t believe</span> in an afterlife. To your right are people who do <span class=belief>believe</span>.\r\n\r\n\r\n<div class=\"hints pan\">Drag to pan</div>"
+    }
+  ],
+  "yes": [
+    {
+      "age": "18",
+      "age_end": "19",
+      "hide_panel": "true",
+      "hide_map": "true",
+      "text": "Everyone you see around you also <span class=belief>believe</span> there is life after death.\r\n\r\n\r\n<div class=\"hints scroll\">Scroll to walk</div>"
+    },
+    {
+      "age": "19",
+      "age_end": "20",
+      "hide_panel": "true",
+      "hide_map": "true",
+      "text": "Most other people in the world agree with you.\r\n\r\n\r\n<div class=\"hints scroll\">Scroll to walk</div>"
+    },
+    {
+      "age": "20",
+      "age_end": "22",
+      "text": "To your immediate left are people who are <span class=unsure>unsure</span> after an afterlife. On the far left are people who <span class=no_belief>don’t believe</span> in an afterlife.\r\n\r\n\r\n<div class=\"hints pan\">Drag to pan</div>"
     }
   ]
 }
