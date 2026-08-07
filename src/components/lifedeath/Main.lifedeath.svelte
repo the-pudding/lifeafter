@@ -2435,7 +2435,9 @@
 <div
 	class="lifedeath-room"
 	class:topdown-active={mode === "topdown"}
-	style="--bg-color: {BG_COLOR_CSS};"
+	style="--bg-color: {BG_COLOR_CSS}; --click-cursor-url: url({asset(
+		'/assets/app/click.svg'
+	)});"
 	bind:this={container}
 >
 	{#if !shouldHidePanel}

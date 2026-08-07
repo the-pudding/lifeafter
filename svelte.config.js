@@ -15,16 +15,17 @@ const config = {
 	preprocess,
 	kit: {
 		adapter: adapterStatic({ strict: false }),
-		// GitHub Pages serves this repo as a project page at
-		// /lifedeath/, not the domain root — every asset/fetch URL needs
-		// that prefix or it 404s against the bare domain instead (this is
-		// what was breaking the crowd body GLBs and people.json in
-		// production). `vite build` sets NODE_ENV to "production"
-		// automatically (Vite's own default, not something this repo sets
-		// itself); `vite dev` leaves it as "development", so local dev
-		// keeps running at the actual root.
+		// This app is never actually served from a domain root — GitHub
+		// Pages publishes it as a project page at /lifedeath/, and the
+		// eventual pudding.cool deploy (see the Makefile's own PUDDING_PATH)
+		// will be some other /year/month/name subpath — so a single
+		// hardcoded base (or one keyed off NODE_ENV, which is
+		// "production" for *both* targets since both just run
+		// `vite build`) can't be right for more than one of them at once.
+		// BASE_PATH is set per-target by the Makefile (empty/unset for
+		// `npm run dev`, which is what keeps local dev at the real root).
 		paths: {
-			base: process.env.NODE_ENV === "production" ? "/lifedeath" : ""
+			base: process.env.BASE_PATH || ""
 		}
 	}
 };

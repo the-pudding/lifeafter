@@ -1,0 +1,28 @@
+var e={hed:`life after death?`,all:[{age:`16`,age_end:`18`,hide_panel:`true`,hide_map:`true`,text:`<div class="hints click">Click on a door.</div>`},{age:`18`,age_end:`19`,hide_panel:`true`,hide_map:`true`,text:`This room is filled with thousands of people who answered questions about whether they believe in life after death.\r
+\r
+\r
+<div class="hints scroll">Scroll to walk</div>`},{age:`23`,age_end:`25`,text:`On the bottom-right is a mini-map to guide you.`},{age:`25`,age_end:`29`,text:`The people are organized by age — here in the front are younger people, in the back are older people.`},{age:`29`,age_end:`33`,var_color:`RELIGIOUS_AFFILIATION`,wave:`2`,text:`You might assume that belief in an afterlife is dictated by our religious affiliation. There’s a strong correlation — but it’s not always the case. \r
+\r
+\r
+<div class="hints click">Click on a person to learn more</div>`},{age:`33`,age_end:`37`,var_color:`BELIEVE_GOD_BROAD`,wave:`2`,text:`And you might assume that you have to believe in a higher power to believe in an afterlife. There’s a strong correlation, but that’s not always true either.\r
+\r
+\r
+<div class="hints click">Click on a person to learn more</div>`}],no:[{age:`19`,age_end:`21`,hide_map:`true`,hide_panel:`true`,text:`You’re among people who <span class=no_belief>do not believe</span> in an afterlife. You heretic! (Just kidding.)\r
+\r
+\r
+<div class="hints scroll">Scroll to walk</div>`},{age:`21`,age_end:`23`,hide_map:`true`,text:`To your immediate right are people who are <span class=unsure>unsure</span> after an afterlife. On the far right are people who <span class=belief>believe</span> in an afterlife.\r
+\r
+\r
+<div class="hints pan">Drag to pan</div>`}],unsure:[{age:`19`,age_end:`21`,hide_map:`true`,hide_panel:`true`,text:`You’re among people who are <span class=unsure>unsure</span> if there’s an afterlife. You have plenty of fence-sitters with you here.\r
+\r
+\r
+<div class="hints scroll">Scroll to walk</div>`},{age:`21`,age_end:`23`,hide_map:`true`,text:`To your left are people who <span class=no_belief>don’t believe</span> in an afterlife. To your right are people who do <span class=belief>believe</span>.\r
+\r
+\r
+<div class="hints pan">Drag to pan</div>`}],yes:[{age:`19`,age_end:`21`,hide_map:`true`,hide_panel:`true`,text:`You’re among people who <span class=belief>believe</span> there is life after death. Most other people in the world agree with you.\r
+\r
+\r
+<div class="hints scroll">Scroll to walk</div>`},{age:`21`,age_end:`23`,hide_map:`true`,text:`To your immediate left are people who are <span class=unsure>unsure</span> after an afterlife. On the far left are people who <span class=no_belief>don’t believe</span> in an afterlife.\r
+\r
+\r
+<div class="hints pan">Drag to pan</div>`}]};export{e as t};

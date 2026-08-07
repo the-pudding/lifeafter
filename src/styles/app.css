@@ -204,10 +204,15 @@ svg {
     mask-repeat: no-repeat;
 }
 
-/* 1. Click: Hand Select Cursor (Static) */
+/* 1. Click: Hand Select Cursor (Static) — --click-cursor-url is set inline
+   on .lifedeath-room (see Main.lifedeath.svelte), not a literal url() here:
+   this app is deployed under a subpath that changes per target (GitHub
+   Pages vs. pudding.cool, see svelte.config.js's own paths.base), and a
+   plain CSS url() is static text with no way to pick that prefix up at
+   runtime the way asset() can from JS. */
 .story-overlay p .hints.click::before {
-    -webkit-mask-image: url("assets/app/click.svg");
-    mask-image: url("assets/app/click.svg");
+    -webkit-mask-image: var(--click-cursor-url);
+    mask-image: var(--click-cursor-url);
 }
 /* 2. Scroll: Down Arrow with downward animation */
 .story-overlay p .hints.scroll::before {
