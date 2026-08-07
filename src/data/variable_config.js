@@ -48,8 +48,8 @@ export const PALETTE = [
   "#ffb200", // 0 — warm amber/orange
   "#ff6a5c", // 1 — coral
   "#9b4dff", // 2 — vivid purple
-  "#e13cc9", // 3 — magenta
-  "#ff29d8"  // 4 — bright pink
+  "#b7227e", // 3 — magenta
+  "#ff00aa"  // 4 — bright pink
 ];
 
 export const PARENT_ORDER = [
@@ -892,8 +892,55 @@ export const variableConfig =
       "ATTEND_SVCS_Y2"
     ]
   },
+   "BELIEVE_GOD_BROAD": {
+    "label": "Belief in god(s)?",
+    "parent": "Religion & Spirituality",
+    "type": "categorical",
+    "categories": [
+      {
+        "key": "god_belief",
+        "label": "One or more god(s)",
+        "color": PALETTE[2],
+        "values": [
+          "One God",
+          "More than one god"
+        ]
+      },
+      {
+        "key": "impersonal_spiritual_force",
+        "label": "Impersonal Spiritual Force",
+        "color": PALETTE[0],
+        "values": [
+          "An impersonal spiritual force"
+        ]
+      },
+      {
+        "key": "unsure",
+        "label": "Unsure",
+        "color": PALETTE[1],
+        "values": [
+          "Unsure"
+        ]
+      },
+      {
+        "key": "none_of_these",
+        "label": "No/No answer",
+        "color": PALETTE[3],
+        "values": [
+          "None of these",
+           "(Saw, skipped)",
+          "(Refused)",
+          "(DK)"
+        ]
+      }
+    ],
+    "columns": [
+      "BELIEVE_GOD_Y1",
+      "BELIEVE_GOD_Y2"
+    ]
+  },
   "BELIEVE_GOD": {
-    "label": "Belief About God",
+    "label": "Specific belief about god(s)",
     "parent": "Religion & Spirituality",
     "type": "categorical",
     "categories": [
@@ -953,6 +1000,7 @@ export const variableConfig =
       "BELIEVE_GOD_Y2"
     ]
   },
+ 
   "COMFORT_REL": {
     "label": "Find Comfort in Religion/Spirituality",
     "parent": "Religion & Spirituality",
@@ -1558,6 +1606,56 @@ export const variableConfig =
         "label": "Other Religion",
         "color": PALETTE[2],
         "values": [
+          "Some other religion",
+          "Primal, Animist, or Folk religion",
+          "Umbanda, Candomblé, and other African-derived religions",
+          "Taoism",
+          "Spiritism",
+          "Chinese folk/traditional religion",
+          "Sikhism",
+          "Shinto",
+          "Confucianism"
+        ]
+      },
+      {
+        "key": "no_answer",
+        "label": "No Answer",
+        "color": NO_ANSWER_COLOR,
+        "values": [
+          "(Saw, skipped)",
+          "(Refused)",
+          "(DK)"
+        ]
+      }
+    ],
+    "columns": [
+      "REL2_Y1",
+      "REL2_Y2"
+    ]
+  },
+  "RELIGIOUS_AFFILIATION": {
+    "label": "Religiously Affiliated vs. Unaffiliated",
+    "parent": "Religion & Spirituality",
+    "type": "categorical",
+    "categories": [
+      {
+        "key": "unaffiliated",
+        "label": "No Religion / Atheist / Agnostic",
+        "color": PALETTE[0],
+        "values": [
+          "No religion/Atheist/Agnostic"
+        ]
+      },
+      {
+        "key": "affiliated",
+        "label": "Religiously Affiliated",
+        "color": PALETTE[4],
+        "values": [
+          "Christianity",
+          "Islam",
+          "Hinduism",
+          "Buddhism",
+          "Judaism",
           "Some other religion",
           "Primal, Animist, or Folk religion",
           "Umbanda, Candomblé, and other African-derived religions",

@@ -344,6 +344,11 @@
 	// on each footfall (left step, right step) rather than one per full
 	// stride cycle, matching how an actual torso bob doubles up with gait.
 	const BREATH_CYCLES_PER_STRIDE = 2;
+	// Scales just the walking portion of the breath wobble, on top of
+	// BREATHING_AMPLITUDE — 0.6 reads as about 40% shallower while walking
+	// than the same amplitude would look standing still, without touching
+	// idle breathing at all.
+	const WALK_BREATH_AMPLITUDE_SCALE = 0.6;
 
 	// First-person "walk" camera tuning, roughly at head height.
 	const EYE_HEIGHT = FIGURE_HEIGHT * 0.9;
@@ -419,9 +424,16 @@
 	const DEBUG_START_Z = HALF_DEPTH - WALK_MARGIN;
 	// Toggled with a `?debug` query param — a dev convenience, not a
 	// feature that needs a UI button.
-	const debugMode =
-		typeof window !== "undefined" &&
-		new URLSearchParams(window.location.search).has("debug");
+	const debugSearchParams =
+		typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+	const debugMode = debugSearchParams?.has("debug") ?? false;
+	// ?variable=/&age= — read back on load (see selectedVariable's own
+	// initializer and DEBUG_START_Z's use just below) so a URL copied from
+	// the address bar while in debug mode (see the $effect further down
+	// that keeps these two params live-updated) reopens at the exact same
+	// variable + walk position, not just debug mode itself.
+	const debugVariableParam = debugMode ? debugSearchParams.get("variable") : null;
+	const debugAgeParam = debugMode ? debugSearchParams.get("age") : null;
 
 	// Collision "nudging": a person near the walker is pushed sideways out
 	// of the way via a small (offsetX, offsetZ) displacement that grows
@@ -458,17 +470,23 @@
 	// `selectedVariable` drives the recolor dropdown
 	// `positionMode` picks which wave's layout the crowd walks toward
 	let mode = $state("walk"); // "walk" | "topdown"
-	let selectedVariable = $state("AFTER_DEATH");
+	let selectedVariable = $state(debugVariableParam ?? "AFTER_DEATH");
 	let positionMode = $state("Y2"); // "Y1" | "Y2"
 
-	// Debug convenience only: mirrors the "Color by" dropdown into
-	// ?variable=, so a specific view can be linked/reloaded directly.
-	// One-way (dropdown -> URL) — nothing reads this param back on load.
+	// Debug convenience only: keeps the "Color by" dropdown and current age
+	// mirrored into ?variable=/&age= as they change, so the address bar
+	// always holds a link back to exactly this view — see
+	// debugVariableParam/debugAgeParam above for the read-back half (walk
+	// position is restored via DEBUG_START_Z's own use of debugAgeParam
+	// further down; selectedVariable's initializer just above handles the
+	// variable half).
 	$effect(() => {
 		const variable = selectedVariable;
+		const age = currentAge;
 		if (!debugMode) return;
 		const url = new URL(window.location.href);
 		url.searchParams.set("variable", variable);
+		if (age !== null) url.searchParams.set("age", age.toFixed(1));
 		window.history.replaceState({}, "", url);
 	});
 	// A small summary of the current color mapping, rendered as a legend.
@@ -508,7 +526,8 @@
 		age: null,
 		mode: "",
 		insideRoom: false,
-		autoWalking: false
+		autoWalking: false,
+		selectedVariable: ""
 	});
 	let debugCopyFeedback = $state(false);
 	function formatDebugStats(stats) {
@@ -516,7 +535,8 @@
 			`x=${stats.x.toFixed(2)} z=${stats.z.toFixed(2)} ` +
 			`yaw=${stats.yawDeg.toFixed(1)} pitch=${stats.pitchDeg.toFixed(1)} ` +
 			`fov=${stats.fov.toFixed(1)} age=${stats.age?.toFixed(1) ?? "—"} ` +
-			`mode=${stats.mode} insideRoom=${stats.insideRoom} autoWalking=${stats.autoWalking}`
+			`mode=${stats.mode} insideRoom=${stats.insideRoom} autoWalking=${stats.autoWalking} ` +
+			`selectedVariable=${stats.selectedVariable}`
 		);
 	}
 	async function copyDebugStats() {
@@ -1432,6 +1452,7 @@
 				breathingSpeed: BREATHING_SPEED,
 				breathingAmplitude: BREATHING_AMPLITUDE,
 				breathCyclesPerStride: BREATH_CYCLES_PER_STRIDE,
+				walkBreathAmplitudeScale: WALK_BREATH_AMPLITUDE_SCALE,
 				stepBackHoldFraction: STEP_BACK_HOLD_FRACTION,
 				minWalkTimescale: MIN_WALK_TIMESCALE,
 				maxWalkTimescale: MAX_WALK_TIMESCALE,
@@ -1501,15 +1522,21 @@
 			// First-person "walk" controls. Camera height is locked to
 			// EYE_HEIGHT; drag steers (see DRAG_LOOK_RADIANS_PER_SWIPE), scroll/vertical-drag only ever walks forward/back.
 
+			// ?age= (debug mode only) — reopens already standing at that
+			// exact walk depth instead of at the door, see debugAgeParam above.
+			const debugAgeZ =
+				debugAgeParam !== null && debugAgeParam !== "" ? ageToZ(Number(debugAgeParam)) : null;
 			// Where the walker is trying to go (updated instantly by input).
 			let targetWalkX = 0;
-			let targetWalkZ = debugMode ? DEBUG_START_Z : DEFAULT_START_Z;
+			let targetWalkZ = debugAgeZ ?? (debugMode ? DEBUG_START_Z : DEFAULT_START_Z);
 			// Where the camera (and collision checks) actually are — glides
 			// toward the target above every frame.
 			let renderWalkX = targetWalkX;
 			let renderWalkZ = targetWalkZ;
 
-			let hasEnteredRoom = false;
+			// Already past the door when reopening at a saved ?age= — same as
+			// having actually walked in, not still standing outside it.
+			let hasEnteredRoom = debugAgeZ !== null;
 
 			// Set by handleDoorClick: the Z to walk to once renderWalkX has
 			// lined up with the clicked door's X (see the animate() check
@@ -2253,7 +2280,8 @@
 						age: currentAge,
 						mode,
 						insideRoom,
-						autoWalking
+						autoWalking,
+						selectedVariable
 					};
 				}
 				updateExteriorVisibility();
@@ -2431,6 +2459,7 @@
 			<div>yaw: {debugStats.yawDeg.toFixed(1)}°  pitch: {debugStats.pitchDeg.toFixed(1)}°</div>
 			<div>fov: {debugStats.fov.toFixed(1)}  age: {debugStats.age?.toFixed(1) ?? "—"}</div>
 			<div>mode: {debugStats.mode}  inside: {debugStats.insideRoom}  autoWalk: {debugStats.autoWalking}</div>
+			<div>variable: {debugStats.selectedVariable}</div>
 			<button type="button" onclick={copyDebugStats}>
 				{debugCopyFeedback ? "Copied!" : "Copy"}
 			</button>

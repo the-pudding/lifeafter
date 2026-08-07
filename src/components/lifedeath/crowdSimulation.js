@@ -266,6 +266,7 @@ export function createCrowdAnimator({
 	breathingSpeed,
 	breathingAmplitude,
 	breathCyclesPerStride,
+	walkBreathAmplitudeScale,
 	stepBackHoldFraction,
 	minWalkTimescale,
 	maxWalkTimescale,
@@ -593,9 +594,25 @@ export function createCrowdAnimator({
 			// the whole crowd sliding to their new spot in a frozen pose —
 			// the radius was tuned for the small, always-near-the-walker
 			// idle wander shuffle, not this room-spanning relocation.
+			// isActivelyMoving alone isn't enough here: it's a raw
+			// per-frame displacement check, which can read as "not moving"
+			// for a stray frame right as a blend move's ease-in ramp is
+			// still near-zero velocity — freezing someone the instant they
+			// *start* a room-spanning walk, mid-stride, until they
+			// happened to drift back within lodFreezeDistance.
+			// person.__blendMoveActive (persisted across frames, not
+			// re-derived from a single frame's tiny displacement) covers
+			// that. person.__walkAmount > 0 covers the other half: once a
+			// blend move actually ends, keep the mixer running until the
+			// walk-clip weight has actually finished cross-fading back
+			// down to the rest pose, rather than snapping frozen mid-cross-fade.
 			const distToWalker = Math.sqrt(distToWalkerSq);
 			const band = pickLodBand(distToWalker, lodColorBands);
-			const isFrozen = distToWalker > lodFreezeDistance && !isActivelyMoving;
+			const isFrozen =
+				distToWalker > lodFreezeDistance &&
+				!isActivelyMoving &&
+				!person.__blendMoveActive &&
+				person.__walkAmount <= 0.01;
 
 			const bodyMaterial = personBodyMaterials[i];
 			const skinMaterial = personSkinMaterials[i];
@@ -693,9 +710,17 @@ export function createCrowdAnimator({
 				const breathSpeedFactor =
 					BREATH_SPEED_FACTOR_MIN +
 					speedT * (BREATH_SPEED_FACTOR_MAX - BREATH_SPEED_FACTOR_MIN);
+				// walkBreathAmplitudeScale scales just this walking term,
+				// independent of breathingAmplitude (which also sets the
+				// idle-standing breath above) — lets walking breathe
+				// visibly shallower than standing without touching the
+				// idle amplitude at all.
 				breath =
 					(idlePhaseValue * (1 - person.__walkAmount) +
-						walkPhaseValue * person.__walkAmount * breathSpeedFactor) *
+						walkPhaseValue *
+							person.__walkAmount *
+							breathSpeedFactor *
+							walkBreathAmplitudeScale) *
 					breathingAmplitude;
 			} else {
 				breath = idlePhaseValue * breathingAmplitude;

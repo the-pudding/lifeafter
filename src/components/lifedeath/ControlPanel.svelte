@@ -51,8 +51,7 @@
 		{#if legendData?.kind === "categorical"}
 			<div class="legend">
 				{#each legendData.items as item (item.label)}
-					<div class="legend-row">
-						<span class="swatch" style:background={item.color}></span>
+					<div class="legend-row" style:background={item.color}>
 						{item.label}
 					</div>
 				{/each}
@@ -161,15 +160,10 @@
 .legend-row {
     display: flex;
     align-items: center;
-    gap: 0.25rem; /* reduced space between swatch and label */
-}
-
-.swatch {
-    width: 0.85rem; /* slightly enlarged to balance the bigger text */
-    height: 0.85rem;
-	border: 2px solid #000;
-    /* border-radius: 50%; */
-    flex: none;
+    padding: 0.15rem 0.4rem;
+    border-radius: 0.25rem;
+    color: #fff;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
 }
 
 	.button-row {
