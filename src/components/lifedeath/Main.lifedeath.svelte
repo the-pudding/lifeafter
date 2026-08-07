@@ -1,6 +1,7 @@
 <script>
 	import { onMount } from "svelte";
 	import { fade } from "svelte/transition";
+	import { asset } from "$app/paths";
 	import * as THREE from "three";
 	import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 	// Used once, up front, to weld the walker GLB's low-poly hard-edged
@@ -56,12 +57,24 @@
 		smoothDamp
 	} from "./roomMath.js";
 
-	// Fetched at runtime (~17MB) rather than imported as a module
-	const PEOPLE_DATA_URL = "data/people.json";
+	// Fetched at runtime (~17MB) rather than imported as a module. Built
+	// with asset() (from $app/paths), not a hand-rolled "/data/..." or
+	// "$data/..." string — GitHub Pages serves this app as a project page
+	// under /lifedeath/, not the domain root, and asset() is what actually
+	// bakes that prefix in (see svelte.config.js's own paths.base); a bare
+	// "$data/..." is a leftover Vite *import-alias* name, meaningless to a
+	// runtime fetch() (the browser just requests that literal path and
+	// 404s), and a plain relative "data/..." string only survives by
+	// accident, depending on the current document URL happening to already
+	// end in a trailing slash.
+	const PEOPLE_DATA_URL = asset("/data/people.json");
 	// Low-poly rigged humanoids with a baked-in "Walk" clip, one body per
 	// GENDER x body-type combo; each crowd member clones whichever matches
-	// their own GENDER. CC-BY-4.0 (Sketchfab, "Base Mesh 246 Tri").
-	const BASE_URL = "assets/app/bodies_clothes/";
+	// their own GENDER. CC-BY-4.0 (Sketchfab, "Base Mesh 246 Tri"). Same
+	// asset()-prefixed reasoning as PEOPLE_DATA_URL above — filenames are
+	// still concatenated onto this below, asset() just establishes the
+	// correct prefix once.
+	const BASE_URL = asset("/assets/app/bodies_clothes/");
 	const MALE_BODY_URLS = [
 		BASE_URL + "base_mesh_246_tri_walking_m_athletic_v1.glb",
 		BASE_URL + "base_mesh_246_tri_walking_m_athletic_v2.glb",
