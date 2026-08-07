@@ -10,7 +10,7 @@ var e={hed:`life after death?`,all:[{age:`16`,age_end:`18`,hide_panel:`true`,hid
 <div class="hints click">Click on a person to learn more</div>`}],no:[{age:`19`,age_end:`21`,hide_map:`true`,hide_panel:`true`,text:`You’re among people who <span class=no_belief>do not believe</span> in an afterlife. You heretic! (Just kidding.)\r
 \r
 \r
-<div class="hints scroll">Scroll to walk</div>`},{age:`21`,age_end:`23`,hide_map:`true`,text:`To your immediate right are people who are <span class=unsure>unsure</span> after an afterlife. On the far right are people who <span class=belief>believe</span> in an afterlife.\r
+<div class="hints scroll">Scroll to walk</div>`},{age:`21`,age_end:`23`,hide_map:`true`,text:`To your immediate right are people who are <span class=unsure>unsure</span> there is an afterlife. On the far right are people who <span class=belief>believe</span> in an afterlife.\r
 \r
 \r
 <div class="hints pan">Drag to pan</div>`}],unsure:[{age:`19`,age_end:`21`,hide_map:`true`,hide_panel:`true`,text:`You’re among people who are <span class=unsure>unsure</span> if there’s an afterlife. You have plenty of fence-sitters with you here.\r

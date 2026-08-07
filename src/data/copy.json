@@ -52,7 +52,7 @@
       "age": "21",
       "age_end": "23",
       "hide_map": "true",
-      "text": "To your immediate right are people who are <span class=unsure>unsure</span> after an afterlife. On the far right are people who <span class=belief>believe</span> in an afterlife.\r\n\r\n\r\n<div class=\"hints pan\">Drag to pan</div>"
+      "text": "To your immediate right are people who are <span class=unsure>unsure</span> there is an afterlife. On the far right are people who <span class=belief>believe</span> in an afterlife.\r\n\r\n\r\n<div class=\"hints pan\">Drag to pan</div>"
     }
   ],
   "unsure": [
