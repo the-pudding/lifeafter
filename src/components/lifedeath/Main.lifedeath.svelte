@@ -57,11 +57,11 @@
 	} from "./roomMath.js";
 
 	// Fetched at runtime (~17MB) rather than imported as a module
-	const PEOPLE_DATA_URL = "/data/people.json";
+	const PEOPLE_DATA_URL = "data/people.json";
 	// Low-poly rigged humanoids with a baked-in "Walk" clip, one body per
 	// GENDER x body-type combo; each crowd member clones whichever matches
 	// their own GENDER. CC-BY-4.0 (Sketchfab, "Base Mesh 246 Tri").
-	const BASE_URL = "/assets/app/bodies_clothes/";
+	const BASE_URL = "assets/app/bodies_clothes/";
 	const MALE_BODY_URLS = [
 		BASE_URL + "base_mesh_246_tri_walking_m_athletic_v1.glb",
 		BASE_URL + "base_mesh_246_tri_walking_m_athletic_v2.glb",
