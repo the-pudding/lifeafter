@@ -1,42 +1,30 @@
 <script>
-	// A left-side detail panel for whichever crowd member was clicked (see
-	// handlePersonClick in Main.lifedeath.svelte) — shows every variable
-	// from variable_config.js that this respondent actually answered,
-	// grouped the same way the "Color by" dropdown groups them. Modeled
-	// after the love-hcm project's own Modal.love.svelte "shelf" pattern.
+	// left shelf for the clicked crowd member. every variable they answered,
+	// grouped like the "Color by" dropdown
 	import {
 		variableConfig,
 		groupedVariableOptions,
 		getColumns,
 		getCategoryFor,
+		columnForWave,
 		parseNumericValue
 	} from "$data/variable_config.js";
 
-	// `wave` ("Y1" | "Y2") is bindable so this toggle and the ControlPanel's
-	// own Wave 1/Wave 2 buttons share one piece of state in
-	// Main.lifedeath.svelte — flipping it here also walks the crowd to
-	// their other wave's position, same as the control panel toggle.
+	// `wave` is bindable, so this and the control panel share one state —
+	// flipping here also walks the crowd
 	let { person, wave = $bindable("Y1"), onclose } = $props();
 
 	const open = $derived(person != null);
 	const groups = groupedVariableOptions();
 
-	// The one column for this variable that matches the selected wave —
-	// null if this respondent has no data for that wave at all. Variables
-	// with only a single column (no suffix at all, like GENDER, or a
-	// recruit-only "_Y1"-only question like REL1) aren't really wave-
-	// specific, so that one column shows for either wave.
-	function columnForWave(key, waveKey) {
-		const columns = getColumns(key);
-		if (columns.length <= 1) return columns[0] ?? null;
-		return columns.find((column) => column.endsWith(`_${waveKey}`)) ?? null;
-	}
-
+	// as recorded, not the lumped legend label ("Married", not
+	// "Married/Partnered"). config still flags admin codes as missing
 	function formatValue(key, config, column) {
 		const raw = person?.[column];
 		if (raw === null || raw === undefined || raw === "") return "—";
 		if (config.type === "categorical") {
-			return getCategoryFor(key, raw)?.label ?? String(raw);
+			if (getCategoryFor(key, raw)?.key === "no_answer") return "—";
+			return String(raw);
 		}
 		if (config.type === "numeric") {
 			const num = parseNumericValue(key, raw);
@@ -45,16 +33,9 @@
 		return String(raw);
 	}
 
-	// Most numeric variables' top bucket is a real scale ceiling (LIFE_SAT's
-	// "High (7-10)" truly stops at 10) — but a few (NUM_CHILDREN's "3+",
-	// CIGARETTES' "20+") use a wildly wide top bucket (span 27, say,
-	// against the previous bucket's span of 1) purely as an open-ended
-	// catch-all, not a real bound — its stated max (30) is arbitrary and
-	// would leave every realistic value looking near-empty. Detected by
-	// comparing the top bucket's own span to the one before it; when it's
-	// disproportionately wider, the bucket's start (3) is used as the
-	// effective ceiling instead of its stated end, so landing in that
-	// bucket simply reads as "maxed out."
+	// some top buckets are open-ended catch-alls ("3+", "20+") whose stated
+	// max is arbitrary. detected by span vs. the bucket before; if much
+	// wider, its start is the ceiling
 	function effectiveMaxFor(config) {
 		const sorted = [...config.ranges].sort((a, b) => a.min - b.min);
 		const last = sorted[sorted.length - 1];
@@ -67,11 +48,7 @@
 		return last.max;
 	}
 
-	// A numeric variable's own full scale, spanning its ranges' own
-	// low/high buckets (see variable_config.js — e.g. LIFE_SAT's
-	// low/mid/high buckets span 0-10 overall) — the range-bar below fills
-	// against THIS span, not some fixed 0-10 assumption, since not every
-	// numeric variable (NUM_CHILDREN, say) is actually a 0-10 scale.
+	// the variable's own full span, since not every numeric is 0-10
 	function numericScaleFor(config) {
 		if (config.type !== "numeric" || !config.ranges?.length) return null;
 		const min = Math.min(...config.ranges.map((r) => r.min));
@@ -79,17 +56,13 @@
 		return max > min ? { min, max } : null;
 	}
 
-	// 0..1 fill fraction for the range bar, clamped in case a raw value
-	// happens to fall outside its own configured ranges.
+	// 0..1 bar fill, clamped for values outside the configured ranges
 	function fillFractionFor(value, scale) {
 		return Math.max(0, Math.min(1, (value - scale.min) / (scale.max - scale.min)));
 	}
 
-	// Small discrete counts (kids/adults in the household; Health &
-	// Habits' cigarette/drink/exercise-day counts) read better as a row
-	// of filled pips — one dot per unit, no fixed total/empty ones since
-	// there's no real ceiling to measure against — than a continuous bar,
-	// where "63% full" wouldn't mean anything for "3 children."
+	// small counts read better as pips, one per unit — "63% full" means
+	// nothing for "3 children"
 	function isPipVariable(key, config) {
 		return (
 			config.parent === "Health & Habits" || key === "NUM_CHILDREN" || key === "NUM_HOUSEHOLD"
@@ -99,28 +72,29 @@
 	const age = $derived(person?.[wave === "Y1" ? "AGE_Y1" : "AGE_Y2"] ?? null);
 	const waveYearLabel = $derived(wave === "Y1" ? "2022-23" : "2024");
 
+	// as recorded, or null for missing/admin codes
+	function rawAnswer(currentPerson, baseVar, waveKey) {
+		const column = columnForWave(baseVar, waveKey);
+		const raw = column ? currentPerson[column] : null;
+		if (typeof raw !== "string" || raw === "") return null;
+		if (getCategoryFor(baseVar, raw)?.key === "no_answer") return null;
+		return raw;
+	}
+
 	function genderNoun(genderRaw) {
 		if (genderRaw === "Male") return "man";
 		if (genderRaw === "Female") return "woman";
 		return "person";
 	}
 
-	// A short, plain-language intro built from whatever this respondent
-	// actually answered — same spirit as the love-hcm modal's own intro
-	// sentence, just built from GFS's variables instead of that survey's.
+	// plain-language intro from whatever they answered
 	function buildIntroSentence(currentPerson, waveKey) {
 		if (!currentPerson) return "";
 		const noun = genderNoun(currentPerson.GENDER);
 		const currentAge = currentPerson[waveKey === "Y1" ? "AGE_Y1" : "AGE_Y2"];
 
-		const maritalColumn = columnForWave("MARITAL_STATUS", waveKey);
-		const maritalLabel = maritalColumn
-			? getCategoryFor("MARITAL_STATUS", currentPerson[maritalColumn])?.label
-			: null;
-		const employmentColumn = columnForWave("EMPLOYMENT", waveKey);
-		const employmentLabel = employmentColumn
-			? getCategoryFor("EMPLOYMENT", currentPerson[employmentColumn])?.label
-			: null;
+		const maritalLabel = rawAnswer(currentPerson, "MARITAL_STATUS", waveKey);
+		const employmentLabel = rawAnswer(currentPerson, "EMPLOYMENT", waveKey);
 		const afterDeathColumn = columnForWave("AFTER_DEATH", waveKey);
 		const afterDeathLabel = afterDeathColumn
 			? getCategoryFor("AFTER_DEATH", currentPerson[afterDeathColumn])?.label
@@ -286,10 +260,10 @@
 		top: 0px;
 		width: 100%;
 		box-sizing: border-box;
-		/* Sticky, but with no z-index it still stacks in plain DOM order —
+		/* sticky, but with no z-index it still stacks in plain DOM order —
 		   later content scrolling underneath (e.g. a .rangeBarValue--outside
 		   label, itself position:absolute) could paint over it once it
-		   scrolled up to y=0. This keeps it on top regardless. */
+		   scrolled up to y=0. this keeps it on top regardless. */
 		z-index: 20;
 	}
 	.detailsClose:hover {
@@ -376,13 +350,13 @@
 		font-size: 0.72rem;
 		white-space: nowrap;
 	}
-	/* Enough fill to fit the label inside it — right-aligned near the
+	/* enough fill to fit the label inside it — right-aligned near the
 	   fill's own leading (right) edge, over the accent color. */
 	.rangeBarValue--inside {
 		padding-right: 4px;
 		color: #fff;
 	}
-	/* Not enough fill — the label sits just past the bar's own leading
+	/* not enough fill — the label sits just past the bar's own leading
 	   edge instead, over the track rather than the (too-thin) fill. */
 	.rangeBarValue--outside {
 		position: absolute;
@@ -391,7 +365,7 @@
 		margin-left: 4px;
 		color: rgba(255, 255, 255, 0.85);
 	}
-	/* Small discrete counts (see isPipVariable) — one dot per unit, filled
+	/* small discrete counts (see isPipVariable) — one dot per unit, filled
 	   up to the value, same track/fill colors as .rangeBar for one
 	   consistent "this is how full/many" visual language. */
 	.pipRow {

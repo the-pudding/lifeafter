@@ -1,112 +1,73 @@
 <script>
-	// The plain 2D minimap overlay — not a second three.js render pass, just
-	// a <canvas> drawn from each person's flat (x, z) position and current
-	// color, both of which Main.lifedeath.svelte's updatePeoplePositions/
-	// applyColorVariable already track every frame. Pulled out of
-	// Main.lifedeath.svelte as its own component since drawing/sizing this
-	// canvas is a self-contained concern; Main still owns the crowd
-	// simulation data itself and just calls draw() every frame (see
-	// animate() there) — that's an imperative per-frame call, not a Svelte
-	// prop, so the ~2,500-person position/color arrays never have to go
-	// through Svelte's reactivity on every frame.
+	// 2D minimap overlay. a plain <canvas> drawn from each person's (x, z)
+	// and color. Main calls draw() imperatively each frame, so the ~2,500
+	// position/color entries never go through Svelte reactivity
 	import { onMount } from "svelte";
 
-	// hidden hides the canvas visually only (CSS, not {#if}) — some
-	// copy.json story beats (see Main's hideMap) want the map off-screen
-	// temporarily. Unmounting instead would drop the roomConfig/scale
-	// state init() below only ever sets once, breaking draw() silently
-	// the next time this map should reappear.
-	// panelClear: pixels of vertical space to leave clear at the top in
-	// topdown mode, so the enlarged map doesn't sit under ControlPanel
-	// (see Main's controlPanelHeight, measured from the real panel
-	// element since its height varies with content/viewport).
-	// mode is bindable so the small walk-mode corner box can switch
-	// straight to topdown on click (see the canvas's own onclick below),
-	// the same toggle ControlPanel.svelte's button already does — clicking
-	// anywhere on that box, not just a dedicated button, now does it.
-	// onPersonClick(index): fired when a person's dot is clicked in
-	// top-down mode (see hitTestPerson/the canvas's own onclick) — Main
-	// owns the actual clickedPerson/clickedPersonIndex state the modal
-	// reads, so this just reports which respondent index was hit.
+	// hidden: CSS-only, not {#if} — unmounting would drop the roomConfig
+	// state init() sets once, silently breaking draw() on reappear.
+	// panelClear / bottomClear: space to leave at the top and bottom in
+	// topdown, so the map clears the control panel and the story text.
+	// mode: bindable, so clicking the corner box switches to topdown.
+	// onPersonClick(index): a dot was clicked; Main owns the modal state.
+	// bounce / onAcknowledge: hop for an hl_minimap beat, stop on first
+	// hover or click.
 	let {
 		mode = $bindable(),
 		container,
 		hidden = false,
 		panelClear = 0,
+		bottomClear = 0,
+		bounce = false,
+		onAcknowledge,
 		onPersonClick
 	} = $props();
 
 	let minimapCanvas;
 
-	// A fixed logical coordinate space regardless of this canvas's actual
-	// on-screen size/aspect (see draw()'s uniform "contain" scale) — taller
-	// than wide (2:1) to echo the room's own very elongated shape.
+	// fixed logical space, whatever the canvas's real size. 2:1, echoing
+	// the room's shape
 	const MINIMAP_WIDTH_PX = 120;
 	const MINIMAP_HEIGHT_PX = 240;
-	// The whole room's layout is shown at once now, not just the extent the
-	// walker has reached — it's a map, not a fog-of-war reveal. Circles
-	// (not squares) so uniform scaling in draw() never turns a person into
-	// a stretched blob. HIT_RADIUS is deliberately bigger than the drawn
-	// dot (see hitTestPerson) — a dot this small is a fiddly click target
-	// at its own exact radius.
+	// circles, so uniform scaling never stretches a person into a blob.
+	// HIT_RADIUS is bigger than the dot — it's a fiddly target otherwise
 	const PERSON_DOT_RADIUS = 0.85; // ~same area as the old 1.5x1.5 square
 	const PERSON_DOT_HIT_RADIUS = 3;
-	// Breathing room between the plot/axes and the canvas's own outer
-	// border — kept small on purpose, the small corner box has little
-	// room to spare and the walker's own dot already sits close to it.
+	// gap between plot and canvas border. small — the corner box is tight
 	const MINIMAP_OUTER_PADDING = 3;
-	// Topdown mode only: clears space below the enlarged map box for
-	// ControlPanel's "Back to walk view" button, which sits fixed to the
-	// container's own bottom edge (see ControlPanel's .minimap-toggle) —
-	// without this the map's bottom edge ran flush to the container
-	// bottom too, right under/behind that button.
+	// topdown: room below for the "Back to walk view" button
 	const TOPDOWN_BOTTOM_CLEAR = 44;
-	// Extra room below the room plot specifically — the age label now sits
-	// below the walker's dot (see draw()) rather than above it, so it
-	// needs somewhere to land without getting clipped by the canvas's own
-	// bottom edge when the walker's near the entrance (bottom of the plot).
+	// room for the age label, which sits below the walker's dot
 	const MINIMAP_BOTTOM_PADDING = 16;
-	// The walker's own tracking line — full white, opaque, so it still
+	// the walker's own tracking line — full white, opaque, so it still
 	// reads as the one thing that's moving, not just another grid line.
 	const MINIMAP_LINE_COLOR = "#ffffff";
-	// The static axis grid (age ticks, zone dividers) stays subtler than
-	// the tracking line above — a faint structural hint, not competing
-	// with the dot scatter or the tracking line for attention.
+	// static grid, subtler than the tracking line
 	const MINIMAP_AXIS_LINE_COLOR = "rgba(255, 255, 255, 0.3)";
-	// Fallback tracking-line width in walk mode (see trackingLineWidthLogical
+	// fallback tracking-line width in walk mode (see trackingLineWidthLogical
 	// in draw()) — that's the size it was originally tuned for.
 	const MINIMAP_TRACKING_LINE_WIDTH = 2;
-	// Reserved margin for the age (left) and No/Unsure/Yes group (top)
-	// axis labels, outside the room-plot area itself. Zero in the small
-	// walk-mode corner box — no room to spare there, and the tick lines
-	// (drawn regardless of mode, see draw()) already convey the age scale
-	// well enough at that size. The full-screen top-down view has room to
-	// spare, so both axes get their labels back there.
+	// margin for the axis labels. zero in the corner box, where the tick
+	// lines alone convey the scale
 	function axisMargins(mode) {
 		return mode === "topdown"
 			? { left: 22, top: 16 }
 			: { left: 0, top: 0 };
 	}
 
-	// Room-layout config, handed over once via init() (see Main's onMount) —
-	// none of this changes afterward, so it's plain closure state rather
-	// than reactive props.
+	// set once via init(); never changes, so plain closure state
 	let roomConfig = null;
 	let minimapZBackWall = 0;
 	let minimapScaleX = 1;
 	let minimapScaleZ = 1;
-	// The last draw() call's own transform params — see hitTestPerson.
+	// the last draw() call's own transform params — see hitTestPerson.
 	let lastDrawState = null;
-	// The respondent index currently under the pointer in top-down mode
-	// (see handleMinimapMouseMove) — read by draw() each frame to light
-	// that dot up. Plain variable, not $state: draw() is called
-	// imperatively every frame regardless (see Main's animate()), so
-	// there's no need to trigger a Svelte re-render on every hover change.
+	// dot under the pointer, read by draw(). plain variable — draw() runs
+	// every frame anyway, so no re-render needed
 	let hoveredPersonIndex = null;
 
-	// World bounds mapped onto the canvas: X across the full room width
-	// (No=left, Yes=right); Z from the entrance (bottom of the canvas — the
-	// young end, where you walk in) to the back wall (top — the old end).
+	// world -> canvas. X = room width (No left, Yes right). Z = entrance
+	// at the bottom (young) to back wall at the top (old)
 	export function init(config) {
 		roomConfig = config;
 		const minimapZEntrance = config.halfDepth + config.exteriorDepth;
@@ -138,29 +99,17 @@
 		const { zoneWidth, ageMin, ageMax, ageToZ, bgColorCss } = roomConfig;
 		const ctx = minimapCanvas.getContext("2d");
 		const isTopdown = mode === "topdown";
-		// Axis label margins only reserved in top-down mode (see
-		// axisMargins) — the small walk-mode corner box stays edge-to-edge
-		// with the room plot, just the outer padding below.
+		// label margins in topdown only; the corner box stays edge-to-edge
 		const { left: axisLeftMargin, top: axisTopMargin } = axisMargins(mode);
-		// axisLeftMargin only ever adds space on the LEFT (room for the age
-		// numbers, see axisMargins) — left unmatched, that pulls the actual
-		// room plot off-center within the square topdown box, since the
-		// "contain" scale/letterboxing below centers the whole logical
-		// block (plot + its lopsided margin) rather than the plot itself.
-		// Mirroring the same amount of blank space on the right keeps the
-		// plot itself visually centered; the age numbers stay left-only,
-		// which is fine, that's their intended position.
+		// mirror the left margin on the right, or the contain-scale centers
+		// the lopsided block and pulls the plot off-center
 		const logicalWidth =
 			MINIMAP_WIDTH_PX + axisLeftMargin + axisLeftMargin + MINIMAP_OUTER_PADDING;
 		const logicalHeight =
 			MINIMAP_HEIGHT_PX + axisTopMargin + MINIMAP_OUTER_PADDING + MINIMAP_BOTTOM_PADDING;
-		// The drawing below is all in the fixed logicalWidth x logicalHeight
-		// coordinate space regardless of the canvas's actual raster
-		// size/aspect (small corner box in walk mode, capped-at-square
-		// full-bleed in topdown mode — see .topdown-active CSS and
-		// layoutMinimapBox). A single uniform scale (never separate X/Y
-		// factors) keeps circles circular and text unwarped; any leftover
-		// space is centered as letterboxing instead of stretching.
+		// everything below draws in the fixed logical space. one uniform
+		// scale, never separate X/Y, so circles stay round. leftover space
+		// letterboxes rather than stretching
 		const scale = Math.min(
 			minimapCanvas.width / logicalWidth,
 			minimapCanvas.height / logicalHeight
@@ -170,48 +119,28 @@
 		ctx.setTransform(scale, 0, 0, scale, offsetX, offsetY);
 		ctx.fillStyle = bgColorCss;
 		ctx.fillRect(0, 0, logicalWidth, logicalHeight);
-		// Everything from here down draws inside the outer-padding inset
-		// (see MINIMAP_OUTER_PADDING) — the background fill above still
-		// covers the full box, so this just leaves a blank margin between
-		// the axis/plot content and the canvas's own border.
+		// inside the padding inset. the bg fill above still covers the full box
 		ctx.save();
 		ctx.translate(MINIMAP_OUTER_PADDING, MINIMAP_OUTER_PADDING);
 
-		// Axis label text size: deliberately NOT just "scale" logical px
-		// like everything else above — in topdown mode the box (and so
-		// `scale`) can grow to fill an entire desktop screen, and text
-		// scaled the same uniform amount as the room plot would blow up to
-		// a huge, illegible size. Instead it's pinned to a small range of
-		// actual on-screen pixels tied to the viewport's own width (not
-		// this box's, which can be much bigger), then converted back into
-		// logical units by dividing out `scale` (dpr cancels out: raster
-		// pixels-per-logical-unit / raster-pixels-per-CSS-pixel =
-		// CSS-pixels-per-logical-unit).
+		// not scaled like the plot — in topdown the box can fill a screen and
+		// text would blow up. pinned to on-screen px off the viewport width,
+		// then converted back to logical units
 		const axisFontCSSPx = Math.max(13, Math.min(13, window.innerWidth / 100));
 		const cssPxToLogical = (cssPx) =>
 			(cssPx * (minimapCanvas.width / minimapCanvas.clientWidth || 1)) / scale;
 		const axisFontLogicalPx = cssPxToLogical(axisFontCSSPx);
 
-		// Grid/tracking line widths, converted the same CSS-px-pinned way as
-		// axisFontLogicalPx just above — MINIMAP_LINE_WIDTH/
-		// MINIMAP_TRACKING_LINE_WIDTH's own fixed logical-unit values only
-		// ever looked right at the small walk-mode corner box's own scale;
-		// at topdown's much larger scale (the box can fill a whole desktop
-		// screen), the same logical width draws several times thicker on
-		// screen. The axis stays a flat 1 CSS px regardless of mode; the
-		// tracking line keeps walk mode's original fixed value (that's the
-		// size it was tuned for) and only gets the same CSS-px pinning in topdown.
+		// same CSS-px pinning as the font: fixed logical widths draw far too
+		// thick at topdown's scale. axis stays 1 CSS px; the tracking line
+		// keeps its walk-mode value and is only pinned in topdown
 		const lineWidthLogical = cssPxToLogical(1);
 		const trackingLineWidthLogical = isTopdown
 			? cssPxToLogical(1.5)
 			: MINIMAP_TRACKING_LINE_WIDTH;
 
-		// Age axis (left): a tick line every 10 years — spanning the plot's
-		// actual width, in the same Z->pixel space worldZToMinimapPx
-		// already uses for that line. Drawn in both modes (cheap, and
-		// still reads fine with no label at the small corner size); the
-		// number next to each line only appears in top-down mode, where
-		// axisLeftMargin actually reserves room for it.
+		// age axis: a tick every 10 years, full plot width. lines in both
+		// modes, numbers only in topdown where there's room
 		ctx.strokeStyle = MINIMAP_AXIS_LINE_COLOR;
 		ctx.lineWidth = lineWidthLogical;
 		const ageAxisStart = Math.ceil(ageMin / 10) * 10;
@@ -233,10 +162,7 @@
 			}
 		}
 
-		// Group axis (top): No/Unsure/Yes labels over their column, same
-		// X->pixel space worldXToMinimapPx already uses for the column
-		// dividers below. Top-down only — axisTopMargin is 0 otherwise, no
-		// room reserved for this band at the small corner-box size.
+		// group axis: No/Unsure/Yes over their columns. topdown only
 		if (isTopdown) {
 			ctx.textAlign = "center";
 			ctx.textBaseline = "alphabetic";
@@ -271,15 +197,11 @@
 			);
 		}
 
-		// The room plot itself, offset past the axis margins so
-		// worldXToMinimapPx/worldZToMinimapPx's own 0-based math (and every
-		// hand-tuned constant below) stays unchanged.
+		// the plot, offset past the margins so the 0-based math stays put
 		ctx.save();
 		ctx.translate(axisLeftMargin, axisTopMargin);
 
-		// Light dividers between the No/Unsure/Yes columns, echoing the
-		// zone lines on the actual room floor — drawn under the people
-		// dots (like the age line's floor markings) rather than over them.
+		// column dividers, echoing the room's zone lines. under the dots
 		ctx.fillStyle = MINIMAP_AXIS_LINE_COLOR;
 		for (const x of [-zoneWidth / 2, zoneWidth / 2]) {
 			const px = worldXToMinimapPx(x);
@@ -300,10 +222,7 @@
 			ctx.fill();
 		}
 
-		// The hovered dot (see hitTestPerson/handleMinimapMouseMove), lit up
-		// on top of the normal pass above — bigger and haloed in white so
-		// it's obvious which one a click would open, same idea as the
-		// walk-view crowd's own hoveredPersonBrightness.
+		// hovered dot, drawn over the normal pass: bigger, white halo
 		if (hoveredPersonIndex !== null && hoveredPersonIndex < respondentCount) {
 			const px = worldXToMinimapPx(minimapX[hoveredPersonIndex]);
 			const py = worldZToMinimapPx(minimapZ[hoveredPersonIndex]);
@@ -317,11 +236,8 @@
 			ctx.fill();
 		}
 
-		// Whoever's respondent modal is currently open (see Main's
-		// clickedPersonIndex) — a persistent white ring, distinct from the
-		// hover halo above (filled circle vs an outlined ring) so
-		// "selected" and "currently hovered" read as two different things,
-		// including when they're the same dot at once.
+		// whoever's modal is open: an outlined ring, so "selected" reads
+		// differently from the filled hover halo above
 		if (selectedPersonIndex !== null && selectedPersonIndex < respondentCount) {
 			const px = worldXToMinimapPx(minimapX[selectedPersonIndex]);
 			const py = worldZToMinimapPx(minimapZ[selectedPersonIndex]);
@@ -332,9 +248,7 @@
 			ctx.stroke();
 		}
 
-		// The age line: a full-width marker at the walker's current Z,
-		// thicker than the static grid lines (see MINIMAP_TRACKING_LINE_WIDTH)
-		// since this is the one that actually moves as they walk.
+		// full-width marker at the walker's Z. thicker than the grid — it moves
 		const lineY = worldZToMinimapPx(walkerZ);
 		ctx.fillStyle = MINIMAP_LINE_COLOR;
 		ctx.fillRect(
@@ -344,18 +258,11 @@
 			trackingLineWidthLogical
 		);
 
-		// The walker's own exact position, plus a heading cone showing
-		// which way the camera's currently facing — sharp point at the
-		// walker (where else), fanning out and fading to fully transparent
-		// at the far end, like a flashlight beam rather than an arrow.
+		// walker position plus a heading cone, fading out like a flashlight
 		const walkerCanvasX = worldXToMinimapPx(walkerX);
 		if (walkerYaw !== undefined) {
-			// Forward in world space (same sin/-cos convention Main's own
-			// forwardX/forwardZ use for movement). The map's X/Z scale
-			// isn't uniform (minimapScaleX vs minimapScaleZ, see init()),
-			// so this direction is converted into map-pixel space and
-			// re-normalized before use — otherwise the cone's apparent
-			// angle wouldn't visually match the camera's real facing.
+			// world forward, same sin/-cos as Main. the map's X/Z scales differ,
+			// so convert to map space and re-normalize or the angle won't match
 			const forwardX = Math.sin(walkerYaw);
 			const forwardZ = -Math.cos(walkerYaw);
 			let dx = forwardX * minimapScaleX;
@@ -385,10 +292,7 @@
 		ctx.arc(walkerCanvasX, lineY, 3, 0, Math.PI * 2);
 		ctx.fill();
 
-		// The current age, centered below the dot and moving with it —
-		// black-stroked so it stays legible over the busy dot scatter
-		// behind it, same outline-then-fill approach as the neon text
-		// elsewhere in this app.
+		// age, below the dot. black-stroked to stay legible over the scatter
 		if (currentAge !== null && currentAge !== undefined) {
 			const ageLabelFontPx = axisFontLogicalPx * 1.15;
 			ctx.font = `bold ${ageLabelFontPx}px monospace`;
@@ -408,19 +312,13 @@
 		ctx.restore();
 		ctx.restore();
 
-		// Cached for hitTestPerson below — click/hover hit-testing runs on
-		// its own (mousemove/click), not every frame, so it needs this
-		// frame's transform params to map a raw pointer position back into
-		// the same logical space worldXToMinimapPx/worldZToMinimapPx draw
-		// in, rather than redoing (and risking drifting out of sync with)
-		// draw()'s own math.
+		// cached for hitTestPerson, which runs on events, not per frame —
+		// it needs this frame's transform to map a pointer back to logical space
 		lastDrawState = { scale, offsetX, offsetY, axisLeftMargin, axisTopMargin, minimapX, minimapZ, respondentCount };
 	}
 
-	// Keeps the canvas's raster buffer a crisp devicePixelRatio multiple of
-	// its current CSS box (see draw()'s ctx.setTransform) — re-run via
-	// ResizeObserver below whenever that box changes, including the
-	// walk/topdown layout swap.
+	// keeps the raster buffer a dpr multiple of the CSS box. re-run by the
+	// observer below on any box change
 	function resizeMinimapCanvas() {
 		const dpr = Math.min(window.devicePixelRatio, 2);
 		const w = Math.round(minimapCanvas.clientWidth * dpr);
@@ -430,30 +328,15 @@
 		minimapCanvas.height = h;
 	}
 
-	// Sizes the enlarged topdown minimap box to draw()'s own logical
-	// content aspect ratio (MINIMAP_WIDTH_PX/HEIGHT_PX plus the topdown
-	// axis margins/padding — see draw()'s logicalWidth/logicalHeight),
-	// instead of capping it at a 1x1 square. A square box is much wider
-	// than that content's own ~0.6 aspect, so draw()'s internal "contain"
-	// scale was letterboxing it down to a much smaller map inside a mostly
-	// empty square — this way the box IS already the right shape, so
-	// there's nothing left to letterbox and the map fills its box edge to
-	// edge. Also pushes the box down by panelClear so it starts clear of
-	// ControlPanel instead of running under it. Reads container's size
-	// directly (not minimapCanvas's own — that's the box being computed
-	// here). Cleared back to the CSS-driven small corner box in walk mode,
-	// so no stale inline sizing lingers once topdown mode is left.
+	// sizes the topdown box to the content's own ~0.6 aspect, so nothing
+	// letterboxes and the map fills it edge to edge. offset by panelClear.
+	// reads container, not the canvas being sized. cleared in walk mode
 	function layoutMinimapBox() {
 		if (mode !== "topdown") {
 			minimapCanvas.style.width = "";
 			minimapCanvas.style.top = "";
 			minimapCanvas.style.height = "";
-			// Leaving topdown mode: drop any inline cursor hitTestPerson's
-			// hover handling left behind, so the small corner box's usual
-			// CSS-driven `cursor: pointer` (see .minimap-canvas) takes back
-			// over instead of getting stuck at whatever it last was, and
-			// clear the hover highlight too so it doesn't linger onto a
-			// small corner box that was never actually hovered.
+			// leaving topdown: drop the inline cursor and hover, or they stick
 			minimapCanvas.style.cursor = "";
 			hoveredPersonIndex = null;
 			return;
@@ -468,7 +351,7 @@
 		const availW = container.clientWidth;
 		const availH = Math.max(
 			0,
-			container.clientHeight - panelClear - TOPDOWN_BOTTOM_CLEAR
+			container.clientHeight - panelClear - TOPDOWN_BOTTOM_CLEAR - bottomClear
 		);
 		let width = availH * contentAspect;
 		let height = availH;
@@ -484,22 +367,18 @@
 	$effect(() => {
 		mode;
 		panelClear;
+		bottomClear;
 		if (minimapCanvas && container) layoutMinimapBox();
 	});
 
-	// The respondent index whose dot sits under (clientX, clientY), within
-	// PERSON_DOT_HIT_RADIUS — null if none. Undoes draw()'s own transform
-	// pipeline (ctx.setTransform's scale/offset, then the outer-padding and
-	// axis-margin translates) using lastDrawState, the same call's params,
-	// so a hit here always matches what's actually visible on screen.
+	// -> respondent index under the pointer, or null. undoes draw()'s
+	// transform via lastDrawState, so hits match what's on screen
 	function hitTestPerson(clientX, clientY) {
 		if (!lastDrawState || !roomConfig) return null;
 		const { scale, offsetX, offsetY, axisLeftMargin, axisTopMargin, minimapX, minimapZ, respondentCount } =
 			lastDrawState;
 		const rect = minimapCanvas.getBoundingClientRect();
-		// CSS-pixel pointer position -> this canvas's own raster space
-		// (its width/height attributes can differ from its CSS box by
-		// devicePixelRatio, see resizeMinimapCanvas).
+		// CSS px -> raster space; they differ by dpr
 		const rasterX = ((clientX - rect.left) / rect.width) * minimapCanvas.width;
 		const rasterY = ((clientY - rect.top) / rect.height) * minimapCanvas.height;
 		const logicalX = (rasterX - offsetX) / scale - MINIMAP_OUTER_PADDING - axisLeftMargin;
@@ -519,12 +398,7 @@
 		return bestIndex;
 	}
 
-	// Top-down mode only (see the canvas's own onclick/onmousemove/
-	// onmouseleave below): a normal cursor by default, switching to
-	// pointer only while actually hovering a clickable dot — rather than
-	// always showing pointer over the whole map regardless of whether
-	// anything's under it. Also lights that same dot up (see draw()'s own
-	// hoveredPersonIndex check) so it's obvious which one a click would open.
+	// topdown only: pointer cursor only over a real dot, and light it up
 	function handleMinimapMouseMove(event) {
 		if (mode !== "topdown") return;
 		hoveredPersonIndex = hitTestPerson(event.clientX, event.clientY);
@@ -536,12 +410,11 @@
 		minimapCanvas.style.cursor = "default";
 	}
 
-	// True while the given pointer position sits over this canvas's own
-	// on-screen box — used by Main.lifedeath.svelte to stop a door/person
-	// click from reaching through the minimap (it's pointer-events:none
-	// purely so drag-to-steer/scroll-to-walk still reach the 3D canvas
-	// underneath it, not so clicks should reach through to whatever's behind it).
+	// pointer over this canvas's box. Main uses it to stop clicks reaching
+	// through; pointer-events:none is only there for drag and scroll
 	export function containsPoint(clientX, clientY) {
+		// A faded-out map still has a box, but shouldn't swallow clicks.
+		if (hidden) return false;
 		const rect = minimapCanvas.getBoundingClientRect();
 		return (
 			clientX >= rect.left &&
@@ -559,13 +432,8 @@
 		return () => minimapResizeObserver.disconnect();
 	});
 
-	// container, by contrast, is Main.lifedeath.svelte's own bind:this
-	// target passed down as a prop — its bind:this effect there isn't
-	// guaranteed to have resolved yet by the time this component's onMount
-	// runs (a child's onMount can fire before an ancestor element's own
-	// bind:this settles), so observing it eagerly in onMount above threw
-	// "parameter 1 is not of type 'Element'" here. A reactive $effect
-	// instead re-runs once the prop actually turns into a real element.
+	// container is Main's bind:this, which may not have resolved when this
+	// child's onMount runs. an $effect re-runs once it's a real element
 	$effect(() => {
 		if (!container) return;
 		const containerResizeObserver = new ResizeObserver(layoutMinimapBox);
@@ -577,9 +445,11 @@
 <canvas
 	class="minimap-canvas"
 	class:topdown-active={mode === "topdown"}
+	class:bounce
+	class:is-hidden={hidden}
 	bind:this={minimapCanvas}
-	{hidden}
 	onclick={(event) => {
+		onAcknowledge?.();
 		if (mode !== "topdown") {
 			mode = "topdown";
 			return;
@@ -587,6 +457,7 @@
 		const index = hitTestPerson(event.clientX, event.clientY);
 		if (index !== null) onPersonClick?.(index);
 	}}
+	onpointerenter={() => onAcknowledge?.()}
 	onmousemove={handleMinimapMouseMove}
 	onmouseleave={handleMinimapMouseLeave}
 ></canvas>
@@ -608,7 +479,7 @@
 		height: 244px;
 		border: 1px solid rgba(255, 255, 255, 0.2);
 		border-radius: 0rem;
-		/* The small walk-mode corner box is click-to-switch (see the
+		/* the small walk-mode corner box is click-to-switch (see the
 		   canvas's own onclick); the full-bleed topdown map (below) is
 		   click-a-dot-to-open-their-modal (see hitTestPerson) — both need
 		   real pointer events, unlike drag-to-steer/scroll-to-walk (which
@@ -620,22 +491,65 @@
 		cursor: pointer;
 		background: #10000E;
 	}
-	/* Main.lifedeath.svelte's own global `.lifedeath-room :global(canvas) {
-	   display: block; }` rule is an author-stylesheet rule, so it beats the
-	   browser's built-in `[hidden] { display: none }` UA rule outright
-	   (author always wins over UA, regardless of specificity) — without
-	   this, the hidden attribute set from Main's hideMap prop above had no
-	   visible effect. This selector's two classes/attribute outrank that
-	   rule's one class + one type selector, so it wins the (now
-	   author-vs-author) specificity fight instead. */
-	.minimap-canvas[hidden] {
-		display: none;
+	/* story beats show and hide this, so it fades rather than cuts. opacity
+	   rather than display:none, which can't transition; pointer-events are
+	   dropped so a faded-out map can't still be clicked. */
+	.minimap-canvas {
+		transition: opacity 320ms ease-out;
+	}
+	.minimap-canvas.is-hidden {
+		opacity: 0;
+		pointer-events: none;
+	}
+	/* attention bob for a copy.json hl_minimap beat (see the `bounce`
+	   prop). :not(.topdown-active) is a belt-and-braces guard — Main
+	   already only passes bounce in walk mode, since the topdown box
+	   centers itself with its own transform that this would override.
+	   A transform animation (not top/margin) so it runs on the
+	   compositor: this component's sibling three.js loop keeps the main
+	   thread busy enough that main-thread-driven animation stutters. */
+	.minimap-canvas.bounce:not(.topdown-active) {
+		animation: minimap-bounce 1.8s infinite;
+	}
+	/* two hops then a rest, rather than an even oscillation. each hop uses
+	   ease-out going up and ease-in coming down, so it reads as thrown and
+	   falling rather than floating, and the flat tail is the pause. */
+	@keyframes minimap-bounce {
+		0% {
+			transform: translateY(0);
+			animation-timing-function: cubic-bezier(0.25, 0.6, 0.4, 1);
+		}
+		12% {
+			transform: translateY(-18px);
+			animation-timing-function: cubic-bezier(0.6, 0, 0.75, 0.4);
+		}
+		24% {
+			transform: translateY(0);
+			animation-timing-function: cubic-bezier(0.25, 0.6, 0.4, 1);
+		}
+		36% {
+			transform: translateY(-13px);
+			animation-timing-function: cubic-bezier(0.6, 0, 0.75, 0.4);
+		}
+		48% {
+			transform: translateY(0);
+		}
+		100% {
+			transform: translateY(0);
+		}
+	}
+	/* respect a reduced-motion preference — the story text still carries
+	   the same "look at the map" cue without the movement. */
+	@media (prefers-reduced-motion: reduce) {
+		.minimap-canvas.bounce:not(.topdown-active) {
+			animation: none;
+		}
 	}
 	.minimap-canvas.topdown-active {
 		left: 50%;
 		right: auto;
 		transform: translateX(-50%);
-		/* Above app.css's .story-overlay (z-index: 10) — in topdown mode
+		/* above app.css's .story-overlay (z-index: 10) — in topdown mode
 		   this map IS the main view, so it shouldn't ever end up tucked
 		   behind that bottom text box. */
 		z-index: 11;

@@ -9,7 +9,7 @@
 :root {
 	/* font */
 	--font-sans: "Atlas Grotesk", -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif;
-	--font-serif: "Iowan Old Style, Tiempos Text",  Times New Roman, Times, serif;
+	--font-serif: "Iowan Old Style", "Tiempos Text",  Times New Roman, Times, serif;
 	--font-mono: Menlo, Consolas, Monaco, monospace;
 
 	/* z-index */
@@ -101,7 +101,7 @@ svg {
 }
 
 .story-overlay {
-	font-family: var(--font-mono);
+	font-family: var(--font-serif);
 	font-weight: 100;
 	position: absolute;
 	bottom: 10px;
@@ -143,8 +143,8 @@ svg {
 	/* Shrinks smoothly on narrow screens (down to 0.8rem) instead of
 	   staying a fixed 1.3em and eating into the limited vertical space
 	   there — caps back at the original 1.3rem on wide/desktop screens. */
-	font-size: 20px;
-	line-height: 1.8em;
+	font-size: 16px;
+	line-height: 1.7em;
 	background: rgba(0,0,0,0.8);
 	padding: 3px;
 	margin-block-start: 1.2em;
@@ -172,6 +172,19 @@ svg {
 		font-size: 13px;
 	}
 }
+/* Links written as markdown in copy.json (see renderStoryText in
+   Main.lifedeath.svelte, which turns them into real anchors). Underlined
+   rather than color-only, since the story text already uses color to mean
+   something specific here — the belief/no_belief/unsure spans. */
+.story-overlay p a {
+	color: #ff8dce;
+	text-decoration: underline;
+	text-underline-offset: 3px;
+}
+.story-overlay p a:hover {
+	color: #fff;
+}
+
 /* Base container styling */
 .story-overlay p .hints {
     text-align: center;

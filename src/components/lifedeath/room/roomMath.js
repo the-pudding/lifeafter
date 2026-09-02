@@ -1,7 +1,4 @@
-// Pure math/geometry helpers used by Main.lifedeath.svelte's walk
-// simulation, crowd LOD, and camera setup — no Three.js or Svelte
-// dependency, so these are easy to read and test in isolation from the
-// scene-building code itself.
+// pure math for the walk sim, crowd LOD, and camera. no three.js or Svelte
 
 /** Keeps an angle in (-π, π] so it doesn't grow without bound as someone spins around and around while steering. */
 export function wrapAngle(angle) {
@@ -20,14 +17,9 @@ export function shortestAngleDelta(a, b) {
 }
 
 /**
- * The `root.rotation.y` that makes a crowd-member GLB's own front face
- * world direction (dx, dz) — NOT the plain `Math.atan2(dz, dx)` a
- * standard glTF (local -Z forward) would use. Empirically confirmed
- * (rendering one body at a handful of test rotation.y values and
- * checking which way its face/hood pointed) that these particular
- * bodies are rigged facing local +Z instead, so world-forward at a given
- * rotation.y is (sin y, cos y), not (-sin y, -cos y) — hence atan2's
- * arguments here are (dx, dz), swapped from the usual (dz, dx).
+ * rotation.y facing a body's front toward (dx, dz). these GLBs are rigged
+ * facing local +Z, not the usual -Z, so forward is (sin y, cos y) and
+ * atan2's arguments are swapped.
  */
 export function directionToYaw(dx, dz) {
 	return Math.atan2(dx, dz);
@@ -47,11 +39,8 @@ export function pickLodBand(distance, bands) {
 }
 
 /**
- * Builds the age <-> room-depth (Z) mapping for a given respondent age
- * range and room size — younger respondents sit toward the front (larger
- * Z, near the doors), older respondents toward the back wall (more
- * negative Z). Shared between both directions so a given age always maps
- * to the same depth it'd map back from.
+ * age <-> depth mapping. young at the front (larger Z), old at the back.
+ * both directions share it, so a round trip is stable.
  */
 export function createAgeZMapping({ ageMin, ageMax, halfDepth, roomDepth }) {
 	function ageToZ(age) {
@@ -68,9 +57,7 @@ export function createAgeZMapping({ ageMin, ageMax, halfDepth, roomDepth }) {
 }
 
 /**
- * Pushes a walker back to whichever side of the outer doors' Z plane
- * they're already on, unless the specific door they're in front of is
- * open enough to pass through — a no-op otherwise.
+ * pushes back to their side of the door plane, unless that door is open.
  */
 export function createOuterDoorCollisionResolver({
 	doors,
@@ -92,9 +79,7 @@ export function createOuterDoorCollisionResolver({
 }
 
 /**
- * Pushes a walker back to whichever side of the inner partition wall's Z
- * plane they're already on, unless they're within one of its corridor
- * openings — always open, since the outer doors are the only real gate.
+ * same for the inner wall, unless they're in a corridor opening.
  */
 export function createInnerWallCollisionResolver({
 	zoneXs,
@@ -114,20 +99,12 @@ export function createInnerWallCollisionResolver({
 }
 
 /**
- * Critically-damped spring toward `target`, with a hard cap on speed —
- * the standard "SmoothDamp" (Unity/Game Programming Gems) formulation.
- * Unlike a plain exponential ease (`current += (target - current) *
- * factor`), whose instantaneous speed is always proportional to the
- * remaining distance, this carries real velocity from frame to frame: it
- * ramps up to maxSpeed (acceleration) and eases back down to zero right
- * as it arrives (deceleration), and — the reason it's used for the
- * door auto-walk specifically — a sudden mid-flight change to `target`
- * doesn't jolt the velocity, it just smoothly re-curves toward the new
- * target instead.
+ * critically-damped spring toward `target`, speed-capped. the standard
+ * SmoothDamp. unlike an exponential ease it carries velocity frame to
+ * frame, so it accelerates, decelerates, and re-curves without jolting
+ * when `target` changes mid-flight.
  *
- * Returns `{ value, velocity }`; pass the previous call's `velocity` back
- * in on the next frame (0 to start). `smoothTime` is roughly the seconds
- * to close most of the remaining distance once at full speed.
+ * returns { value, velocity }; feed velocity back in (0 to start).
  */
 export function smoothDamp(current, target, velocity, smoothTime, maxSpeed, dt) {
 	smoothTime = Math.max(0.0001, smoothTime);
@@ -141,9 +118,7 @@ export function smoothDamp(current, target, velocity, smoothTime, maxSpeed, dt) 
 	const temp = (velocity + omega * change) * dt;
 	let nextVelocity = (velocity - omega * temp) * exp;
 	let value = adjustedTarget + (change + temp) * exp;
-	// Prevent overshoot: once the eased value would cross past the real
-	// target, snap to it and zero out the velocity component that
-	// would've carried it further.
+	// snap on overshoot
 	if (originalTarget - current > 0 === value > originalTarget) {
 		value = originalTarget;
 		nextVelocity = (value - originalTarget) / dt;
@@ -152,12 +127,8 @@ export function smoothDamp(current, target, velocity, smoothTime, maxSpeed, dt) 
 }
 
 /**
- * The vertical (three.js `camera.fov`) angle, in degrees, that reproduces
- * a given required horizontal half-angle at a given aspect ratio (width /
- * height) — a wide/short viewport needs less vertical fov than a
- * narrow/tall one to show the same horizontal spread. Clamped to a sane
- * range so an extreme aspect ratio can't push it to a degenerate fisheye
- * or pinhole value.
+ * vertical fov (deg) reproducing a horizontal half-angle at an aspect.
+ * clamped, so an extreme aspect can't reach fisheye or pinhole.
  */
 export function computeFovForHorizontalHalfAngle(
 	halfAngleRad,

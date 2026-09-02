@@ -1,17 +1,11 @@
 import * as THREE from "three";
 
-// The room shell: floor, exterior plaza floor + pebbles, ceiling, back
-// wall, inner partition wall, side walls (interior + exterior). Since the
-// walk camera is clamped (WALK_MARGIN, in Main.lifedeath.svelte) rather
-// than freely orbiting, the shell can just match the room bounds exactly.
-//
-// Shared everywhere so every wall reads as the same material family: one
-// dark, desaturated purple, plain (no texture beyond wallGradientMap),
-// lit only by keyLight/fillLight's shading.
+// the room shell: floor, exterior plaza floor + pebbles, ceiling, back wall,
+// inner partition wall, side walls (interior + exterior).
 const CONCRETE_COLOR = "#191022";
 
 // A shared palette/geometry factory for the alley's ground/wall debris —
-// broken brick chunks, planks/boards, and crumpled trash. Real 3D pieces
+// broken brick chunks, planks/boards, and crumpled trash. real 3D pieces
 // (not a texture), toon-shaded the same flat, non-gradient way as
 // everything else in the scene (see floorMaterial/pebbleMaterial below).
 const DEBRIS_KINDS = [
@@ -21,11 +15,9 @@ const DEBRIS_KINDS = [
 ];
 
 /**
- * Builds every static structural surface of the room and adds it to the
+ * builds every static structural surface of the room and adds it to the
  * scene (the inner wall goes into `innerRoomGroup` instead, same as the
- * crowd, since it's specific to "which zone this is"). Returns the
- * handful of meshes handlePersonClick's line-of-sight check needs (a
- * click on a person standing behind one of these shouldn't register).
+ * crowd, since it's specific to "which zone this is").
  */
 export function buildRoomShell(scene, innerRoomGroup, config) {
 	const {
@@ -46,29 +38,14 @@ export function buildRoomShell(scene, innerRoomGroup, config) {
 		ageMin,
 		ageMax,
 		ageToZ,
-		// The exterior-plaza-only meshes below (exteriorFloor, the plaza's
-		// own debris/pebbles, its backdrop and side walls) go into this
-		// shared group instead of straight onto `scene` — same group
-		// facade.js's own everything goes into — so Main.lifedeath.svelte
-		// can hide the whole outside scene in one toggle once the walker's
-		// inside with every door shut. Every other mesh built here (floor,
-		// ceiling, back wall, interior side walls) is interior-only
-		// already — its own geometry never actually reaches past
-		// halfDepth — so those stay directly on `scene`, unaffected.
+		// the exterior-plaza-only meshes below (exteriorFloor, the plaza's own
+		// debris/pebbles, its backdrop and side walls) go into this shared group
+		// instead of straight onto `scene`.
 		exteriorGroup
 	} = config;
 
-	// Stretched past the building's depth to also cover the exterior
-	// plaza, so the ground outside isn't a void — recentered to match.
-	// Also widened to outerWallHalfWidth like the facade, so a shifted
-	// interior never exposes a floor edge.
-	// Outline disabled on the floor/ceiling/wall materials below: a large
-	// flat plane's inflated backface outline shell sits almost exactly on
-	// top of the plane itself, and on mobile GPUs (typically less precise
-	// depth buffers) that reads as jittery z-fighting flicker rather than
-	// a clean edge. A flat wall has no silhouette against empty space to
-	// outline anyway, so this is both a fix and a simplification ("keep
-	// the wall simple").
+	// stretched past the building's depth to also cover the exterior plaza, so
+	// the ground outside isn't a void.
 	const floorMaterial = new THREE.MeshToonMaterial({
 		color: "#060106",
 		gradientMap: toonGradientMap,
@@ -83,13 +60,9 @@ export function buildRoomShell(scene, innerRoomGroup, config) {
 	floor.receiveShadow = true;
 	scene.add(floor);
 
-	// The exterior plaza floor: a separate mesh/material from the
-	// interior above (rather than one floor plane spanning both), so it
-	// can be its own desaturated purple rather than the interior's
-	// near-black tone. Bright enough that exteriorFillLight (see Main)
-	// actually reads as "lit ground" rather than staying near-black
-	// regardless of how much light hits it — a near-zero base color
-	// multiplies almost any amount of incoming light down to nothing.
+	// the exterior plaza floor: a separate mesh/material from the interior above
+	// (rather than one floor plane spanning both), so it can be its own
+	// desaturated purple rather than the interior's near-black tone.
 	const exteriorFloorMaterial = new THREE.MeshToonMaterial({
 		color: "#22162b",
 		gradientMap: toonGradientMap
@@ -104,19 +77,14 @@ export function buildRoomShell(scene, innerRoomGroup, config) {
 	exteriorFloor.receiveShadow = true;
 	exteriorGroup.add(exteriorFloor);
 
-	// Alley debris scattered across the plaza — broken brick chunks,
-	// planks, and crumpled trash, real 3D pieces (not a texture) so they
-	// pick up keyLight's shadows. One InstancedMesh per kind (see
-	// DEBRIS_KINDS) rather than one generic pebble field, for the
-	// "trash/bricks/material" look instead of uniform gravel — same flat
-	// toon shading as the rest of the scene, not a gradient/PBR look.
+	// alley debris scattered across the plaza.
 	const DEBRIS_COUNT_PER_KIND = 60;
 	const debrisGeometries = {
 		brick: new THREE.BoxGeometry(1, 1, 1),
 		plank: new THREE.BoxGeometry(1, 1, 1),
 		trash: new THREE.IcosahedronGeometry(1, 0)
 	};
-	// Keeps brick-wall debris from spawning directly in front of a door
+	// keeps brick-wall debris from spawning directly in front of a door
 	// opening (zoneXs) — same "clear a gap around each door" idea as
 	// facade.js's facadeSolidXRanges, just a simple rejection check here
 	// rather than pre-computing solid ranges.
@@ -131,11 +99,7 @@ export function buildRoomShell(scene, innerRoomGroup, config) {
 		}
 		return x;
 	}
-	// Keeps debris (of any kind, any placement) out of each door's own
-	// ground-glow "spotlight" (see reflectionGlow in doors.js — same
-	// radius, centered the same place: each door's own x, right at
-	// halfDepth). A chunk of debris sitting in that lit pool read as
-	// placed there on purpose rather than scattered.
+	// keeps debris out of each door's ground-glow pool
 	const SPOTLIGHT_RADIUS = 3.3;
 	function isInSpotlight(x, z) {
 		return zoneXs.some((zoneX) => {
@@ -175,13 +139,9 @@ export function buildRoomShell(scene, innerRoomGroup, config) {
 		instances.castShadow = true;
 		instances.receiveShadow = true;
 		for (let i = 0; i < DEBRIS_COUNT_PER_KIND; i++) {
-			// Most of each kind piles up against the brick facade (z near
-			// halfDepth) now, with only a smaller share against the two
-			// exterior side walls and the rest scattered loose — "more on
-			// the brick wall, less on the side walls." Planks lean against
-			// the brick wall even more often than that shared split — "a
-			// bunch of planks" leaned there specifically, per its own
-			// higher chance below.
+			// most of each kind piles up against the brick facade (z near halfDepth)
+			// now, with only a smaller share against the two exterior side walls and the
+			// rest scattered loose.
 			const placementRoll = Math.random();
 			const brickWallChance = kind.name === "plank" ? 0.8 : 0.55;
 			const AGAINST_BRICK_WALL = placementRoll < brickWallChance;
@@ -190,7 +150,7 @@ export function buildRoomShell(scene, innerRoomGroup, config) {
 			const wallSign = Math.random() < 0.5 ? -1 : 1;
 			let x, y, z, tilt;
 			if (kind.name === "plank" && AGAINST_BRICK_WALL) {
-				// Leaned up against the brick wall's base, tilted forward
+				// leaned up against the brick wall's base, tilted forward
 				// into the plaza (+z, the only direction there is to lean
 				// — unlike the two side walls, there's no "other side").
 				const length = 0.5 + Math.random() * 0.7;
@@ -221,7 +181,7 @@ export function buildRoomShell(scene, innerRoomGroup, config) {
 					size * (0.8 + Math.random() * 0.6)
 				);
 			} else if (kind.name === "plank" && AGAINST_SIDE_WALL) {
-				// Leaned up against the wall base, tilted rather than flat.
+				// leaned up against the wall base, tilted rather than flat.
 				const length = 0.5 + Math.random() * 0.7;
 				[x, z] = pickOutsideSpotlight(() => [
 					wallSign * (halfWidth - 0.08 - Math.random() * 0.15),
@@ -258,11 +218,8 @@ export function buildRoomShell(scene, innerRoomGroup, config) {
 					halfDepth + Math.random() * exteriorDepth
 				]);
 				if (kind.name === "plank") {
-					// Lying flat, not tumbled — only yaw (the rotation
-					// around the vertical axis) varies. Any x/z tilt on a
-					// piece this long reads as the plank digging into or
-					// poking up out of the ground instead of resting on
-					// top of it.
+					// lying flat, not tumbled — only yaw (the rotation around the vertical axis)
+					// varies.
 					const length = 0.4 + Math.random() * 0.8;
 					debrisPlacementHelper.position.set(x, PLANK_THICKNESS / 2, z);
 					debrisPlacementHelper.rotation.set(0, Math.random() * Math.PI, 0);
@@ -335,13 +292,8 @@ export function buildRoomShell(scene, innerRoomGroup, config) {
 	pebbleInstances.instanceMatrix.needsUpdate = true;
 	exteriorGroup.add(pebbleInstances);
 
-	// A solid black backdrop right at the plaza's far edge (where
-	// exteriorFloor ends, halfDepth + exteriorDepth) — the walker starts
-	// exactly at that edge (see DEFAULT_START_Z in Main), so turning
-	// around to look back out of the alley would otherwise stare past the
-	// last bit of floor into unrendered space. Plain unlit black (not
-	// toon-shaded), so it reads as flat black regardless of any nearby
-	// light, and double-sided since which way it's wound doesn't matter here.
+	// A solid black backdrop right at the plaza's far edge (where exteriorFloor
+	// ends, halfDepth + exteriorDepth).
 	const exteriorBackdropMaterial = new THREE.MeshBasicMaterial({
 		color: 0x000000,
 		side: THREE.DoubleSide
@@ -379,7 +331,7 @@ export function buildRoomShell(scene, innerRoomGroup, config) {
 	doorGlow.position.set(0, roomHeight * 0.24, -halfDepth + 0.05);
 	scene.add(doorGlow);
 
-	// Floor grid: a thin line at every whole-year age (so the depth axis
+	// floor grid: a thin line at every whole-year age (so the depth axis
 	// actually reads as "age"), plus a noticeably thicker line at each of
 	// the two boundaries between the No/Unsure/Yes zones — lines that mean
 	// something specific in this room rather than a generic decorative grid.
@@ -442,11 +394,8 @@ export function buildRoomShell(scene, innerRoomGroup, config) {
 	backWall.receiveShadow = true;
 	scene.add(backWall);
 
-	// The inner wall: at z = halfDepth, plain openings (no doors, the
-	// outer ones already gate entry) sized to corridorWidth. Derived
-	// straight from each door's own x (not an independent copy of it) so
-	// this wall's openings always line up with wherever the doors
-	// actually are, even after moving them.
+	// the inner wall: at z = halfDepth, plain openings (no doors, the outer ones
+	// already gate entry) sized to corridorWidth.
 	function innerWallSolidXRanges() {
 		const halfGap = corridorWidth / 2;
 		const ranges = [];
@@ -459,7 +408,7 @@ export function buildRoomShell(scene, innerRoomGroup, config) {
 		if (x < halfWidth) ranges.push([x, halfWidth]);
 		return ranges;
 	}
-	// Concrete, not brick — this one isn't the outside/door wall, just
+	// concrete, not brick — this one isn't the outside/door wall, just
 	// another interior partition, so it matches the back/side walls'
 	// material instead of the facade's.
 	const innerWallMaterial = new THREE.MeshToonMaterial({
@@ -469,12 +418,12 @@ export function buildRoomShell(scene, innerRoomGroup, config) {
 		flatShading: true
 	});
 	innerWallMaterial.userData.outlineParameters = { visible: false };
-	// Collected for handlePersonClick's line-of-sight check in Main — a
+	// collected for handlePersonClick's line-of-sight check in Main — a
 	// person raycast hit shouldn't count if a wall was actually closer to
 	// the camera along that same ray.
 	const innerWallMeshes = [];
 	for (const [xStart, xEnd] of innerWallSolidXRanges()) {
-		// Boxed like the facade's own panels — straddles halfDepth the
+		// boxed like the facade's own panels — straddles halfDepth the
 		// same way, consistent with FACADE_CLEARANCE (already sized
 		// around a facadeThickness-deep wall here).
 		const innerWall = new THREE.Mesh(
@@ -488,13 +437,8 @@ export function buildRoomShell(scene, innerRoomGroup, config) {
 		innerWallMeshes.push(innerWall);
 	}
 
-	// A real box (not a flat plane) for the same "these walls have
-	// volume" reason as the back wall — a box's own width/height/depth
-	// axes already point the right way once placed, so unlike the old
-	// plane this needs no Y rotation. Split at halfDepth (interior vs.
-	// exterior plaza), same idea as the floor above — the interior
-	// segment keeps the lit concrete look, the exterior segment is its
-	// own separate, pure-black, unlit material instead.
+	// A real box (not a flat plane) for the same "these walls have volume"
+	// reason as the back wall.
 	const sideWallGeometry = new THREE.BoxGeometry(wallThickness, roomHeight, roomDepth);
 	const sideWallMaterial = new THREE.MeshToonMaterial({
 		color: CONCRETE_COLOR,
@@ -504,7 +448,7 @@ export function buildRoomShell(scene, innerRoomGroup, config) {
 	});
 	sideWallMaterial.userData.outlineParameters = { visible: false };
 
-	// Extruded outward from halfWidth (away from the room) by
+	// extruded outward from halfWidth (away from the room) by
 	// wallThickness, so the inner face lands exactly where the old flat
 	// plane sat.
 	const leftWall = new THREE.Mesh(sideWallGeometry, sideWallMaterial);
@@ -517,7 +461,7 @@ export function buildRoomShell(scene, innerRoomGroup, config) {
 	rightWall.position.x = halfWidth + wallThickness / 2;
 	scene.add(rightWall);
 
-	// The exterior plaza's own side walls — pure black and unlit, so the
+	// the exterior plaza's own side walls — pure black and unlit, so the
 	// plaza reads as dark on every side, not just the brick facade you're facing.
 	const exteriorSideWallGeometry = new THREE.BoxGeometry(
 		wallThickness,

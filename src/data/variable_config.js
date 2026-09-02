@@ -4620,6 +4620,18 @@ export function getColumns(baseVar) {
 	return variableConfig[baseVar]?.columns ?? [];
 }
 
+/**
+ * The one column for a base variable that matches the given wave — null if
+ * this variable has no column at all. Variables with only a single column
+ * (no suffix, like GENDER, or a recruit-only "_Y1"-only question like REL1)
+ * aren't really wave-specific, so that one column is returned for either wave.
+ */
+export function columnForWave(baseVar, waveKey) {
+	const columns = getColumns(baseVar);
+	if (columns.length <= 1) return columns[0] ?? null;
+	return columns.find((column) => column.endsWith(`_${waveKey}`)) ?? null;
+}
+
 /** For a numeric variable: raw people.json value -> number, or null if unmapped/unparseable. */
 export function parseNumericValue(baseVar, rawValue) {
 	const config = variableConfig[baseVar];

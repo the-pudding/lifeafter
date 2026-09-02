@@ -6,22 +6,8 @@ import {
 	UniformsUtils
 } from "three";
 
-// A fork of three.js's own OutlineEffect (examples/jsm/effects/OutlineEffect.js)
-// — same inflated-backface-hull technique, same per-material
-// userData.outlineParameters API (thickness/color/alpha/visible/keepAlive),
-// same render()/renderOutline()/setSize() surface — with one addition: the
-// extruded hull's vertices are perturbed by a hash of each vertex's own
-// REST-POSE local position, so the line's thickness and direction wobble
-// unevenly like a hand-drawn stroke instead of tracing a perfectly smooth
-// vector silhouette.
-//
-// That noise is keyed to `position` (the raw, pre-skinning attribute) —
-// not screen space, not even world space — so a given vertex always gets
-// the exact same jitter every frame: identical from any camera angle,
-// unaffected by the crowd's own walk-cycle animation, and never needing a
-// second render pass to compute. (An earlier attempt at this same "pencil"
-// look used a screen-space post-process instead, and its noise swam across
-// people as the camera moved for exactly the reason this version doesn't.)
+// A fork of three.js's own OutlineEffect
+// (examples/jsm/effects/OutlineEffect.js).
 class PencilOutlineEffect {
 	constructor(renderer, parameters = {}) {
 		this.enabled = true;
@@ -39,26 +25,22 @@ class PencilOutlineEffect {
 			parameters.defaultKeepAlive !== undefined
 				? parameters.defaultKeepAlive
 				: false;
-		// How unevenly the stroke width varies vertex-to-vertex (0 = the
+		// how unevenly the stroke width varies vertex-to-vertex (0 = the
 		// plain, uniform OutlineEffect line; 1 = thickness can swing all
 		// the way down to 0 at its jitteriest vertices).
 		const defaultThicknessJitter =
 			parameters.defaultThicknessJitter !== undefined
 				? parameters.defaultThicknessJitter
 				: 0.9;
-		// How far the extrusion direction itself wanders off the true
+		// how far the extrusion direction itself wanders off the true
 		// normal — this is what makes the line bow and waver rather than
 		// just pulse thicker/thinner in place.
 		const defaultNormalJitter =
 			parameters.defaultNormalJitter !== undefined
 				? parameters.defaultNormalJitter
 				: 0.3;
-		// How finely the jitter pattern repeats across a mesh's own local
-		// coordinates. Tuned for the crowd's human-scale bodies (~2 world
-		// units tall) — a mesh with only a handful of vertices (a plain
-		// wall/floor plane) won't have enough of them for this to read as
-		// a wobble regardless of frequency, which is fine since those
-		// materials disable the outline entirely via outlineParameters.visible.
+		// how finely the jitter pattern repeats across a mesh's own local
+		// coordinates.
 		const defaultNoiseFrequency =
 			parameters.defaultNoiseFrequency !== undefined
 				? parameters.defaultNoiseFrequency
@@ -93,24 +75,15 @@ class PencilOutlineEffect {
 			"uniform float outlineNormalJitter;",
 			"uniform float outlineNoiseFrequency;",
 
-			// A raw hash (used only as value-noise's per-cell corner
-			// value, below) has no spatial coherence at all — neighboring
-			// inputs give totally unrelated outputs. Using that directly
-			// per vertex is what made the first attempt at this read as
-			// messy static rather than a hand-drawn line: every vertex
-			// jittered independently, with no relation to its neighbors.
+			// A raw hash (used only as value-noise's per-cell corner value, below) has
+			// no spatial coherence at all.
 			"float pencilHash( vec3 p ) {",
 			"	p = fract( p * 0.3183099 + vec3( 0.1, 0.2, 0.3 ) );",
 			"	p *= 17.0;",
 			"	return fract( p.x * p.y * p.z * ( p.x + p.y + p.z ) );",
 			"}",
 
-			// Trilinearly-interpolated (and smoothstepped) value noise —
-			// unlike the raw hash above, this varies continuously, so
-			// vertices that are close together in local space get similar
-			// values. That continuity is what a hand-drawn line actually
-			// needs: a slow, coherent bow along its length rather than
-			// per-point static.
+			// trilinearly-interpolated (and smoothstepped) value noise.
 			"float pencilValueNoise( vec3 p ) {",
 			"	vec3 i = floor( p );",
 			"	vec3 f = fract( p );",
@@ -127,12 +100,7 @@ class PencilOutlineEffect {
 			"		u.z );",
 			"}",
 
-			// Two octaves — one broad, dominant wave a vertex's neighbors
-			// mostly share (the actual hand-drawn "bow" in the line), plus
-			// a much smaller, finer ripple on top (a little roughness, not
-			// the main shape) — rather than one single-frequency noise,
-			// which either bows smoothly with no texture or gets textured
-			// but loses the bow, never both at once.
+			// two octaves.
 			"vec3 pencilSketchJitter( vec3 p ) {",
 			"	vec3 coarse = vec3(",
 			"		pencilValueNoise( p ),",
