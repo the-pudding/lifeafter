@@ -15,6 +15,9 @@ import {
 	NEARBY_PERSON_HEAD_GAP,
 	NEARBY_PERSON_MAX_DISTANCE,
 	NEARBY_PANEL_FADE_SECONDS,
+	NEARBY_PANEL_LINE_LENGTH,
+	NEARBY_PANEL_LINE_SECONDS,
+	NEARBY_PANEL_LINE_WIDTH,
 	NEARBY_SELECTION_REFRESH_INTERVAL
 } from "./peopleConfig.js";
 
@@ -112,10 +115,26 @@ export function createNearbyPanels({
 		return nearbyHeadTopPoint;
 	}
 
+	// leader line, drawn before the panel appears. unit quad standing on its
+	// own origin, so scale.y is the drawn length. shared across panels —
+	// they differ only by transform
+	const nearbyLineGeometry = new THREE.PlaneGeometry(1, 1).translate(0, 0.5, 0);
+	const nearbyLineMaterial = new THREE.MeshBasicMaterial({
+		color: 0xffffff,
+		// opaque, and a full z-buffer citizen: anything nearer hides it
+		transparent: false,
+		depthTest: true,
+		depthWrite: true,
+		side: THREE.DoubleSide
+	});
+	nearbyLineMaterial.userData.outlineParameters = { visible: false };
+
 	// personIndex -> { mesh, texture, wave, variable }. keyed by respondent
 	// so a panel survives rank changes. wave+variable are the text cache key
 	const nearbyPanels = new Map();
 	function disposeNearbyPanel(record) {
+		// geometry/material are shared, so the line is only unparented
+		record.line.parent?.remove(record.line);
 		record.mesh.parent?.remove(record.mesh);
 		record.mesh.geometry.dispose();
 		const materials = Array.isArray(record.mesh.material)
@@ -137,6 +156,10 @@ export function createNearbyPanels({
 			anisotropy: maxAnisotropy
 		});
 		innerRoomGroup.add(mesh);
+		const line = new THREE.Mesh(nearbyLineGeometry, nearbyLineMaterial);
+		line.renderOrder = 9;
+		line.visible = false;
+		innerRoomGroup.add(line);
 		// only the face materials carry the canvas; edges are invisible
 		const fadeMaterials = (
 			Array.isArray(mesh.material) ? mesh.material : [mesh.material]
@@ -146,8 +169,10 @@ export function createNearbyPanels({
 		return {
 			mesh,
 			texture,
+			line,
 			fadeMaterials,
 			opacity: 0,
+			lineProgress: 0,
 			fadingOut: false,
 			wave: getPositionMode(),
 			variable: getSelectedVariable()
@@ -158,17 +183,28 @@ export function createNearbyPanels({
 		const record = nearbyPanels.get(index);
 		if (record) record.fadingOut = true;
 	}
-	// advance fade, keep following, dispose at 0
+	// two stages: the line draws up, then the panel fades in. reversed on
+	// the way out. keeps following, disposes once both are gone
 	function advancePanelFade(index, record, dt) {
+		const lineStep = dt / NEARBY_PANEL_LINE_SECONDS;
 		const step = dt / NEARBY_PANEL_FADE_SECONDS;
-		record.opacity = Math.max(
-			0,
-			Math.min(1, record.opacity + (record.fadingOut ? -step : step))
-		);
+		if (record.fadingOut) {
+			record.opacity = Math.max(0, record.opacity - step);
+			// line retracts only once the panel it carries is gone
+			if (record.opacity <= 0) {
+				record.lineProgress = Math.max(0, record.lineProgress - lineStep);
+			}
+		} else {
+			record.lineProgress = Math.min(1, record.lineProgress + lineStep);
+			if (record.lineProgress >= 1) {
+				record.opacity = Math.min(1, record.opacity + step);
+			}
+		}
 		for (const material of record.fadeMaterials) {
 			material.opacity = record.opacity;
 		}
-		if (record.fadingOut && record.opacity <= 0) {
+		record.line.visible = record.lineProgress > 0;
+		if (record.fadingOut && record.opacity <= 0 && record.lineProgress <= 0) {
 			disposeNearbyPanel(record);
 			nearbyPanels.delete(index);
 			return false;
@@ -307,15 +343,27 @@ export function createNearbyPanels({
 			// apparent size -> world scale. inside the band these cancel to 1
 			const scale =
 				apparentScale * (distance / NEARBY_PANEL_REFERENCE_DISTANCE);
+			// bottom edge sits a line-length plus gap above the head, so line
+			// count grows the panel upward instead of into the face
+			const halfPanelHeight = record.mesh.geometry.parameters.height / 2;
+			const stemLength = NEARBY_PANEL_LINE_LENGTH + NEARBY_PERSON_HEAD_GAP;
 			record.mesh.position.set(
 				headTop.x,
-				// gap scales with the panel
-				headTop.y + NEARBY_PERSON_HEAD_GAP * scale,
+				// stem scales with the panel
+				headTop.y + (stemLength + halfPanelHeight) * scale,
 				headTop.z
 			);
 			record.mesh.scale.setScalar(scale);
 			// face the camera
 			record.mesh.quaternion.copy(camera.quaternion);
+			// stands on the head, drawn up to the panel's bottom edge
+			record.line.position.copy(headTop);
+			record.line.quaternion.copy(camera.quaternion);
+			record.line.scale.set(
+				NEARBY_PANEL_LINE_WIDTH * scale,
+				stemLength * scale * record.lineProgress,
+				1
+			);
 		}
 	}
 	return { update: updateNearbyPersonInfo };

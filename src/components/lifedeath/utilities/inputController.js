@@ -17,6 +17,8 @@ export function createInputController({
 	setTargetCameraPitch,
 	walk,
 	getCameraFov,
+	// per-viewport damping on scroll/swipe walking; keys don't go through here
+	getScrollWalkScale = () => 1,
 	dragLookRadiansPerSwipe,
 	maxDragPitch,
 	dragThresholdPx = 6
@@ -44,7 +46,7 @@ export function createInputController({
 	function handleWheel(event) {
 		if (getMode() !== "walk") return;
 		event.preventDefault(); // don't also scroll the page
-		walk(event.deltaY);
+		walk(event.deltaY * getScrollWalkScale());
 	}
 
 	// steers only while held
@@ -166,7 +168,7 @@ export function createInputController({
 				const fovScale = getCameraFov() / 60;
 				const BASE_WALK_SPEED = 300;
 
-				walk(dyNormalized * BASE_WALK_SPEED * fovScale);
+				walk(dyNormalized * BASE_WALK_SPEED * fovScale * getScrollWalkScale());
 			}
 		}
 

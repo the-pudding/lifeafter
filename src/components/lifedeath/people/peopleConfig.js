@@ -130,14 +130,14 @@ export const NEARBY_PERSON_FOV_HALF_ANGLE = Math.PI / 4; // 45° either side of 
 // trimmed off half-fov so panels don't clip at the edge
 export const NEARBY_PERSON_FOV_SCREEN_MARGIN = (5 * Math.PI) / 180; // 5°
 
-// head-to-panel gap
-export const NEARBY_PERSON_HEAD_GAP = 0.25;
+// head-to-panel gap, on top of the leader line's length
+export const NEARBY_PERSON_HEAD_GAP = 0.05;
 
 // max panels at once. depth-tested meshes, so z-buffer sorts overlaps
-export const NEARBY_PEOPLE_MAX = 3;
+export const NEARBY_PEOPLE_MAX = 4;
 
 // panel width at reference distance. height follows line count
-export const NEARBY_PANEL_WORLD_WIDTH = 0.78;
+export const NEARBY_PANEL_WORLD_WIDTH = 0.8;
 
 // distance where a panel is its literal world size
 export const NEARBY_PANEL_REFERENCE_DISTANCE = 3.5;
@@ -149,6 +149,13 @@ export const NEARBY_PANEL_MAX_APPARENT_SCALE = 1.4;
 
 // panel fade in/out
 export const NEARBY_PANEL_FADE_SECONDS = 0.28;
+
+// leader line head -> panel: length, draw time, world thickness
+export const NEARBY_PANEL_LINE_LENGTH = 0.2;
+
+export const NEARBY_PANEL_LINE_SECONDS = 0.18;
+
+export const NEARBY_PANEL_LINE_WIDTH = 0.008;
 
 // selection re-rank interval. drops are per-frame; only adds throttled
 export const NEARBY_SELECTION_REFRESH_INTERVAL = 0.35; // seconds

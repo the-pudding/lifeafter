@@ -9,6 +9,7 @@
 		columnForWave,
 		parseNumericValue
 	} from "$data/variable_config.js";
+	import { tidyMarital } from "./people/personSummary.js";
 
 	// `wave` is bindable, so this and the control panel share one state —
 	// flipping here also walks the crowd
@@ -24,7 +25,7 @@
 		if (raw === null || raw === undefined || raw === "") return "—";
 		if (config.type === "categorical") {
 			if (getCategoryFor(key, raw)?.key === "no_answer") return "—";
-			return String(raw);
+			return key === "MARITAL_STATUS" ? tidyMarital(String(raw)) : String(raw);
 		}
 		if (config.type === "numeric") {
 			const num = parseNumericValue(key, raw);
@@ -93,7 +94,8 @@
 		const noun = genderNoun(currentPerson.GENDER);
 		const currentAge = currentPerson[waveKey === "Y1" ? "AGE_Y1" : "AGE_Y2"];
 
-		const maritalLabel = rawAnswer(currentPerson, "MARITAL_STATUS", waveKey);
+		const maritalRaw = rawAnswer(currentPerson, "MARITAL_STATUS", waveKey);
+		const maritalLabel = maritalRaw && tidyMarital(maritalRaw);
 		const employmentLabel = rawAnswer(currentPerson, "EMPLOYMENT", waveKey);
 		const afterDeathColumn = columnForWave("AFTER_DEATH", waveKey);
 		const afterDeathLabel = afterDeathColumn

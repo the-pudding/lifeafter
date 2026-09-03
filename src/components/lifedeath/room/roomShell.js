@@ -324,12 +324,47 @@ export function buildRoomShell(scene, innerRoomGroup, config) {
 	// opening, so the light source has a visible origin.
 	const doorGlowMaterial = new THREE.MeshBasicMaterial({ color: "#fff4e0" });
 	doorGlowMaterial.userData.outlineParameters = { visible: false };
+	// top edge unchanged; the bottom now reaches the floor
+	const doorGlowTop = roomHeight * 0.44;
 	const doorGlow = new THREE.Mesh(
-		new THREE.PlaneGeometry(roomWidth * 0.5, roomHeight * 0.4),
+		new THREE.PlaneGeometry(roomWidth * 0.5, doorGlowTop),
 		doorGlowMaterial
 	);
-	doorGlow.position.set(0, roomHeight * 0.24, -halfDepth + 0.05);
+	doorGlow.position.set(0, doorGlowTop / 2, -halfDepth + 0.05);
 	scene.add(doorGlow);
+
+	// faint unfogged halo, so the light still reads from across the room —
+	// fog swallows the plane above well before then. soft-edged on purpose:
+	// a hard-edged rectangle that small crawls as the walker moves
+	const beaconCanvas = document.createElement("canvas");
+	beaconCanvas.width = 128;
+	beaconCanvas.height = 128;
+	const beaconCtx = beaconCanvas.getContext("2d");
+	const beaconGradient = beaconCtx.createRadialGradient(64, 64, 0, 64, 64, 64);
+	beaconGradient.addColorStop(0, "rgba(255, 244, 224, 1)");
+	beaconGradient.addColorStop(0.45, "rgba(255, 244, 224, 0.55)");
+	beaconGradient.addColorStop(1, "rgba(255, 244, 224, 0)");
+	beaconCtx.fillStyle = beaconGradient;
+	beaconCtx.fillRect(0, 0, 128, 128);
+	const beaconTexture = new THREE.CanvasTexture(beaconCanvas);
+	beaconTexture.colorSpace = THREE.SRGBColorSpace;
+	const doorGlowBeaconMaterial = new THREE.MeshBasicMaterial({
+		map: beaconTexture,
+		transparent: true,
+		opacity: 0.5,
+		blending: THREE.AdditiveBlending,
+		depthWrite: false,
+		fog: false
+	});
+	doorGlowBeaconMaterial.userData.outlineParameters = { visible: false };
+	const doorGlowBeacon = new THREE.Mesh(
+		new THREE.PlaneGeometry(roomWidth * 0.8, doorGlowTop * 1.6),
+		doorGlowBeaconMaterial
+	);
+	// stands well clear of the glow: seen from across the room the depth
+	// buffer can't separate near-coplanar planes, and the two shimmer
+	doorGlowBeacon.position.set(0, doorGlowTop / 2, -halfDepth + 1.2);
+	scene.add(doorGlowBeacon);
 
 	// floor grid: a thin line at every whole-year age (so the depth axis
 	// actually reads as "age"), plus a noticeably thicker line at each of

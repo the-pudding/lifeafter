@@ -53,7 +53,8 @@ export function createStoryBeats({
 				hidePanel: false,
 				hideMap: false,
 				highlightMap: false,
-				hideYear: false
+				hideYear: false,
+				hasBeat: false
 			});
 			return;
 		}
@@ -64,12 +65,14 @@ export function createStoryBeats({
 		let matchedHideMap = false;
 		let matchedHighlightMap = false;
 		let matchedHideYear = false;
+		let matchedAny = false;
 		let matchedVariableEntry = null;
 		// flags arrive as "true" from the exported spreadsheet
 		const isFlagSet = (value) => value === "true" || value === true;
 		const collect = (entries) => {
 			for (const entry of entries ?? []) {
 				if (currentAge >= Number(entry.age) && currentAge < Number(entry.age_end)) {
+					matchedAny = true;
 					// text-free entries still carry flags. empty text would render
 					// as a blank filled box
 					if (entry.text?.trim()) matches.push(entry.text);
@@ -91,7 +94,9 @@ export function createStoryBeats({
 			hidePanel: matchedHidePanel,
 			hideMap: matchedHideMap,
 			highlightMap: matchedHighlightMap,
-			hideYear: matchedHideYear
+			hideYear: matchedHideYear,
+			// any entry matched, text or not — "is the script running here"
+			hasBeat: matchedAny
 		});
 
 		if (!matchedVariableEntry) {

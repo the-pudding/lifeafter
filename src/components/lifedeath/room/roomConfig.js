@@ -138,6 +138,16 @@ export const WALK_SPEED = 0.02; // world units of target movement per unit of wh
 
 export const MAX_WHEEL_STEP = 45; // clamps one wheel event so trackpad flings don't teleport
 
+// scroll/swipe walking is scaled down on small screens. a trackpad or
+// touch swipe sends the same pixel deltas whatever the display, but a 13"
+// laptop shows less room per pixel, so the same gesture reads as a sprint.
+// keys and door auto-walk are rate-based and unaffected.
+export const SCROLL_WALK_NARROW_WIDTH = 1100; // at or below: slowest
+
+export const SCROLL_WALK_WIDE_WIDTH = 1700; // at or above: unchanged
+
+export const SCROLL_WALK_MIN_SCALE = 0.62;
+
 // arrow-key rate. x WALK_SPEED = ~5 units/sec
 export const KEY_MOVE_DELTA_PER_SECOND = 250;
 

@@ -139,7 +139,7 @@
 		border: 1px solid rgba(255, 255, 255, 0.4);
 		border-radius: 0;
 		padding: 0.3rem 0.4rem;
-		max-width: 320px;
+		max-width: 600px;
 	}
 
 .legend {

@@ -100,6 +100,9 @@
 		ROOM_ENTRY_PITCH_TIME,
 		ROOM_HEIGHT,
 		ROOM_WIDTH,
+		SCROLL_WALK_MIN_SCALE,
+		SCROLL_WALK_NARROW_WIDTH,
+		SCROLL_WALK_WIDE_WIDTH,
 		SIDE_WALL_MARGIN,
 		TURN_CLEARANCE,
 		VESTIBULE_CEILING_HEIGHT,
@@ -202,6 +205,18 @@
 	// hl_minimap: hop the minimap. hide_year: hide the wave toggle
 	let highlightMap = $state(false);
 	let hideYear = $state(false);
+	// whether any copy.json entry is active here at all
+	let storyHasBeat = $state(false);
+	// seconds to close ~63% of a crowd recolor; higher = slower cross-fade
+	const CROWD_RECOLOR_TIME = 0.35;
+	// how far past the back wall the walker can press into the light
+	const LIGHT_NUDGE_DEPTH = 2.2;
+	// seconds to close ~63% of that overshoot; lower = springier
+	const LIGHT_PUSHBACK_TIME = 0.22;
+	// how close to the wall the message appears
+	const LIGHT_MESSAGE_MARGIN = 0.9;
+	// true while pressed into the light
+	let inLight = $state(false);
 	// "skip to explore": no story text, no beat overrides, free movement
 	let exploreMode = $state(false);
 	// live "inside" check. unlike hasEnteredRoom, flips back on exit
@@ -235,8 +250,10 @@
 		setTimeout(() => (debugCopyFeedback = false), 1200);
 	}
 	// hidden by a story beat, or by being outside
-	const shouldHidePanel = $derived(hidePanel || !insideRoom);
-	const shouldHideMap = $derived(hideMap || !insideRoom);
+	// pressing into the light clears the screen for its message, and
+	// everything comes back on the way out
+	const shouldHidePanel = $derived(hidePanel || !insideRoom || inLight);
+	const shouldHideMap = $derived(hideMap || !insideRoom || inLight);
 	// panel height, so the topdown map clears it. stays mounted while
 	// hidden, so this stays accurate
 	let controlPanelHeight = $state(0);
@@ -248,6 +265,11 @@
 	// first hover/click of the minimap stops the hop. sticky
 	let minimapAcknowledged = $state(false);
 	// walk mode only — topdown centers via a transform the hop would override
+	// the wave toggle belongs to the script: shown while a beat is running
+	// (unless it hides it), and while exploring. hidden between beats.
+	const shouldHideYear = $derived(
+		exploreMode ? false : hideYear || !storyHasBeat
+	);
 	const shouldBounceMap = $derived(
 		highlightMap && !shouldHideMap && !minimapAcknowledged && mode === "walk"
 	);
@@ -396,6 +418,7 @@
 					hideMap = result.hideMap;
 					highlightMap = result.highlightMap;
 					hideYear = result.hideYear;
+					storyHasBeat = result.hasBeat;
 				}
 			});
 			storyBeatsImpl = storyBeats;
@@ -450,7 +473,7 @@
 			const outermostDoorX =
 				Math.max(...DOORS.map((d) => Math.abs(d.x))) + DOOR_WIDTH / 2;
 			const distanceToDoors = DEFAULT_START_Z - DOOR_Z;
-			const DOOR_VIEW_MARGIN = 1.15; // a little breathing room past the doors' exact edges
+			const DOOR_VIEW_MARGIN = 1.35; // breathing room past the doors' exact edges; also sets how wide the walk view is
 			const requiredHalfHorizontalFovRad =
 				Math.atan(outermostDoorX / distanceToDoors) * DOOR_VIEW_MARGIN;
 			const computeDoorVisibleFovDegrees = (aspect) =>
@@ -812,6 +835,11 @@
 				);
 			}
 
+			// recolor target; personBaseColors ease toward these each frame.
+			// the first pass snaps, so the crowd doesn't fade up from black
+			const personTargetColors = respondents.map(() => new THREE.Color());
+			let hasAppliedColorVariable = false;
+
 			function applyColorVariable(baseVar) {
 				const config = variableConfig[baseVar];
 				const column = resolveColumn(baseVar);
@@ -830,16 +858,27 @@
 					).map((bucket) => ({ label: bucket.label, color: bucket.color }))
 				};
 
-				// base color; the frame loop applies LOD darkening. CSS feeds the minimap
+				// target color; the frame loop eases into it, then applies LOD
+				// darkening. CSS feeds the minimap, which switches outright
 				for (let i = 0; i < respondents.length; i++) {
 					const bucket = bucketFor(respondents[i]);
 					if (bucket) {
-						personBaseColors[i].set(bucket.color);
+						personTargetColors[i].set(bucket.color);
 						personColorCSS[i] = bucket.color;
 					} else {
-						personBaseColors[i].copy(muted);
+						personTargetColors[i].copy(muted);
 						personColorCSS[i] = mutedCSS;
 					}
+					if (!hasAppliedColorVariable) personBaseColors[i].copy(personTargetColors[i]);
+				}
+				hasAppliedColorVariable = true;
+			}
+
+			// eases every body toward its target color
+			function advanceCrowdColors(dt) {
+				const factor = 1 - Math.exp(-dt / CROWD_RECOLOR_TIME);
+				for (let i = 0; i < personBaseColors.length; i++) {
+					personBaseColors[i].lerp(personTargetColors[i], factor);
 				}
 			}
 
@@ -897,12 +936,25 @@
 					MAX_WALK_X,
 					Math.max(MIN_WALK_X, targetWalkX + dirX * distance)
 				);
+				// the back wall is soft: the walker can push a little way into
+				// the light before it pushes them back (see animate())
 				targetWalkZ = Math.min(
 					MAX_WALK_Z,
-					Math.max(MIN_WALK_Z, targetWalkZ + dirZ * distance)
+					Math.max(MIN_WALK_Z - LIGHT_NUDGE_DEPTH, targetWalkZ + dirZ * distance)
 				);
 				targetWalkZ = resolveOuterDoorCollision(targetWalkX, targetWalkZ);
 				targetWalkZ = resolveInnerWallCollision(targetWalkX, targetWalkZ);
+			}
+
+			// gesture walking eases off on narrow viewports; full speed on wide
+			function scrollWalkScale() {
+				const viewportWidth = window.innerWidth;
+				const span = SCROLL_WALK_WIDE_WIDTH - SCROLL_WALK_NARROW_WIDTH;
+				const t = Math.min(
+					1,
+					Math.max(0, (viewportWidth - SCROLL_WALK_NARROW_WIDTH) / span)
+				);
+				return SCROLL_WALK_MIN_SCALE + (1 - SCROLL_WALK_MIN_SCALE) * t;
 			}
 
 			// positive = forward, like scrolling down a page
@@ -1242,6 +1294,7 @@
 				},
 				walk,
 				getCameraFov: () => camera.fov,
+				getScrollWalkScale: scrollWalkScale,
 				dragLookRadiansPerSwipe: DRAG_LOOK_RADIANS_PER_SWIPE,
 				maxDragPitch: MAX_DRAG_PITCH
 			});
@@ -1406,6 +1459,7 @@
 				cameraPitch = targetCameraPitch + roomEntryPitchOffset;
 
 				updateEnteredRoom();
+				advanceCrowdColors(dt);
 				crowdAnimator.update(dt, simulatedElapsed);
 				updateCamera();
 				updateDoors(dt);
@@ -1416,6 +1470,17 @@
 					highlightExteriorFocus();
 				}
 				insideRoom = renderWalkZ <= HALF_DEPTH;
+
+				// the light pushes back: past the wall the target eases home,
+				// harder the deeper they've pressed in, so it reads magnetic
+				if (targetWalkZ < MIN_WALK_Z) {
+					const overshoot = MIN_WALK_Z - targetWalkZ;
+					const pull = 1 - Math.exp(-dt / LIGHT_PUSHBACK_TIME);
+					targetWalkZ += overshoot * pull;
+					if (MIN_WALK_Z - targetWalkZ < 0.01) targetWalkZ = MIN_WALK_Z;
+				}
+				// shown once they're actually pressing into it
+				inLight = renderWalkZ < MIN_WALK_Z + LIGHT_MESSAGE_MARGIN;
 				if (debugMode) {
 					debugStats = {
 						x: renderWalkX,
@@ -1438,6 +1503,7 @@
 					hideMap = false;
 					highlightMap = false;
 					hideYear = false;
+					storyHasBeat = false;
 				} else {
 					storyBeats.update();
 				}
@@ -1567,7 +1633,7 @@
 		bind:positionMode
 		{currentAge}
 		{loadingMessage}
-		{hideYear}
+		hideYear={shouldHideYear}
 		hideMap={shouldHideMap}
 		hidden={shouldHidePanel}
 		bind:panelHeight={controlPanelHeight}
@@ -1579,9 +1645,13 @@
 			transition:fade
 			bind:clientHeight={storyOverlayHeight}
 		>
-			{#each storyTexts as text}
-				<p>{@html renderStoryText(text)}</p>
-			{/each}
+			<!-- keyed on the text, so changing beats re-mount the paragraphs
+			     and replay their flash animation -->
+			{#key storyTexts.join("\u0000")}
+				{#each storyTexts as text}
+					<p>{@html renderStoryText(text)}</p>
+				{/each}
+			{/key}
 		</div>
 	{/if}
 	<Minimap
@@ -1602,9 +1672,14 @@
 		class:mode-veil--opaque={modeVeilVisible}
 		style="--mode-fade-ms: {MODE_FADE_MS}ms"
 	></div>
+	<!-- shown while pressing into the light at the back wall -->
+	<div class="light-message" class:light-message--on={inLight}>
+		Hi, it's good to see you here. But you can't go in here right now.
+	</div>
 	<!-- leaves the story for free roaming, or returns to it -->
 	<button
 		class="explore-toggle"
+		class:explore-toggle--hidden={inLight}
 		onclick={() => {
 			exploreMode = !exploreMode;
 			if (exploreMode) {
@@ -1715,11 +1790,37 @@
 	/* minimap styles itself */
 
 
+	/* black on the white light, so it only reads once you're in it.
+	   the shadows thicken it against the glow's bright edges */
+	.light-message {
+		position: absolute;
+		top: 50%;
+		left: 50%;
+		transform: translate(-50%, -50%);
+		z-index: 12;
+		pointer-events: none;
+		width: min(560px, 80%);
+		text-align: center;
+		font-family: var(--font-mono);
+		font-size: 1.35rem;
+		line-height: 1.6;
+		color: #000;
+		text-shadow:
+			0 0 6px rgba(0, 0, 0, 0.55),
+			0 0 18px rgba(0, 0, 0, 0.35);
+		opacity: 0;
+		transition: opacity 420ms ease-out;
+	}
+	.light-message--on {
+		opacity: 1;
+	}
+
 	/* top-right, above every overlay */
 	.explore-toggle {
 		position: absolute;
 		top: 10px;
 		right: 12px;
+		transition: opacity 320ms ease-out;
 		z-index: 30;
 		font-family: var(--font-mono);
 		font-size: 0.75rem;
@@ -1736,6 +1837,11 @@
 	.explore-toggle:hover {
 		color: #fff;
 		border-color: #fff;
+	}
+	/* out of the way while the light's message is up */
+	.explore-toggle--hidden {
+		opacity: 0;
+		pointer-events: none;
 	}
 
 	/* debug HUD. below the explore toggle */

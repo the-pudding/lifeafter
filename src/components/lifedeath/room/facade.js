@@ -216,13 +216,13 @@ export function buildFacade(scene, config) {
 	// scaled up to MAX_SIGN_SCALE for mobile legibility, see Main's
 	// updateTextFovScale) low enough to genuinely overlap the "Unsure" door's
 	// own label at scale.
-	const signY = doorHeight + 1.6;
+	const signY = doorHeight + 1.9;
 	const signGroup = new THREE.Group();
 	signGroup.position.set(0, signY, signZ);
 	exteriorGroup.add(signGroup);
 
 	// the building's name.
-	const SIGN_WIDTH = 6;
+	const SIGN_WIDTH = 5.4;
 	const SIGN_HEIGHT = (SIGN_WIDTH * 63) / 318;
 	const buildingSign = makeSvgNeonPanel(signSvg, {
 		width: SIGN_WIDTH,
@@ -252,7 +252,7 @@ export function buildFacade(scene, config) {
 	// the byline, below the sign in smaller neon text.
 	const BYLINE_WIDTH = 1.45;
 	const BYLINE_HEIGHT = (BYLINE_WIDTH * 56) / 271; // byline.svg's own 271x56 viewBox
-	const BYLINE_GAP = 0.15; // clearance below the sign's own bottom edge
+	const BYLINE_GAP = 0.05; // clearance below the sign's own bottom edge
 	const byline = makeSvgNeonPanel(bylineSvg, {
 		width: BYLINE_WIDTH,
 		height: BYLINE_HEIGHT,

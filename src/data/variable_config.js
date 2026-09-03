@@ -4613,6 +4613,118 @@ export const variableConfig =
 }
 ;
 
+// --- Gradient scales ---------------------------------------------------
+//
+// PALETTE above is for telling categories APART. Anything with an order to
+// it — every numeric range, and every categorical whose categories run
+// low->high, never->always, disagree->agree, no->yes — reads better as one
+// continuous ramp, so those get GRADIENT_PALETTE instead: dark purple at
+// the low end through to bright pink at the high end. A scale's colors are
+// sampled evenly across the ramp, however many buckets it has, so a 2-value
+// yes/no lands on the two endpoints and a 5-bucket scale spreads across all
+// of it.
+//
+// The dark end stops at a deep purple rather than going near-black: the room
+// itself is near-black, and a body or minimap dot below roughly this
+// lightness stops reading as a color at all.
+export const GRADIENT_PALETTE = [
+	"#52187d", // dark purple
+	"#7a2299",
+	"#a52aa2",
+	"#d62c9f",
+	"#ff00aa" // bright pink
+];
+
+// blends two hex colors; t = 0 -> a, 1 -> b
+function mixHex(a, b, t) {
+	const parse = (hex) => [
+		parseInt(hex.slice(1, 3), 16),
+		parseInt(hex.slice(3, 5), 16),
+		parseInt(hex.slice(5, 7), 16)
+	];
+	const [ar, ag, ab] = parse(a);
+	const [br, bg, bb] = parse(b);
+	const channel = (x, y) => Math.round(x + (y - x) * t);
+	return `#${[channel(ar, br), channel(ag, bg), channel(ab, bb)]
+		.map((v) => v.toString(16).padStart(2, "0"))
+		.join("")}`;
+}
+
+/** Color at position `t` (0-1) along GRADIENT_PALETTE. */
+export function gradientColorAt(t) {
+	const clamped = Math.min(1, Math.max(0, t));
+	const scaled = clamped * (GRADIENT_PALETTE.length - 1);
+	const low = Math.floor(scaled);
+	const high = Math.min(GRADIENT_PALETTE.length - 1, low + 1);
+	return mixHex(GRADIENT_PALETTE[low], GRADIENT_PALETTE[high], scaled - low);
+}
+
+/** `count` colors spread evenly across the ramp, endpoints included. */
+export function gradientScale(count) {
+	if (count <= 1) return [GRADIENT_PALETTE[GRADIENT_PALETTE.length - 1]];
+	return Array.from({ length: count }, (_, i) => gradientColorAt(i / (count - 1)));
+}
+
+// Variables with no inherent order — identity, religion, employment, and
+// the like. A ramp would imply a low-to-high reading that isn't there, so
+// these keep PALETTE's distinct stops.
+const QUALITATIVE_VARS = new Set([
+	"GENDER",
+	"MARITAL_STATUS",
+	"EMPLOYMENT",
+	"SELFID1",
+	"SELFID2",
+	"REL1",
+	"REL2",
+	"REL3",
+	"REL7",
+	"REL8",
+	"BELIEVE_GOD",
+	"BELIEVE_GOD_BROAD",
+	"POLITICAL_ID",
+	// the room is built around this one: the doors, legend and story copy
+	// all key off amber/purple/pink, so it is skipped entirely above
+	"AFTER_DEATH"
+]);
+
+// Pick order for the qualitative variables above. Coral sits last on
+// purpose: against bright pink it's the one pair that reads as the same
+// color at a glance, so it only comes out once a variable has more
+// categories than there are distinct stops.
+const QUALITATIVE_ORDER = [
+	PALETTE[4], // bright pink
+	PALETTE[0], // warm amber
+	PALETTE[2], // vivid purple
+	PALETTE[3], // magenta
+	PALETTE[1] // coral
+];
+
+// Repaint every ordered scale onto the ramp, and every qualitative one
+// onto the pick order above. Runs once at module load, so the entries
+// above stay readable as "which values fold into which bucket" without a
+// hand-picked color on all ~300 of them.
+for (const [baseVar, config] of Object.entries(variableConfig)) {
+	// the room's own variable keeps its hand-set door colors
+	if (baseVar === "AFTER_DEATH") continue;
+	const buckets = config.type === "numeric" ? config.ranges : config.categories;
+	if (!buckets) continue;
+	// admin codes aren't part of the scale and keep their fixed neutrals
+	const scaleBuckets = buckets.filter(
+		(bucket) =>
+			bucket.key !== "no_answer" &&
+			bucket.color !== NO_ANSWER_COLOR &&
+			bucket.color !== NOT_APPLICABLE_COLOR
+	);
+	const colors = QUALITATIVE_VARS.has(baseVar)
+		? scaleBuckets.map(
+				(_, i) => QUALITATIVE_ORDER[i % QUALITATIVE_ORDER.length]
+			)
+		: gradientScale(scaleBuckets.length);
+	scaleBuckets.forEach((bucket, i) => {
+		bucket.color = colors[i];
+	});
+}
+
 // --- Helpers for consuming the config above ---------------------------
 
 /** The actual people.json column name(s) for a base variable, e.g. "AGE" -> ["AGE_Y1","AGE_Y2"]. */

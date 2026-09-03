@@ -53,18 +53,26 @@ function rawAnswer(person, baseVar, waveKey) {
 	return raw;
 }
 
-// lines: age/gender/marital, race/ethnicity, selected variable.
+// survey wording -> reading wording
+export function tidyMarital(raw) {
+	return raw === "Single/Never been married" ? "Single" : raw;
+}
+
+// lines: age/gender/marital, race/ethnicity, religion, selected variable.
 // missing dropped. entries are strings or { text, color }
 export function formatNearbyPersonLines(person, waveKey, baseVar) {
 	const age = person[waveKey === "Y1" ? "AGE_Y1" : "AGE_Y2"];
 	const gender = rawAnswer(person, "GENDER", waveKey);
 	const marital = rawAnswer(person, "MARITAL_STATUS", waveKey);
-	const topLine = [typeof age === "number" ? age : null, gender, marital]
+	const topLine = [typeof age === "number" ? age : null, gender, marital && tidyMarital(marital)]
 		.filter(Boolean)
 		.join(", ");
+	// skipped when it's already the last line
+	const religion = baseVar === "REL2" ? null : rawAnswer(person, "REL2", waveKey);
 	return [
 		topLine,
 		formatSelfId(person.SELFID1),
+		religion,
 		selectedVariableLine(person, waveKey, baseVar)
 	].filter(Boolean);
 }
