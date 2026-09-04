@@ -4699,6 +4699,122 @@ const QUALITATIVE_ORDER = [
 	PALETTE[1] // coral
 ];
 
+// --- Bucketing ---------------------------------------------------------
+//
+// The `values` arrays above fold several raw answers into one category.
+// That folding only earns its keep once a variable has enough answers to
+// be unreadable otherwise, so it's re-derived here:
+//
+//   <= MAX_UNGROUPED_ANSWERS raw answers -> no folding at all, one
+//     category per answer, labelled with the answer itself
+//   more than that -> folded into even groups, preferring the most groups
+//     that divide the answers exactly (4, then 3, then 2)
+//
+// Numeric variables aren't folded at all — they're a continuous ramp, see
+// gradientColorForValue below. Qualitative variables aren't either: their
+// categories have no order, so "consecutive groups" would be meaningless.
+const MAX_UNGROUPED_ANSWERS = 4;
+const GROUP_TARGETS = [4, 3, 2];
+
+// most groups that divide n exactly; failing that, the most groups
+function groupCountFor(n) {
+	return GROUP_TARGETS.find((k) => n % k === 0) ?? GROUP_TARGETS[0];
+}
+
+// n consecutive chunks whose sizes differ by at most one
+function evenChunks(items, count) {
+	const chunks = [];
+	const base = Math.floor(items.length / count);
+	let remainder = items.length % count;
+	let start = 0;
+	for (let i = 0; i < count; i++) {
+		const size = base + (remainder > 0 ? 1 : 0);
+		if (remainder > 0) remainder--;
+		chunks.push(items.slice(start, start + size));
+		start += size;
+	}
+	return chunks;
+}
+
+// admin codes ("(Refused)", "(Does not apply)") sit outside the scale.
+// the label test catches buckets that mix a real answer in with the admin
+// codes but still announce themselves as the no-answer bucket
+function isAdminBucket(bucket) {
+	return (
+		bucket.key === "no_answer" ||
+		/no answer/i.test(bucket.label ?? "") ||
+		bucket.color === NO_ANSWER_COLOR ||
+		bucket.color === NOT_APPLICABLE_COLOR
+	);
+}
+
+// Read off the hand-authored entries before anything below rewrites them:
+//
+//   handGrouped — a category folding this many raw answers is a deliberate
+//     grouping ("Religiously Affiliated" over 14 religions), not an
+//     ordinal fold, and regrouping it into even chunks is nonsense
+//   brightFirst — the author put the palette's bright end on the FIRST
+//     category, i.e. listed the scale high -> low ("Yes | No"). the ramp
+//     has to be flipped for those, so bright always means the high end
+const HAND_GROUPED_MIN_VALUES = 4;
+const scaleIntent = new Map();
+for (const [baseVar, config] of Object.entries(variableConfig)) {
+	const buckets = config.type === "numeric" ? config.ranges : config.categories;
+	if (!buckets) continue;
+	const scale = buckets.filter((bucket) => !isAdminBucket(bucket));
+	const paletteIndex = (bucket) => PALETTE.indexOf(bucket.color);
+	scaleIntent.set(baseVar, {
+		handGrouped: scale.some(
+			(bucket) => (bucket.values?.length ?? 0) >= HAND_GROUPED_MIN_VALUES
+		),
+		brightFirst:
+			scale.length > 1 && paletteIndex(scale[0]) > paletteIndex(scale[scale.length - 1])
+	});
+}
+
+function chunkLabel(chunk) {
+	if (chunk.length === 1) return chunk[0];
+	if (chunk.length === 2) return `${chunk[0]} / ${chunk[1]}`;
+	return `${chunk[0]} – ${chunk[chunk.length - 1]}`;
+}
+
+for (const [baseVar, config] of Object.entries(variableConfig)) {
+	// the room is built around AFTER_DEATH's own three buckets
+	if (baseVar === "AFTER_DEATH") continue;
+	if (config.type !== "categorical" || !config.categories) continue;
+	if (QUALITATIVE_VARS.has(baseVar)) continue;
+	// a deliberate grouping stays exactly as written
+	if (scaleIntent.get(baseVar)?.handGrouped) continue;
+
+	const adminBuckets = config.categories.filter(isAdminBucket);
+	// flattened in the order the config lists them, which is the scale's
+	// own low -> high order
+	const answers = [];
+	for (const bucket of config.categories) {
+		if (isAdminBucket(bucket)) continue;
+		for (const value of bucket.values ?? []) {
+			if (!answers.includes(value)) answers.push(value);
+		}
+	}
+	if (answers.length === 0) continue;
+
+	const chunks =
+		answers.length <= MAX_UNGROUPED_ANSWERS
+			? answers.map((value) => [value])
+			: evenChunks(answers, groupCountFor(answers.length));
+
+	config.categories = [
+		...chunks.map((chunk, i) => ({
+			key: `group_${i + 1}`,
+			label: chunkLabel(chunk),
+			// overwritten by the color pass below
+			color: PALETTE[0],
+			values: chunk
+		})),
+		...adminBuckets
+	];
+}
+
 // Repaint every ordered scale onto the ramp, and every qualitative one
 // onto the pick order above. Runs once at module load, so the entries
 // above stay readable as "which values fold into which bucket" without a
@@ -4715,17 +4831,65 @@ for (const [baseVar, config] of Object.entries(variableConfig)) {
 			bucket.color !== NO_ANSWER_COLOR &&
 			bucket.color !== NOT_APPLICABLE_COLOR
 	);
-	const colors = QUALITATIVE_VARS.has(baseVar)
-		? scaleBuckets.map(
-				(_, i) => QUALITATIVE_ORDER[i % QUALITATIVE_ORDER.length]
-			)
-		: gradientScale(scaleBuckets.length);
+	let colors;
+	if (QUALITATIVE_VARS.has(baseVar)) {
+		colors = scaleBuckets.map(
+			(_, i) => QUALITATIVE_ORDER[i % QUALITATIVE_ORDER.length]
+		);
+	} else {
+		colors = gradientScale(scaleBuckets.length);
+		// listed high -> low, so the bright end belongs at the front
+		if (scaleIntent.get(baseVar)?.brightFirst) colors.reverse();
+	}
 	scaleBuckets.forEach((bucket, i) => {
 		bucket.color = colors[i];
 	});
+
+	// every no-answer bucket reads as missing data, in the same gray —
+	// including ones the entries above had given a palette color.
+	// "(Does not apply)" keeps its own muted plum, which is a different
+	// statement from "they didn't answer"
+	for (const bucket of buckets) {
+		if (!isAdminBucket(bucket)) continue;
+		if (bucket.color === NOT_APPLICABLE_COLOR) continue;
+		bucket.color = NO_ANSWER_COLOR;
+	}
 }
 
 // --- Helpers for consuming the config above ---------------------------
+
+// A numeric variable's full span. The top bucket is sometimes an
+// open-ended catch-all ("3+", "20+") whose stated max is arbitrary —
+// detected by comparing its span to the bucket below it; if it's much
+// wider, its start is the real ceiling.
+export function numericScale(baseVar) {
+	const config = variableConfig[baseVar];
+	if (config?.type !== "numeric" || !config.ranges?.length) return null;
+	const sorted = [...config.ranges].sort((a, b) => a.min - b.min);
+	const last = sorted[sorted.length - 1];
+	const secondLast = sorted[sorted.length - 2];
+	let max = last.max;
+	if (secondLast) {
+		const lastSpan = last.max - last.min;
+		const secondLastSpan = secondLast.max - secondLast.min || 1;
+		if (lastSpan > secondLastSpan * 3) max = last.min;
+	}
+	const min = Math.min(...sorted.map((range) => range.min));
+	return max > min ? { min, max } : null;
+}
+
+/**
+ * A numeric answer's color, sampled continuously along the ramp rather
+ * than snapped to a range bucket — a 0-10 scale reads as a gradient, not
+ * as three steps. Null for missing/unparseable values.
+ */
+export function gradientColorForValue(baseVar, rawValue) {
+	const scale = numericScale(baseVar);
+	if (!scale) return null;
+	const value = parseNumericValue(baseVar, rawValue);
+	if (value === null) return null;
+	return gradientColorAt((value - scale.min) / (scale.max - scale.min));
+}
 
 /** The actual people.json column name(s) for a base variable, e.g. "AGE" -> ["AGE_Y1","AGE_Y2"]. */
 export function getColumns(baseVar) {

@@ -216,7 +216,7 @@
 		position: fixed;
 		left: -380px;
 		top: 0px;
-		width: 360px;
+		width: 380px;
 		max-width: 100%;
 		/* height:100% of a position:fixed element resolves against the
 		   viewport, which on mobile browsers includes address-bar space —
@@ -244,6 +244,14 @@
 	}
 	.shelf.shelfopen {
 		left: 0px;
+	}
+	/* below 450px the shelf takes the whole screen; the closed offset has to
+	   match the width, or a sliver of it stays on screen */
+	@media (max-width: 449px) {
+		.shelf {
+			width: 100%;
+			left: -100%;
+		}
 	}
 	.detailsClose {
 		font-size: 15px;

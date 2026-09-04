@@ -7,6 +7,63 @@ import bylineSvg from "$svg/byline.svg?raw";
 // dim state for the wordmark/byline links; lit fully on hover
 export const FACADE_LINK_DIM_BRIGHTNESS = 0.7;
 
+// --- sign geometry -----------------------------------------------------
+// module scope, not inside buildFacade: the loading screen draws its own
+// copy of this sign and has to land it in exactly the same place, before
+// any of this is built.
+export const SIGN_WIDTH = 5.4;
+
+export const SIGN_HEIGHT = (SIGN_WIDTH * 63) / 318;
+
+const SIGN_ABOVE_DOOR = 1.9;
+// clear of the brick relief
+const SIGN_FACE_OFFSET = 0.1;
+const BRICK_DEPTH = 0.4;
+
+const LOGO_WIDTH = 2;
+const LOGO_HEIGHT = (LOGO_WIDTH * 247) / 600; // matches the SVG's own 600x247 viewBox
+const WORDMARK_GAP = 0.3; // clearance above the sign's own top edge
+const LOGO_Y = SIGN_HEIGHT / 2 + WORDMARK_GAP + LOGO_HEIGHT / 2;
+
+const BYLINE_WIDTH = 1.95;
+const BYLINE_HEIGHT = (BYLINE_WIDTH * 56) / 271; // byline.svg's own 271x56 viewBox
+const BYLINE_GAP = 0.22; // clearance below the sign's own bottom edge
+
+// where the wordmark+sign+byline cluster's visual center sits relative to
+// the sign's bottom edge, per unit of scale. lets a caller place the
+// cluster by its center instead of by the sign's own anchor
+const CLUSTER_CENTER_OFFSET =
+	(SIGN_HEIGHT / 2 + LOGO_Y + LOGO_HEIGHT / 2 - (BYLINE_GAP + BYLINE_HEIGHT)) / 2;
+
+/**
+ * Where the sign panel itself ends up, in world units, for a given fov
+ * scale and cluster center. One source of truth for buildFacade's own
+ * layout and for the loading screen that has to match it.
+ */
+export function signPlacement({
+	doorHeight,
+	doorZ,
+	facadeThickness,
+	scale = 1,
+	centerY = null
+}) {
+	const signBottomAnchor = doorHeight + SIGN_ABOVE_DOOR - SIGN_HEIGHT / 2;
+	const requested =
+		centerY === null ? signBottomAnchor : centerY - CLUSTER_CENTER_OFFSET * scale;
+	// never let the byline sink onto the door lamps (doorHeight + 0.4,
+	// sphere radius 0.15), however low the requested center is
+	const lowestBottomY = doorHeight + 0.75 + (BYLINE_GAP + BYLINE_HEIGHT) * scale;
+	const bottomY = Math.max(lowestBottomY, requested);
+	return {
+		bottomY,
+		centerY: bottomY + (SIGN_HEIGHT / 2) * scale,
+		bylineCenterY: bottomY - (BYLINE_GAP + BYLINE_HEIGHT / 2) * scale,
+		width: SIGN_WIDTH * scale,
+		height: SIGN_HEIGHT * scale,
+		z: doorZ + facadeThickness / 2 + BRICK_DEPTH + SIGN_FACE_OFFSET
+	};
+}
+
 export function excludeDirectionalLights(material) {
 	material.onBeforeCompile = (shader) => {
 		// onBeforeCompile runs before three resolves #include directives, so the
@@ -47,7 +104,6 @@ export function buildFacade(scene, config) {
 	// BRICK_DEPTH to know how much of that depth it should fill.
 	const BRICK_WIDTH = .8;
 	const BRICK_HEIGHT = 0.3;
-	const BRICK_DEPTH = 0.4;
 	const BRICK_GAP = 0.07; // mortar gap between adjacent bricks
 	// how far the grout backing below extends out into the recess behind the
 	// bricks.
@@ -211,7 +267,7 @@ export function buildFacade(scene, config) {
 	// byline) is parented under this one group instead of going straight into
 	// exteriorGroup, positioned at what was previously buildingSign's own
 	// anchor.
-	const signZ = doorZ + BRICK_FRONT_LOCAL_Z + 0.1;
+	const signZ = signPlacement({ doorHeight, doorZ, facadeThickness }).z;
 	// was +0.6 originally, which put buildingSign's own bounding box (height 4,
 	// scaled up to MAX_SIGN_SCALE for mobile legibility, see Main's
 	// updateTextFovScale) low enough to genuinely overlap the "Unsure" door's
@@ -222,8 +278,6 @@ export function buildFacade(scene, config) {
 	exteriorGroup.add(signGroup);
 
 	// the building's name.
-	const SIGN_WIDTH = 5.4;
-	const SIGN_HEIGHT = (SIGN_WIDTH * 63) / 318;
 	const buildingSign = makeSvgNeonPanel(signSvg, {
 		width: SIGN_WIDTH,
 		height: SIGN_HEIGHT,
@@ -233,35 +287,42 @@ export function buildFacade(scene, config) {
 	signGroup.add(buildingSign);
 
 	// the wordmark logo, glowing above the "Life after death?" sign.
-	const LOGO_WIDTH = 2;
-	const LOGO_HEIGHT = (LOGO_WIDTH * 247) / 600; // matches the SVG's own 600x247 viewBox
-	const WORDMARK_GAP = 0.3; // clearance above the sign's own top edge
 	const wordmarkLogo = makeSvgNeonPanel(wordmarkSvg, {
 		width: LOGO_WIDTH,
 		height: LOGO_HEIGHT,
 		color: "#ffffff",
 		glowColor: "#ff36a8"
 	});
-	const logoY = SIGN_HEIGHT / 2 + WORDMARK_GAP + LOGO_HEIGHT / 2;
-	wordmarkLogo.position.set(0, logoY, 0);
+	wordmarkLogo.position.set(0, LOGO_Y, 0);
 	// starts dimmed (see FACADE_LINK_DIM_BRIGHTNESS above); Main's
 	// setFacadeSignHover brightens it back to full on hover.
 	wordmarkLogo.material[4].color.setScalar(FACADE_LINK_DIM_BRIGHTNESS);
 	signGroup.add(wordmarkLogo);
 
 	// the byline, below the sign in smaller neon text.
-	const BYLINE_WIDTH = 1.45;
-	const BYLINE_HEIGHT = (BYLINE_WIDTH * 56) / 271; // byline.svg's own 271x56 viewBox
-	const BYLINE_GAP = 0.05; // clearance below the sign's own bottom edge
 	const byline = makeSvgNeonPanel(bylineSvg, {
 		width: BYLINE_WIDTH,
 		height: BYLINE_HEIGHT,
 		color: "#ff36a8",
 		glowColor: "#ff36a8"
 	});
-	const signBottomY = signY - SIGN_HEIGHT / 2;
-	const bylineY = signBottomY - BYLINE_GAP - BYLINE_HEIGHT / 2;
-	byline.position.set(0, bylineY, signZ + 0.1);
+	// lays out the sign block for a given fov scale. it grows UP from a
+	// fixed bottom edge rather than out from its center, so the big mobile
+	// scale doesn't push the sign — and the byline under it — down into the
+	// door labels. the byline sits outside signGroup and so needs its own
+	// placement either way
+	function layoutSign(scale = 1, centerY = null) {
+		const placed = signPlacement({
+			doorHeight,
+			doorZ,
+			facadeThickness,
+			scale,
+			centerY
+		});
+		signGroup.position.set(0, placed.centerY, signZ);
+		byline.position.set(0, placed.bylineCenterY, signZ + 0.1);
+	}
+	layoutSign();
 	byline.material[4].color.setScalar(FACADE_LINK_DIM_BRIGHTNESS);
 	exteriorGroup.add(byline);
 
@@ -278,5 +339,5 @@ export function buildFacade(scene, config) {
 	signLight.shadow.bias = -0.002;
 	exteriorGroup.add(signLight);
 
-	return { brickFrontLocalZ: BRICK_FRONT_LOCAL_Z, wordmarkLogo, byline, signGroup };
+	return { brickFrontLocalZ: BRICK_FRONT_LOCAL_Z, wordmarkLogo, byline, signGroup, layoutSign, signZ };
 }

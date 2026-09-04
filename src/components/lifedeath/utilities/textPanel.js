@@ -2,7 +2,14 @@ import * as THREE from "three";
 
 // wraps a drawn canvas in a thin box; a flat plane broke OutlineEffect
 // and z-fought its mount
-function wrapCanvasInPanel(canvas, width, height, depthBiasUnits = -4, anisotropy = 1) {
+function wrapCanvasInPanel(
+	canvas,
+	width,
+	height,
+	depthBiasUnits = -4,
+	anisotropy = 1,
+	depthWrite = true
+) {
 	const texture = new THREE.CanvasTexture(canvas);
 	// the canvas is drawn in sRGB; without this three treats it as linear
 	// and the text renders washed out.
@@ -16,7 +23,11 @@ function wrapCanvasInPanel(canvas, width, height, depthBiasUnits = -4, anisotrop
 		// FrontSide culling means exactly one ever rasterizes. DoubleSide let
 		// the mirrored back face win and the sign read backwards.
 		depthTest: true,
-		depthWrite: true,
+		// a transparent quad that writes depth stamps its *whole* rectangle,
+		// clear texels included, so an overlapping panel drawn after it gets
+		// cut off — which is why the wordmark lost a chunk to the sign's own
+		// (glow-padded, much larger than its art) box
+		depthWrite,
 		// pulls written depth toward the camera to win z-fighting against the
 		// surface this is mounted on. factor stays 0 because it scales with
 		// the polygon's depth slope, which blows up at grazing angles; units
@@ -229,7 +240,11 @@ export function makeSvgNeonPanel(
 		canvas,
 		panelWidth,
 		panelHeight,
-		depthBiasUnits
+		depthBiasUnits,
+		1,
+		// these hang on the facade and overlap each other's padding, so they
+		// must not write depth over one another
+		false
 	);
 
 	// the dark letterform fill becomes the neon color; the light highlight

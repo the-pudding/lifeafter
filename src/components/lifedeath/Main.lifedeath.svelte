@@ -7,7 +7,11 @@
 	// fork of OutlineEffect; wobbles the hull for a hand-drawn line
 	import { PencilOutlineEffect } from "./utilities/PencilOutlineEffect.js";
 	import { buildRoomShell } from "./room/roomShell.js";
-	import { buildFacade, FACADE_LINK_DIM_BRIGHTNESS } from "./room/facade.js";
+	import {
+		buildFacade,
+		FACADE_LINK_DIM_BRIGHTNESS,
+		signPlacement
+	} from "./room/facade.js";
 	import { buildDoors, DOOR_LABEL_DIM_BRIGHTNESS } from "./room/doors.js";
 	import { createInputController } from "./utilities/inputController.js";
 	import { spawnCrowd } from "./people/crowd.js";
@@ -34,11 +38,14 @@
 		groupedVariableOptions,
 		getColumns,
 		getCategoryFor,
-		getRangeFor
+		gradientColorForValue,
+		numericScale,
+		GRADIENT_PALETTE
 	} from "$data/variable_config.js";
 	// story text. "all" shows anywhere, the rest only in their zone
 	import copy from "$data/copy.json";
 
+	import signSvg from "$svg/sign.svg?raw";
 	import ControlPanel from "./ControlPanel.svelte";
 	import Modal from "./Modal.lifedeath.svelte";
 	import Minimap from "./Minimap.lifedeath.svelte";
@@ -100,6 +107,8 @@
 		ROOM_ENTRY_PITCH_TIME,
 		ROOM_HEIGHT,
 		ROOM_WIDTH,
+		DOOR_WALK_SETTLE_DISTANCE,
+		DOOR_WALK_SETTLE_SPEED,
 		SCROLL_WALK_MIN_SCALE,
 		SCROLL_WALK_NARROW_WIDTH,
 		SCROLL_WALK_WIDE_WIDTH,
@@ -192,12 +201,32 @@
 	let storyTexts = $state([]);
 	// markdown links -> anchors. links only; the rest of the copy is raw
 	// HTML. http(s) only, so no javascript: URLs
-	function renderStoryText(text) {
-		return text.replace(
-			/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
-			(_match, label, href) =>
-				`<a href="${href}" target="_blank" rel="noopener noreferrer">${label}</a>`
+	// copy.json can drop an audio toggle inline with {{audio}}, anywhere —
+	// including inside one of its own <div>s, so this substitutes markup
+	// rather than splitting the string (which would cut a tag in half).
+	// `playing` is an argument, not a closure read, so the template re-runs
+	// this when it changes and the label stays honest
+	const STORY_AUDIO_TOKEN = /\{\{audio\}\}/g;
+	function storyAudioButton(playing) {
+		const icon = playing
+			? '<path class="wave" d="M15.5 9.2a4 4 0 0 1 0 5.6"/><path class="wave" d="M18 6.8a7.4 7.4 0 0 1 0 10.4"/>'
+			: '<path class="wave" d="M16 9.5l5 5M21 9.5l-5 5"/>';
+		return (
+			`<button class="story-audio" type="button" data-story-audio aria-pressed="${playing}">` +
+			`<svg viewBox="0 0 24 24" aria-hidden="true">` +
+			`<path d="M4 9.5h3.2L12 5.4v13.2L7.2 14.5H4z"/>${icon}</svg>` +
+			`${playing ? "Sound on" : "Sound off"}</button>`
 		);
+	}
+
+	function renderStoryText(text, playing = false) {
+		return text
+			.replace(
+				/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
+				(_match, label, href) =>
+					`<a href="${href}" target="_blank" rel="noopener noreferrer">${label}</a>`
+			)
+			.replace(STORY_AUDIO_TOKEN, () => storyAudioButton(playing));
 	}
 	// story beat asked to hide the panel/minimap
 	let hidePanel = $state(false);
@@ -207,6 +236,20 @@
 	let hideYear = $state(false);
 	// whether any copy.json entry is active here at all
 	let storyHasBeat = $state(false);
+	// load screen cross-fade. slow on purpose: the room resolving out of
+	// the black is the opening beat
+	const LOADING_FADE_MS = 2600;
+	// one full cycle of the wavy line: it draws itself, then rubs itself
+	// out. nothing waits on it — the screen goes the moment the crowd is
+	// ready, cutting the line off wherever it happens to be
+	const LOADING_LINE_MS = 5400;
+	// a fast load shouldn't flash a line that barely gets started, so it
+	// only appears once the wait is long enough to be worth acknowledging
+	const LOADING_LINE_DELAY_MS = 1000;
+	let loadingLineVisible = $state(false);
+	// no skip button before this age — covers the plaza and the first steps
+	// inside, where zToAge clamps below the youngest respondent
+	const EXPLORE_MIN_AGE = 18;
 	// seconds to close ~63% of a crowd recolor; higher = slower cross-fade
 	const CROWD_RECOLOR_TIME = 0.35;
 	// how far past the back wall the walker can press into the light
@@ -274,7 +317,117 @@
 		highlightMap && !shouldHideMap && !minimapAcknowledged && mode === "walk"
 	);
 	// non-empty until data + GLBs resolve; shown in place of the controls
+	// vertical fov keeping all three doors visible at any aspect. at
+	// component scope, not inside buildScene: the loading screen places its
+	// own copy of the sign with this, before any of the scene exists
+	const outermostDoorX =
+		Math.max(...DOORS.map((d) => Math.abs(d.x))) + DOOR_WIDTH / 2;
+	const distanceToDoors = DEFAULT_START_Z - DOOR_Z;
+	const DOOR_VIEW_MARGIN = 1.35; // breathing room past the doors' exact edges; also sets how wide the walk view is
+	const requiredHalfHorizontalFovRad =
+		Math.atan(outermostDoorX / distanceToDoors) * DOOR_VIEW_MARGIN;
+	const computeDoorVisibleFovDegrees = (aspect) =>
+		computeFovForHorizontalHalfAngle(requiredHalfHorizontalFovRad, aspect);
+	// fixed-world-size text loses pixels at a wider fov. compensate
+	// against a 16:9 reference
+	const REFERENCE_ASPECT = 16 / 9;
+	const REFERENCE_FOV = computeDoorVisibleFovDegrees(REFERENCE_ASPECT);
+	// capped per surface: labels overrun the door quickly, the sign has
+	// the whole lintel
+	const MAX_DOOR_LABEL_SCALE = 1.25;
+	const MAX_SIGN_SCALE = 2.3;
+	function computeTextFovScale(fovDegrees, maxScale) {
+		const rawScale =
+			Math.tan(THREE.MathUtils.degToRad(fovDegrees / 2)) /
+			Math.tan(THREE.MathUtils.degToRad(REFERENCE_FOV / 2));
+		return Math.min(rawScale, maxScale);
+	}
+
+	// world Y that lands the sign cluster SIGN_SCREEN_FRACTION down the
+	// screen from the plaza's opening camera. both fov and the start pitch
+	// vary with viewport, so a fixed height sits at a different spot on
+	// every aspect ratio — this solves for the height instead
+	const SIGN_SCREEN_FRACTION = 0.25;
+	function signClusterTargetY(fovDegrees, signZ) {
+		// ndc y: +1 top, -1 bottom
+		const ndcY = 1 - 2 * SIGN_SCREEN_FRACTION;
+		const k = ndcY * Math.tan(THREE.MathUtils.degToRad(fovDegrees / 2));
+		const pitch = DEFAULT_CAMERA_PITCH;
+		const distance = DEFAULT_START_Z - signZ;
+		return (
+			EYE_HEIGHT +
+			(distance * (Math.sin(pitch) + k * Math.cos(pitch))) /
+				(Math.cos(pitch) - k * Math.sin(pitch))
+		);
+	}
+
+	// background music: off until asked for. the file is 13MB, so it is
+	// only fetched on the first unmute, never on load
+	let audioOn = $state(false);
+	let audioEl;
+	// the element is the source of truth, not a flag of our own: play()'s
+	// promise can stay pending, which would leave the button lying about
+	// what's actually happening
+	function toggleAudio() {
+		if (!audioEl) return;
+		if (audioEl.paused) audioEl.play().catch(() => {});
+		else audioEl.pause();
+	}
+
 	let loadingMessage = $state("Loading people…");
+	// kept mounted through the fade, so the sign doesn't cut
+	let loadingFading = $state(false);
+	// measured eagerly, not in an effect: the load screen paints on the
+	// very first frame, and a null rect would flash the sign in the corner
+	let viewport = $state({
+		width: typeof window === "undefined" ? 0 : window.innerWidth,
+		height: typeof window === "undefined" ? 0 : window.innerHeight
+	});
+
+	/**
+	 * Screen rect the facade sign will occupy once the scene is up. The
+	 * loading screen draws its own copy of the sign right here, so when it
+	 * fades the sign appears to have been there all along.
+	 */
+	const loadingSignRect = $derived.by(() => {
+		const { width, height } = viewport;
+		if (!width || !height) return null;
+		const fov = computeDoorVisibleFovDegrees(width / height);
+		const scale = computeTextFovScale(fov, MAX_SIGN_SCALE);
+		const placed = signPlacement({
+			doorHeight: DOOR_HEIGHT,
+			doorZ: DOOR_Z,
+			facadeThickness: FACADE_THICKNESS,
+			scale,
+			centerY: null
+		});
+		const centerY = signPlacement({
+			doorHeight: DOOR_HEIGHT,
+			doorZ: DOOR_Z,
+			facadeThickness: FACADE_THICKNESS,
+			scale,
+			centerY: signClusterTargetY(fov, placed.z)
+		}).centerY;
+
+		// project (0, centerY, signZ) from the plaza camera
+		const pitch = DEFAULT_CAMERA_PITCH;
+		const halfFovTan = Math.tan(THREE.MathUtils.degToRad(fov / 2));
+		const dz = DEFAULT_START_Z - placed.z;
+		const dy = centerY - EYE_HEIGHT;
+		const yCam = dy * Math.cos(pitch) - dz * Math.sin(pitch);
+		const depth = dy * Math.sin(pitch) + dz * Math.cos(pitch);
+		if (depth <= 0) return null;
+		// world units -> px at that depth. the vertical fov governs both,
+		// so width uses the viewport height, not its width
+		const pxPerUnit = height / (2 * depth * halfFovTan);
+		return {
+			width: placed.width * pxPerUnit,
+			height: placed.height * pxPerUnit,
+			centerX: width / 2,
+			centerY: height / 2 - yCam * pxPerUnit
+		};
+	});
+
 	// clicked crowd member -> modal. null closes
 	let clickedPerson = $state(null);
 	// their index; respondents has no stable id. read per frame to light them
@@ -319,6 +472,24 @@
 
 
 
+	$effect(() => {
+		const timer = setTimeout(
+			() => (loadingLineVisible = true),
+			LOADING_LINE_DELAY_MS
+		);
+		return () => clearTimeout(timer);
+	});
+
+	// the load screen's sign placement depends on the viewport, and it is
+	// drawn before the scene's own resize handling exists
+	$effect(() => {
+		const measure = () =>
+			(viewport = { width: window.innerWidth, height: window.innerHeight });
+		measure();
+		window.addEventListener("resize", measure);
+		return () => window.removeEventListener("resize", measure);
+	});
+
 	onMount(() => {
 		let disposed = false;
 		let cleanup = () => {};
@@ -355,7 +526,13 @@
 				sceneCleanup();
 				disposeRoot();
 			};
-			loadingMessage = "";
+			// fade rather than cut; unmounted once the transition is done.
+			// no waiting on the line — it just gets cut off wherever it is
+			loadingFading = true;
+			setTimeout(() => {
+				loadingMessage = "";
+				loadingFading = false;
+			}, LOADING_FADE_MS);
 		})();
 
 		function buildScene(rawPeople, maleGltfs, femaleGltfs, heightScaleFor) {
@@ -469,29 +646,6 @@
 			const innerRoomGroup = new THREE.Group();
 			scene.add(innerRoomGroup);
 
-			// vertical fov keeping all three doors visible at any aspect
-			const outermostDoorX =
-				Math.max(...DOORS.map((d) => Math.abs(d.x))) + DOOR_WIDTH / 2;
-			const distanceToDoors = DEFAULT_START_Z - DOOR_Z;
-			const DOOR_VIEW_MARGIN = 1.35; // breathing room past the doors' exact edges; also sets how wide the walk view is
-			const requiredHalfHorizontalFovRad =
-				Math.atan(outermostDoorX / distanceToDoors) * DOOR_VIEW_MARGIN;
-			const computeDoorVisibleFovDegrees = (aspect) =>
-				computeFovForHorizontalHalfAngle(requiredHalfHorizontalFovRad, aspect);
-			// fixed-world-size text loses pixels at a wider fov. compensate
-			// against a 16:9 reference
-			const REFERENCE_ASPECT = 16 / 9;
-			const REFERENCE_FOV = computeDoorVisibleFovDegrees(REFERENCE_ASPECT);
-			// capped per surface: labels overrun the door quickly, the sign has
-			// the whole lintel
-			const MAX_DOOR_LABEL_SCALE = 1.2;
-			const MAX_SIGN_SCALE = 1.5;
-			function computeTextFovScale(fovDegrees, maxScale) {
-				const rawScale =
-					Math.tan(THREE.MathUtils.degToRad(fovDegrees / 2)) /
-					Math.tan(THREE.MathUtils.degToRad(REFERENCE_FOV / 2));
-				return Math.min(rawScale, maxScale);
-			}
 			// best-effort; CSS size may not have resolved. resizeWebglCanvas corrects
 			const initialAspect = width / height;
 			const fov = computeDoorVisibleFovDegrees(initialAspect);
@@ -655,7 +809,8 @@
 					exteriorGroup
 				}
 			);
-			const { brickFrontLocalZ, wordmarkLogo, byline, signGroup } = buildFacade(scene, {
+			const { brickFrontLocalZ, wordmarkLogo, byline, signGroup, layoutSign, signZ } =
+				buildFacade(scene, {
 				toonGradientMap,
 				doors: DOORS,
 				doorWidth: DOOR_WIDTH,
@@ -688,8 +843,10 @@
 				const doorLabelScale = computeTextFovScale(camera.fov, MAX_DOOR_LABEL_SCALE);
 				// X/Y only — these are boxes; scaling depth lifts them off the wall
 				signGroup.scale.set(signScale, signScale, 1);
-				// scaled alone; group-scaling would shift it under the sign
+				// scaled alone; group-scaling would shift it under the sign.
+				// its Y follows too, so the grown sign doesn't cover it
 				byline.scale.set(signScale, signScale, 1);
+				layoutSign(signScale, signClusterTargetY(camera.fov, signZ));
 				for (const door of DOORS) {
 					door.label.scale.set(doorLabelScale, doorLabelScale, 1);
 				}
@@ -846,25 +1003,34 @@
 				const muted = new THREE.Color(MUTED_COLOR);
 				const mutedCSS = `#${muted.getHexString()}`;
 
-				const bucketFor =
-					config.type === "numeric"
-						? (person) => getRangeFor(baseVar, person[column])
-						: (person) => getCategoryFor(baseVar, person[column]);
-				legendData = {
-					kind: "categorical",
-					items: (config.type === "numeric"
-						? config.ranges
-						: config.categories
-					).map((bucket) => ({ label: bucket.label, color: bucket.color }))
-				};
+				// numeric variables aren't bucketed: each answer takes its own
+				// spot on the ramp, and the legend shows the ramp and its range
+				const scale = config.type === "numeric" ? numericScale(baseVar) : null;
+				legendData = scale
+					? {
+							kind: "gradient",
+							min: scale.min,
+							max: scale.max,
+							stops: GRADIENT_PALETTE
+						}
+					: {
+							kind: "categorical",
+							items: config.categories.map((bucket) => ({
+								label: bucket.label,
+								color: bucket.color
+							}))
+						};
+				const colorFor = scale
+					? (person) => gradientColorForValue(baseVar, person[column])
+					: (person) => getCategoryFor(baseVar, person[column])?.color ?? null;
 
 				// target color; the frame loop eases into it, then applies LOD
 				// darkening. CSS feeds the minimap, which switches outright
 				for (let i = 0; i < respondents.length; i++) {
-					const bucket = bucketFor(respondents[i]);
-					if (bucket) {
-						personTargetColors[i].set(bucket.color);
-						personColorCSS[i] = bucket.color;
+					const color = colorFor(respondents[i]);
+					if (color) {
+						personTargetColors[i].set(color);
+						personColorCSS[i] = color;
 					} else {
 						personTargetColors[i].copy(muted);
 						personColorCSS[i] = mutedCSS;
@@ -907,9 +1073,14 @@
 			const DOOR_ALIGN_EPSILON = 0.4;
 			// door click -> inside. yaw eases instead of snapping while true
 			let autoWalking = false;
+			// the eased motion outlives autoWalking, which ends at the doorway
+			// so the outline pass can come back on — handing the last of the
+			// travel to the much tighter follow glide used to jerk the stop
+			let doorWalkEasing = false;
 			// smoothDamp velocity, fed back per frame for a continuous handoff
 			let doorWalkVelX = 0;
 			let doorWalkVelZ = 0;
+			let doorWalkVelYaw = 0;
 
 			// steering target, set instantly by input
 			let targetCameraYaw = 0;
@@ -924,6 +1095,8 @@
 			function moveDirection(dirX, dirZ, rawDelta) {
 				// the cornered preview isn't a control surface
 				if (mode !== "walk") return;
+				// their own input wins over the tail of the door walk
+				doorWalkEasing = false;
 				// outside, forward is disabled — a door click sets the target.
 				// explore mode lifts that
 				if (!hasEnteredRoom && !exploreMode) return;
@@ -1013,8 +1186,10 @@
 				targetWalkX = door.x;
 				pendingDoorWalkZ = AUTO_WALK_INSIDE_Z;
 				autoWalking = true;
+				doorWalkEasing = true;
 				doorWalkVelX = 0;
 				doorWalkVelZ = 0;
+				doorWalkVelYaw = 0;
 			}
 
 			function handleDoorClick(event) {
@@ -1043,6 +1218,10 @@
 				clickedPerson = respondents[index];
 				clickedPersonIndex = index;
 			}
+			function closeModal() {
+				clickedPerson = null;
+				clickedPersonIndex = null;
+			}
 			selectPersonImpl = selectPerson;
 
 			// modal for the clicked person. only raycasts visible people —
@@ -1065,11 +1244,12 @@
 					],
 					true
 				);
-				if (hits.length === 0) return;
+				// a click that lands on anything but a person dismisses the modal
+				if (hits.length === 0) return closeModal();
 				let obj = hits[0].object;
 				while (obj && obj.userData.personIndex === undefined) obj = obj.parent;
 				const index = obj?.userData.personIndex;
-				if (index === undefined) return;
+				if (index === undefined) return closeModal();
 				selectPerson(index);
 			}
 
@@ -1412,7 +1592,7 @@
 					targetCameraYaw = 0;
 				}
 
-				if (autoWalking) {
+				if (doorWalkEasing) {
 					// carries velocity, so no jolt when the queued Z becomes the target
 					const stepXResult = smoothDamp(
 						renderWalkX,
@@ -1435,13 +1615,29 @@
 					doorWalkVelX = stepXResult.velocity;
 					doorWalkVelZ = stepZResult.velocity;
 
-					const yawStep =
-						Math.sign(shortestAngleDelta(cameraYaw, targetCameraYaw)) *
-						Math.min(
-							Math.abs(shortestAngleDelta(cameraYaw, targetCameraYaw)),
-							DOOR_WALK_YAW_SPEED * dt
-						);
-					cameraYaw = wrapAngle(cameraYaw + yawStep);
+					// eased like the position, not a constant rate, so the turn
+					// settles instead of stopping dead on arrival
+					const yawResult = smoothDamp(
+						0,
+						shortestAngleDelta(cameraYaw, targetCameraYaw),
+						doorWalkVelYaw,
+						DOOR_WALK_SMOOTH_TIME,
+						DOOR_WALK_YAW_SPEED,
+						dt
+					);
+					cameraYaw = wrapAngle(cameraYaw + yawResult.value);
+					doorWalkVelYaw = yawResult.velocity;
+
+					// arrived: hand steering back
+					if (
+						Math.abs(targetWalkZ - renderWalkZ) < DOOR_WALK_SETTLE_DISTANCE &&
+						Math.abs(targetWalkX - renderWalkX) < DOOR_WALK_SETTLE_DISTANCE &&
+						Math.abs(doorWalkVelZ) < DOOR_WALK_SETTLE_SPEED &&
+						pendingDoorWalkZ === null
+					) {
+						doorWalkEasing = false;
+						targetCameraYaw = cameraYaw;
+					}
 				} else {
 					// glide toward the target. ~63% of the distance per FOLLOW_TIME
 					const followFactor = 1 - Math.exp(-dt / FOLLOW_TIME);
@@ -1624,6 +1820,42 @@
 	)});"
 	bind:this={container}
 >
+	<!-- while the crowd loads: the sign and a spinner, middle of the screen -->
+	{#if loadingMessage}
+		<div
+			class="loading-screen"
+			class:loading-screen--out={loadingFading}
+			style="--loading-fade-ms: {LOADING_FADE_MS}ms; --loading-line-ms: {LOADING_LINE_MS}ms"
+		>
+			{#if loadingSignRect}
+				<div
+					class="loading-sign"
+					style="left:{loadingSignRect.centerX}px; top:{loadingSignRect.centerY}px; width:{loadingSignRect.width}px;"
+				>
+					{@html signSvg}
+				</div>
+			{/if}
+			{#if loadingLineVisible}
+				<svg
+					class="loading-line"
+					class:loading-line--out={loadingFading}
+					viewBox="0 0 120 24"
+					role="img"
+					aria-label={loadingMessage}
+				>
+					<!-- deliberately uneven: tight wobbles, a long low swoop, a
+					     tall spike. an even sine reads as a progress bar -->
+					<path
+						d="M2 13 C 4 9, 6 17, 9 12 S 11 6, 14 15 S 17 19, 21 10
+						   S 24 2, 29 14 S 36 21, 43 11 S 48 8, 52 13
+						   S 56 22, 61 12 S 64 3, 68 9 S 71 16, 75 11
+						   S 82 1, 88 15 S 93 21, 99 10 S 104 6, 108 14
+						   S 113 18, 118 12"
+					/>
+				</svg>
+			{/if}
+		</div>
+	{/if}
 	<!-- always mounted, faded via `hidden`, so it transitions -->
 	<ControlPanel
 		{variableOptions}
@@ -1636,12 +1868,16 @@
 		hideYear={shouldHideYear}
 		hideMap={shouldHideMap}
 		hidden={shouldHidePanel}
+		{exploreMode}
 		bind:panelHeight={controlPanelHeight}
 	/>
 	{#if storyTexts.length > 0}
 		<div
 			class="story-overlay"
 			class:no_map={shouldHideMap}
+			onclick={(event) => {
+				if (event.target.closest("[data-story-audio]")) toggleAudio();
+			}}
 			transition:fade
 			bind:clientHeight={storyOverlayHeight}
 		>
@@ -1649,7 +1885,7 @@
 			     and replay their flash animation -->
 			{#key storyTexts.join("\u0000")}
 				{#each storyTexts as text}
-					<p>{@html renderStoryText(text)}</p>
+					<p>{@html renderStoryText(text, audioOn)}</p>
 				{/each}
 			{/key}
 		</div>
@@ -1676,15 +1912,40 @@
 	<div class="light-message" class:light-message--on={inLight}>
 		Hi, it's good to see you here. But you can't go in here right now.
 	</div>
+	<!-- background music, off by default -->
+	<audio
+		bind:this={audioEl}
+		src={asset("/assets/app/Sunday.wav")}
+		loop
+		preload="none"
+		onplay={() => (audioOn = true)}
+		onpause={() => (audioOn = false)}
+	></audio>
+	<button
+		class="audio-toggle"
+		aria-pressed={audioOn}
+		aria-label={audioOn ? "Mute music" : "Play music"}
+		title={audioOn ? "Mute music" : "Play music"}
+		onclick={toggleAudio}
+	>
+		<svg viewBox="0 0 24 24" aria-hidden="true">
+			<path d="M4 9.5h3.2L12 5.4v13.2L7.2 14.5H4z" />
+			{#if audioOn}
+				<path class="wave" d="M15.5 9.2a4 4 0 0 1 0 5.6" />
+				<path class="wave" d="M18 6.8a7.4 7.4 0 0 1 0 10.4" />
+			{:else}
+				<path class="wave" d="M16 9.5l5 5M21 9.5l-5 5" />
+			{/if}
+		</svg>
+	</button>
 	<!-- leaves the story for free roaming, or returns to it -->
 	<button
 		class="explore-toggle"
-		class:explore-toggle--hidden={inLight}
+		class:explore-toggle--hidden={inLight || currentAge < EXPLORE_MIN_AGE}
 		onclick={() => {
 			exploreMode = !exploreMode;
 			if (exploreMode) {
-				// explore opens on the later wave; the story runs Y1
-				positionMode = "Y2";
+				// stays on whichever wave is showing — the reader picks from here
 			} else {
 				// re-arm, so the current beat applies again
 				storyBeatsImpl?.reset();
@@ -1815,20 +2076,151 @@
 		opacity: 1;
 	}
 
-	/* top-right, above every overlay */
-	.explore-toggle {
+	/* load screen: the neon sign, small, with a spinner under it */
+	.loading-screen {
+		position: absolute;
+		inset: 0;
+		z-index: 40;
+		pointer-events: none;
+		background: var(--bg-color);
+		opacity: 1;
+		transition: opacity var(--loading-fade-ms) ease-out;
+	}
+	/* the whole overlay fades, revealing the scene behind it. the sign
+	   fades with it, but the real one sits directly underneath at the same
+	   size and place, so what reads is the black lifting off a sign that
+	   was always there */
+	.loading-screen--out {
+		opacity: 0;
+	}
+	/* the load line is the one thing that shouldn't linger over the room.
+	   it carries no transition at all, so this hides it outright */
+	.loading-line--out {
+		opacity: 0;
+	}
+	.loading-sign {
+		position: absolute;
+		/* centred on the projected rect, so left/top are its middle */
+		transform: translate(-50%, -50%);
+		/* unlit: dead glass tubing, no halo. the real sign is lit and sits
+		   directly underneath at the same size and place, so the overlay
+		   fading out reads as the neon coming on */
+		filter: none;
+	}
+	.loading-sign :global(svg) {
+		width: 100%;
+		height: auto;
+	}
+	/* the artwork is white; dulled here to the colour unlit tube glass
+	   takes against a dark room. the surrounding tube is a <rect> with a
+	   white *stroke*, not a filled path, so it needs its own rule */
+	.loading-sign :global(path) {
+		fill: #392f3c;
+	}
+	.loading-sign :global(rect) {
+		stroke: #392f3c;
+	}
+	.loading-line {
+		position: absolute;
+		/* dead centre of the screen, independent of the sign: the sign's
+		   own rect resolves a frame or two later, and anchoring to it made
+		   it jump */
+		left: 50%;
+		top: 50%;
+		width: 120px;
+		height: 24px;
+		margin-left: -60px;
+		margin-top: -12px;
+		overflow: visible;
+	}
+	.loading-line path {
+		fill: none;
+		/* the room's neon pink, so the load reads as part of the piece */
+		stroke: #ff36a8;
+		stroke-width: 1.6;
+		stroke-linecap: round;
+		stroke-linejoin: round;
+		/* one dash as long as the path, walked along it: the line draws
+		   itself, holds, then rubs itself out from the same end */
+		stroke-dasharray: 240 240;
+		animation: loading-draw var(--loading-line-ms) ease-in-out infinite;
+	}
+	@keyframes loading-draw {
+		0% {
+			stroke-dashoffset: 240;
+		}
+		45% {
+			stroke-dashoffset: 0;
+		}
+		55% {
+			stroke-dashoffset: 0;
+		}
+		100% {
+			stroke-dashoffset: -240;
+		}
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.loading-line path {
+			animation: none;
+			stroke-dashoffset: 0;
+		}
+	}
+
+	/* top-right, the corner the explore toggle used to hold */
+	.audio-toggle {
 		position: absolute;
 		top: 10px;
 		right: 12px;
-		transition: opacity 320ms ease-out;
 		z-index: 30;
-		font-family: var(--font-mono);
-		font-size: 0.75rem;
-		color: rgba(255, 255, 255, 0.75);
-		background: rgba(0, 0, 0, 0.6);
+		width: 34px;
+		height: 34px;
+		display: grid;
+		place-items: center;
+		padding: 0;
+		background: rgba(10, 5, 16, 0.85);
 		border: 1px solid rgba(255, 255, 255, 0.3);
 		border-radius: 0;
-		padding: 0.4rem 0.7rem;
+		color: rgba(255, 255, 255, 0.75);
+		cursor: pointer;
+		transition:
+			color 150ms ease-out,
+			border-color 150ms ease-out;
+	}
+	.audio-toggle:hover {
+		color: #fff;
+		border-color: #fff;
+	}
+	.audio-toggle svg {
+		width: 19px;
+		height: 19px;
+		fill: currentColor;
+	}
+	/* the speaker body is filled; the waves/cross are strokes */
+	.audio-toggle svg .wave {
+		fill: none;
+		stroke: currentColor;
+		stroke-width: 1.7;
+		stroke-linecap: round;
+	}
+
+	/* bottom-right, in the slot the top-down toggle used to hold: directly
+	   under the minimap, matching its width */
+	.explore-toggle {
+		position: absolute;
+		bottom: 10px;
+		right: 10px;
+		width: 124px;
+		box-sizing: border-box;
+		text-align: center;
+		transition: opacity 320ms ease-out;
+		z-index: 30;
+		font-family: var(--font-serif);
+		font-size: 0.85rem;
+		color: rgba(255, 255, 255, 0.75);
+		background: rgba(10, 5, 16, 0.85);
+		border: 1px solid rgba(255, 255, 255, 0.3);
+		border-radius: 0;
+		padding: 0.4rem 0.5rem;
 		cursor: pointer;
 		transition:
 			color 150ms ease-out,
@@ -1837,6 +2229,14 @@
 	.explore-toggle:hover {
 		color: #fff;
 		border-color: #fff;
+	}
+	/* tracks the minimap's own mobile width, so the two stack flush */
+	@media (max-width: 640px) {
+		.explore-toggle {
+			width: min(100px, 25vw);
+			font-size: 0.7rem;
+			padding: 0.3rem 0.35rem;
+		}
 	}
 	/* out of the way while the light's message is up */
 	.explore-toggle--hidden {

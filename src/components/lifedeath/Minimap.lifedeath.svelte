@@ -10,7 +10,7 @@
 	// topdown, so the map clears the control panel and the story text.
 	// mode: bindable, so clicking the corner box switches to topdown.
 	// onPersonClick(index): a dot was clicked; Main owns the modal state.
-	// bounce / onAcknowledge: hop for an hl_minimap beat, stop on first
+	// bounce / onAcknowledge: tap-here ring for an hl_minimap beat, off on first
 	// hover or click.
 	let {
 		mode = $bindable(),
@@ -37,6 +37,9 @@
 	const MINIMAP_OUTER_PADDING = 3;
 	// topdown: room below for the "Back to walk view" button
 	const TOPDOWN_BOTTOM_CLEAR = 44;
+	// breathing room under the control panel, so the legend never sits on
+	// the plot's top edge
+	const TOPDOWN_PANEL_GAP = 12;
 	// room for the age label, which sits below the walker's dot
 	const MINIMAP_BOTTOM_PADDING = 16;
 	// the walker's own tracking line — full white, opaque, so it still
@@ -270,8 +273,8 @@
 			const len = Math.hypot(dx, dy) || 1;
 			dx /= len;
 			dy /= len;
-			const coneLength = 26;
-			const coneHalfWidth = 10;
+			const coneLength = 38;
+			const coneHalfWidth = 16;
 			const farX = walkerCanvasX + dx * coneLength;
 			const farY = lineY + dy * coneLength;
 			const perpX = -dy * coneHalfWidth;
@@ -289,7 +292,7 @@
 		}
 		ctx.fillStyle = "rgba(254, 253, 254,1)";
 		ctx.beginPath();
-		ctx.arc(walkerCanvasX, lineY, 3, 0, Math.PI * 2);
+		ctx.arc(walkerCanvasX, lineY, 4.5, 0, Math.PI * 2);
 		ctx.fill();
 
 		// age, below the dot. black-stroked to stay legible over the scatter
@@ -348,10 +351,11 @@
 			MINIMAP_HEIGHT_PX + axisTopMargin + MINIMAP_OUTER_PADDING + MINIMAP_BOTTOM_PADDING;
 		const contentAspect = logicalWidth / logicalHeight;
 
+		const topClear = panelClear + TOPDOWN_PANEL_GAP;
 		const availW = container.clientWidth;
 		const availH = Math.max(
 			0,
-			container.clientHeight - panelClear - TOPDOWN_BOTTOM_CLEAR - bottomClear
+			container.clientHeight - topClear - TOPDOWN_BOTTOM_CLEAR - bottomClear
 		);
 		let width = availH * contentAspect;
 		let height = availH;
@@ -359,7 +363,7 @@
 			width = availW;
 			height = availW / contentAspect;
 		}
-		minimapCanvas.style.top = `${panelClear}px`;
+		minimapCanvas.style.top = `${topClear}px`;
 		minimapCanvas.style.height = `${height}px`;
 		minimapCanvas.style.width = `${width}px`;
 	}
@@ -445,7 +449,6 @@
 <canvas
 	class="minimap-canvas"
 	class:topdown-active={mode === "topdown"}
-	class:bounce
 	class:is-hidden={hidden}
 	bind:this={minimapCanvas}
 	onclick={(event) => {
@@ -461,6 +464,12 @@
 	onmousemove={handleMinimapMouseMove}
 	onmouseleave={handleMinimapMouseLeave}
 ></canvas>
+
+<!-- hl_minimap beat: a glowing ring over the corner map, saying "tap here".
+     pointer-events off, so the tap lands on the canvas underneath -->
+{#if bounce && mode !== "topdown" && !hidden}
+	<div class="minimap-tap" aria-hidden="true"></div>
+{/if}
 
 <style>
 	/* A small corner box by default; the large main view in topdown mode.
@@ -501,50 +510,65 @@
 		opacity: 0;
 		pointer-events: none;
 	}
-	/* attention bob for a copy.json hl_minimap beat (see the `bounce`
-	   prop). :not(.topdown-active) is a belt-and-braces guard — Main
-	   already only passes bounce in walk mode, since the topdown box
-	   centers itself with its own transform that this would override.
-	   A transform animation (not top/margin) so it runs on the
-	   compositor: this component's sibling three.js loop keeps the main
-	   thread busy enough that main-thread-driven animation stutters. */
-	.minimap-canvas.bounce:not(.topdown-active) {
-		animation: minimap-bounce 1.8s infinite;
+	/* the hl_minimap cue: a soft white ring that breathes, centred on the
+	   corner map. sits over the canvas rather than moving it, so the map
+	   itself stays still and legible. transform/opacity only, so it runs on
+	   the compositor — the three.js loop next door keeps the main thread
+	   busy enough that anything else stutters. */
+	.minimap-tap {
+		position: absolute;
+		right: 10px;
+		bottom: 50px;
+		width: 124px;
+		height: 244px;
+		pointer-events: none;
+		z-index: 6;
+		display: grid;
+		place-items: center;
 	}
-	/* two hops then a rest, rather than an even oscillation. each hop uses
-	   ease-out going up and ease-in coming down, so it reads as thrown and
-	   falling rather than floating, and the flat tail is the pause. */
-	@keyframes minimap-bounce {
+	.minimap-tap::after {
+		content: "";
+		width: 46px;
+		height: 46px;
+		border-radius: 50%;
+		border: 2px solid rgba(255, 255, 255, 0.9);
+		background: rgba(255, 255, 255, 0.12);
+		box-shadow:
+			0 0 18px 6px rgba(255, 255, 255, 0.45),
+			inset 0 0 12px rgba(255, 255, 255, 0.35);
+		animation: minimap-tap-pulse 1.8s ease-out infinite;
+	}
+	@keyframes minimap-tap-pulse {
 		0% {
-			transform: translateY(0);
-			animation-timing-function: cubic-bezier(0.25, 0.6, 0.4, 1);
+			transform: scale(0.72);
+			opacity: 0.35;
 		}
-		12% {
-			transform: translateY(-18px);
-			animation-timing-function: cubic-bezier(0.6, 0, 0.75, 0.4);
-		}
-		24% {
-			transform: translateY(0);
-			animation-timing-function: cubic-bezier(0.25, 0.6, 0.4, 1);
-		}
-		36% {
-			transform: translateY(-13px);
-			animation-timing-function: cubic-bezier(0.6, 0, 0.75, 0.4);
-		}
-		48% {
-			transform: translateY(0);
+		45% {
+			transform: scale(1);
+			opacity: 1;
 		}
 		100% {
-			transform: translateY(0);
+			transform: scale(1.35);
+			opacity: 0;
 		}
 	}
-	/* respect a reduced-motion preference — the story text still carries
-	   the same "look at the map" cue without the movement. */
+	@media (max-width: 640px) {
+		.minimap-tap {
+			width: min(100px, 25vw);
+			height: min(197px, 49.2vw);
+		}
+		.minimap-tap::after {
+			width: 34px;
+			height: 34px;
+		}
+	}
 	@media (prefers-reduced-motion: reduce) {
-		.minimap-canvas.bounce:not(.topdown-active) {
+		.minimap-tap::after {
 			animation: none;
+			opacity: 0.9;
 		}
 	}
+
 	.minimap-canvas.topdown-active {
 		left: 50%;
 		right: auto;
@@ -563,10 +587,14 @@
 		background: #10000E;
 	}
 
+	/* phones: a smaller corner box, it was eating the screen. the two
+	   bounds are kept in the drawn map's own 124:244 proportion (49.2vw is
+	   25vw x 244/124) — draw() fits by "contain", so a box of another shape
+	   just letterboxes inside its border */
 	@media (max-width: 640px) {
 		.minimap-canvas:not(.topdown-active) {
-			width: min(124px, 30vw);
-			height: min(244px, 30vh);
+			width: min(100px, 25vw);
+			height: min(197px, 49.2vw);
 		}
 	}
 </style>

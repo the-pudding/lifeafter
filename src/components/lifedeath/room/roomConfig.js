@@ -1,7 +1,7 @@
 // room, door, and camera constants. world units.
 import { FIGURE_HEIGHT } from "../people/peopleConfig.js";
 import noSvg from "$svg/no.svg?raw";
-import unsureSvg from "$svg/unsure.svg?raw";
+import notSureSvg from "$svg/not-sure.svg?raw";
 import yesSvg from "$svg/yes.svg?raw";
 
 // bg for scene, minimap, topdown page
@@ -31,7 +31,7 @@ export const DOOR_ZONE_COLORS_LIGHT = {
 
 export const ROOM_WIDTH = 30; // left/right: No, Unsure, Yes, one third each
 
-export const ROOM_DEPTH = 250; // front/back (younger <-> older)
+export const ROOM_DEPTH = 290; // front/back (younger <-> older)
 
 export const ROOM_HEIGHT = 50;
 
@@ -82,20 +82,25 @@ export const DOOR_LABEL_MAX_WIDTH = 1.6;
 
 export const DOOR_LABEL_MAX_HEIGHT = 1.0;
 
-// fit label, whichever dimension binds first
-export function sizeDoorLabelSvg(svg, viewBoxWidth, viewBoxHeight) {
+// fit label, whichever dimension binds first. `scale` lets one door's
+// label run bigger than the shared box (the door itself is 2.4 wide, so
+// anything past ~1.5 starts overhanging the panel)
+export function sizeDoorLabelSvg(svg, viewBoxWidth, viewBoxHeight, scale = 1) {
 	const aspect = viewBoxWidth / viewBoxHeight;
-	const widthAtMaxHeight = DOOR_LABEL_MAX_HEIGHT * aspect;
-	const height =
-		widthAtMaxHeight <= DOOR_LABEL_MAX_WIDTH
-			? DOOR_LABEL_MAX_HEIGHT
-			: DOOR_LABEL_MAX_WIDTH / aspect;
+	const maxWidth = DOOR_LABEL_MAX_WIDTH * scale;
+	const maxHeight = DOOR_LABEL_MAX_HEIGHT * scale;
+	const widthAtMaxHeight = maxHeight * aspect;
+	const height = widthAtMaxHeight <= maxWidth ? maxHeight : maxWidth / aspect;
 	return { svg, width: height * aspect, height };
 }
 
+// "not sure" stacks two lines in an 80x56 box, so each line's letters are
+// only ~28 of those units against no/yes's ~48 — it needs ~1.17x just to
+// match their letter size, and the scale below goes past that so this door
+// reads bigger, as intended.
 export const DOOR_LABEL_ASSETS = {
 	No: sizeDoorLabelSvg(noSvg, 58, 48),
-	Unsure: sizeDoorLabelSvg(unsureSvg, 129, 48),
+	Unsure: sizeDoorLabelSvg(notSureSvg, 80, 56, 1.2),
 	Yes: sizeDoorLabelSvg(yesSvg, 71, 48)
 };
 
@@ -155,9 +160,16 @@ export const KEY_MOVE_DELTA_PER_SECOND = 250;
 export const FOLLOW_TIME = 0.1; // seconds to close ~63% of the remaining distance
 
 // door auto-walk. smoothDamp carries velocity across the x->z handoff
-export const DOOR_WALK_SPEED = 9; // world units/second, smoothDamp's speed cap
+export const DOOR_WALK_SPEED = 10; // world units/second, smoothDamp's speed cap
 
-export const DOOR_WALK_SMOOTH_TIME = 0.35; // seconds to close most of the distance at full speed
+// the cruise is capped by the speed above, so this mostly sets how long
+// the arrival takes to settle — the bigger it is, the softer the stop
+export const DOOR_WALK_SMOOTH_TIME = 0.85; // seconds to close most of the distance at full speed
+
+// below both of these the walk is done and normal steering resumes
+export const DOOR_WALK_SETTLE_DISTANCE = 0.03;
+
+export const DOOR_WALK_SETTLE_SPEED = 0.05;
 
 export const DOOR_WALK_YAW_SPEED = Math.PI * 0.7; // radians/second, turning to face forward
 

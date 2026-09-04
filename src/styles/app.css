@@ -124,8 +124,8 @@ svg {
 @media (max-width: 800px) {
 	.story-overlay {
 		box-sizing: border-box;
-		width: calc(100% - 140px);
-		max-width: calc(100% - 140px);
+		width: calc(100% - 115px);
+		max-width: calc(100% - 115px);
 		left: 5px;
 		bottom: 0px;
 		transform: translateX(0%);
@@ -206,12 +206,12 @@ svg {
 }
 @media (max-width: 800px) {
 	.story-overlay p {
-		font-size: 14px;
+		font-size: 17px;
 	}
 }
 @media (max-width: 600px) {
 	.story-overlay p {
-		font-size: 13px;
+		font-size: 16px;
 	}
 }
 /* Links written as markdown in copy.json (see renderStoryText in
@@ -235,6 +235,49 @@ svg {
 		rgba(255, 160, 70, 0) 100%
 	);
 	animation: story-underglow 420ms linear;
+}
+
+/* the shared .hints rule pulls left by 3em to balance the icon each hint
+   carries; the audio row has no icon, so it would sit off centre */
+.story-overlay p .hints.audio {
+	margin-left: 0;
+	padding-top: 0;
+}
+
+/* inline audio toggle, dropped into a beat with {{audio}} */
+.story-overlay p .story-audio {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.4em;
+	vertical-align: baseline;
+	margin: 0 0.15em;
+	padding: 0.15em 0.55em 0.2em;
+	font-family: inherit;
+	font-size: 0.85em;
+	color: #ff8dce;
+	background: transparent;
+	border: 1px solid rgba(255, 141, 206, 0.55);
+	border-radius: 0;
+	cursor: pointer;
+	transition:
+		color 150ms ease-out,
+		border-color 150ms ease-out;
+}
+.story-overlay p .story-audio:hover {
+	color: #fff;
+	border-color: #fff;
+}
+.story-overlay p .story-audio svg {
+	width: 1em;
+	height: 1em;
+	fill: currentColor;
+	display: block;
+}
+.story-overlay p .story-audio svg .wave {
+	fill: none;
+	stroke: currentColor;
+	stroke-width: 1.7;
+	stroke-linecap: round;
 }
 
 .story-overlay p a {

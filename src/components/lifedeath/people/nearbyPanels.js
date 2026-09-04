@@ -7,6 +7,8 @@ import {
 	NEARBY_INCUMBENT_STICKINESS,
 	NEARBY_PANEL_MAX_APPARENT_SCALE,
 	NEARBY_PANEL_MIN_APPARENT_SCALE,
+	NEARBY_PANEL_MAX_FOV_SCALE,
+	NEARBY_PANEL_REFERENCE_FOV,
 	NEARBY_PANEL_REFERENCE_DISTANCE,
 	NEARBY_PANEL_WORLD_WIDTH,
 	NEARBY_PEOPLE_MAX,
@@ -15,7 +17,9 @@ import {
 	NEARBY_PERSON_HEAD_GAP,
 	NEARBY_PERSON_MAX_DISTANCE,
 	NEARBY_PANEL_FADE_SECONDS,
+	NEARBY_PANEL_LINE_COLOR,
 	NEARBY_PANEL_LINE_LENGTH,
+	NEARBY_PANEL_LINE_OPACITY,
 	NEARBY_PANEL_LINE_SECONDS,
 	NEARBY_PANEL_LINE_WIDTH,
 	NEARBY_SELECTION_REFRESH_INTERVAL
@@ -47,6 +51,16 @@ export function createNearbyPanels({
 }) {
 	// once, not per panel. keeps minified label text crisp
 	const maxAnisotropy = renderer.capabilities.getMaxAnisotropy();
+
+	// bigger as the fov widens, so the label holds its pixel size
+	function viewportPanelScale() {
+		const referenceHalfFov = THREE.MathUtils.degToRad(
+			NEARBY_PANEL_REFERENCE_FOV / 2
+		);
+		const halfFov = THREE.MathUtils.degToRad(camera.fov / 2);
+		const scale = Math.tan(halfFov) / Math.tan(referenceHalfFov);
+		return Math.min(NEARBY_PANEL_MAX_FOV_SCALE, Math.max(1, scale));
+	}
 
 	const nearbyVisibilityRaycaster = new THREE.Raycaster();
 	const nearbyVisibilityDirection = new THREE.Vector3();
@@ -120,11 +134,14 @@ export function createNearbyPanels({
 	// they differ only by transform
 	const nearbyLineGeometry = new THREE.PlaneGeometry(1, 1).translate(0, 0.5, 0);
 	const nearbyLineMaterial = new THREE.MeshBasicMaterial({
-		color: 0xffffff,
-		// opaque, and a full z-buffer citizen: anything nearer hides it
-		transparent: false,
+		color: NEARBY_PANEL_LINE_COLOR,
+		// same translucent white as the panel's drawn border. depth-tested,
+		// so bodies in front still hide it, but no depth write — a
+		// transparent quad that writes depth punches out whatever overlaps
+		transparent: true,
+		opacity: NEARBY_PANEL_LINE_OPACITY,
 		depthTest: true,
-		depthWrite: true,
+		depthWrite: false,
 		side: THREE.DoubleSide
 	});
 	nearbyLineMaterial.userData.outlineParameters = { visible: false };
@@ -329,6 +346,7 @@ export function createNearbyPanels({
 		}
 
 		// position every live panel, fading ones included
+		const viewportScale = viewportPanelScale();
 		for (const [index, record] of [...nearbyPanels]) {
 			if (!advancePanelFade(index, record, dt)) continue;
 			const headTop = computeHeadTopPoint(index);
@@ -336,10 +354,11 @@ export function createNearbyPanels({
 			const distance = camera.position.distanceTo(headTop);
 			// what plain perspective would give, clamped to stay legible
 			const naturalApparentScale = NEARBY_PANEL_REFERENCE_DISTANCE / distance;
-			const apparentScale = Math.min(
-				NEARBY_PANEL_MAX_APPARENT_SCALE,
-				Math.max(NEARBY_PANEL_MIN_APPARENT_SCALE, naturalApparentScale)
-			);
+			const apparentScale =
+				Math.min(
+					NEARBY_PANEL_MAX_APPARENT_SCALE,
+					Math.max(NEARBY_PANEL_MIN_APPARENT_SCALE, naturalApparentScale)
+				) * viewportScale;
 			// apparent size -> world scale. inside the band these cancel to 1
 			const scale =
 				apparentScale * (distance / NEARBY_PANEL_REFERENCE_DISTANCE);

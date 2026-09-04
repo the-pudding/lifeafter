@@ -3,7 +3,10 @@ import {
 	variableConfig,
 	columnForWave,
 	getCategoryFor,
-	getRangeFor
+	getRangeFor,
+	gradientColorForValue,
+	numericScale,
+	parseNumericValue
 } from "$data/variable_config.js";
 
 // SELFID "Country:  Ethnicity" -> display. no colon = not a real pair, dropped
@@ -20,6 +23,17 @@ export function selectedVariableLine(person, waveKey, baseVar) {
 	if (!config || !column) return null;
 	const raw = person[column];
 	if (raw === null || raw === undefined || raw === "") return null;
+
+	// numeric: the answer itself against its scale, not a bucket label,
+	// coloured from the same continuous ramp the crowd uses
+	const scale = config.type === "numeric" ? numericScale(baseVar) : null;
+	if (scale) {
+		const value = parseNumericValue(baseVar, raw);
+		const color = gradientColorForValue(baseVar, raw);
+		if (value === null || !color) return null;
+		return { text: `${value} of ${scale.max}`, color };
+	}
+
 	const bucket =
 		config.type === "numeric"
 			? getRangeFor(baseVar, raw)
@@ -38,7 +52,7 @@ export function selectedVariableLine(person, waveKey, baseVar) {
 					: "Unsure about an afterlife";
 		return { text, color: bucket.color };
 	}
-	// raw where it's prose, bucket label for numerics
+	// the answer as recorded, not the bucket it folds into
 	const value = typeof raw === "string" && raw !== "" ? raw : bucket.label;
 	return { text: value, color: bucket.color };
 }

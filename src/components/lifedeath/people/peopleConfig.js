@@ -142,6 +142,16 @@ export const NEARBY_PANEL_WORLD_WIDTH = 0.8;
 // distance where a panel is its literal world size
 export const NEARBY_PANEL_REFERENCE_DISTANCE = 3.5;
 
+// panels are sized in world units, so how big they land on screen is set
+// by the camera's fov — and the fov solve opens up to ~120° on a narrow
+// phone aspect to keep the three doors in frame, which shrinks the text
+// to nothing. scaled against the fov a desktop gets, so a panel holds
+// roughly its pixel size on any viewport. capped, or a phone's panel
+// swallows the screen.
+export const NEARBY_PANEL_REFERENCE_FOV = 64;
+
+export const NEARBY_PANEL_MAX_FOV_SCALE = 2.6;
+
 // apparent-size bounds. between them, scales with distance; outside, clamped
 export const NEARBY_PANEL_MIN_APPARENT_SCALE = 1;
 
@@ -155,7 +165,13 @@ export const NEARBY_PANEL_LINE_LENGTH = 0.2;
 
 export const NEARBY_PANEL_LINE_SECONDS = 0.18;
 
-export const NEARBY_PANEL_LINE_WIDTH = 0.008;
+export const NEARBY_PANEL_LINE_WIDTH = 0.005;
+
+// matches makeLabelPanel's own border, so the stem reads as part of the
+// panel's outline rather than as a separate white rule
+export const NEARBY_PANEL_LINE_COLOR = "#ffffff";
+
+export const NEARBY_PANEL_LINE_OPACITY = 0.35;
 
 // selection re-rank interval. drops are per-frame; only adds throttled
 export const NEARBY_SELECTION_REFRESH_INTERVAL = 0.35; // seconds

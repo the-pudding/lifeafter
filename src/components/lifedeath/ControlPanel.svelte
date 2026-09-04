@@ -11,16 +11,21 @@
 		hideMap = false,
 		hideYear = false,
 		hidden = false,
+		// story mode leaves the dropdown as a read-only label; explore hands
+		// the variable back to the reader
+		exploreMode = false,
 		panelHeight = $bindable(0)
 	} = $props();
 
 	let panelEl;
-	// reports rendered height so the topdown map can clear it. content
-	// varies with variable and viewport, so a fixed guess drifts
+	// reports the panel's bottom edge so the topdown map can clear it —
+	// its own height plus wherever it starts, since narrow screens push it
+	// down past the explore button. content varies with variable and
+	// viewport, so a fixed guess drifts
 	$effect(() => {
 		if (!panelEl) return;
 		const resizeObserver = new ResizeObserver(() => {
-			panelHeight = panelEl.offsetHeight;
+			panelHeight = panelEl.offsetTop + panelEl.offsetHeight;
 		});
 		resizeObserver.observe(panelEl);
 		return () => resizeObserver.disconnect();
@@ -31,28 +36,42 @@
 	{#if loadingMessage}
 		<div class="loading">{loadingMessage}</div>
 	{:else}
-		<label class="field">
-			<!-- <span>Color by</span> -->
-			<select bind:value={selectedVariable}>
-				{#each variableOptions as group (group.parent)}
-					<optgroup label={group.parent}>
-						{#each group.options as option (option.key)}
-							<option value={option.key}>{option.label}</option>
-						{/each}
-					</optgroup>
-				{/each}
-			</select>
-		</label>
+		<!-- keyed on the variable, so picking a new one remounts these and
+		     re-runs the slide-in: the change reads as a change -->
+		{#key selectedVariable}
+			<label class="field field--enter">
+				<!-- <span>Color by</span> -->
+				<select bind:value={selectedVariable} disabled={!exploreMode}>
+					{#each variableOptions as group (group.parent)}
+						<optgroup label={group.parent}>
+							{#each group.options as option (option.key)}
+								<option value={option.key}>{option.label}</option>
+							{/each}
+						</optgroup>
+					{/each}
+				</select>
+			</label>
 
-		{#if legendData?.kind === "categorical"}
-			<div class="legend">
+			{#if legendData?.kind === "gradient"}
+			<!-- continuous scale: the ramp itself, with its two ends -->
+			<div class="legend legend--gradient legend--enter">
+				<span class="legend-end">{legendData.min}</span>
+				<div
+					class="legend-ramp"
+					style:background="linear-gradient(to right, {legendData.stops.join(', ')})"
+				></div>
+				<span class="legend-end">{legendData.max}</span>
+			</div>
+		{:else if legendData?.kind === "categorical"}
+			<div class="legend legend--enter">
 				{#each legendData.items as item (item.label)}
 					<div class="legend-row" style:background={item.color}>
 						{item.label}
 					</div>
 				{/each}
 			</div>
-		{/if}
+			{/if}
+		{/key}
 
 		{#if !hideYear}
 			<div class="button-row">
@@ -82,20 +101,7 @@
 	{/if}
 </div>
 
-{#if !loadingMessage && !hideMap}
-	<!-- tracks whichever small box currently sits at this corner — the
-	     minimap in walk mode (Minimap.lifedeath.svelte's own
-	     .minimap-canvas), or the walk-view preview in top-down mode
-	     (Main's own canvas.webgl-canvas.topdown-active) — see
-	     class:topdown-active below. this div itself ignores pointer
-	     events so drag-to-steer/scroll-to-walk still reach the 3D canvas
-	     underneath; only the button re-enables them. -->
-	<div class="minimap" class:topdown-active={mode === "topdown"} class:is-hidden={hidden}>
-		<button class="minimap-toggle" onclick={() => (mode = mode === "walk" ? "topdown" : "walk")}>
-			{mode === "walk" ? "Top-down view" : "Back to walk view"}
-		</button>
-	</div>
-{/if}
+
 
 <style>
 	.panel {
@@ -111,7 +117,8 @@
 		/* border: 1px solid rgba(255, 255, 255, 0.1); */
 		border-radius: 0.5rem;
 		color: #eee;
-		font-size: 0.8rem;
+		font-family: var(--font-serif);
+		font-size: 0.7rem;
 		line-height: 1.6;
 		/* backdrop-filter: blur(3px); */
 		/* width: 100%; */
@@ -126,20 +133,35 @@
 
 	.field span {
 		color: #a99cb8;
-		font-size: 1rem;
+		font-size: 0.85rem;
 		text-transform: uppercase;
 	}
 
 	.field select {
-		font-size: 1.1rem !important;
+		font-size: 0.95rem !important;
 		/* reset.css targets the bare tag and would win over the mono font */
 		font-family: inherit;
+		font-weight: 700;
 		background:black;
 		color: white;
 		border: 1px solid rgba(255, 255, 255, 0.4);
 		border-radius: 0;
 		padding: 0.3rem 0.4rem;
 		max-width: 600px;
+	}
+
+	/* story mode: reads as a caption, not a control. browsers grey out and
+	   fade a disabled select, so colour and opacity are restated here */
+	.field select:disabled {
+		border-color: transparent;
+		/* no border or box to sit inside, so drop the inset too and let it
+		   line up with the legend below it */
+		padding-left: 0;
+		padding-right: 0;
+		color: white;
+		opacity: 1;
+		-webkit-text-fill-color: white;
+		cursor: default;
 	}
 
 .legend {
@@ -149,7 +171,23 @@
 	margin-left: 0px;
 	color: var(--color-light-purple);
     gap: 0.5rem; /* tighter gap between items */
-    font-size: 1rem; /* larger text size */
+    font-size: 0.85rem;
+}
+
+.legend--gradient {
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.legend-ramp {
+    width: 190px;
+    max-width: 45vw;
+    height: 0.7rem;
+}
+
+.legend-end {
+    color: #fff;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
 }
 
 .legend-row {
@@ -169,12 +207,13 @@
 
 	.mode-toggle {
 		align-self: flex-start;
+		font-family: var(--font-serif);
 		background: transparent;
 		color: rgba(255, 255, 255, 0.4);
 		border: 1px solid rgba(255, 255, 255, 0.25);
 		border-radius: 0rem;
-		padding: 0.35rem 0.6rem;
-		font-size: 0.75rem;
+		padding: 0.3rem 0.55rem;
+		font-size: 0.68rem;
 		cursor: pointer;
 		transition:
 			color 150ms ease-out,
@@ -199,84 +238,78 @@
 
 	.current-age {
 		color: #eee;
-		font-size: 0.8rem;
+		font-size: 0.7rem;
 		font-weight: 600;
 	}
 
 	.instructions {
 		color: #a99cb8;
-		font-size: 0.7rem;
+		font-size: 0.62rem;
 	}
 
 	.loading {
 		color: #c3c2b7;
-		font-size: 0.8rem;
+		font-size: 0.7rem;
 	}
 
 	/* fade, not cut. CSS transition, since the render loop starves Svelte's.
 	   pointer-events dropped so a hidden panel isn't clickable */
-	.panel,
-	.minimap {
+	.panel {
 		transition: opacity 320ms ease-out;
 	}
-	.panel.is-hidden,
-	.minimap.is-hidden {
+	.panel.is-hidden {
 		opacity: 0;
 		pointer-events: none;
 	}
 
-	/* anchor for the toggle button only; the canvases draw themselves.
-	   tracks the walk-mode minimap box, or the topdown preview below, so
-	   the button sits under whichever is shown */
-	.minimap {
-		position: absolute;
-		right: 10px;
-		bottom: 10px;
-		width: 124px;
-		z-index: 999;
-		pointer-events: none;
-	}
 
-	.minimap.topdown-active {
-		right: 24px;
-		width: 200px;
-	}
-
-	@media (max-width: 640px) {
-		.minimap {
-			width: min(124px, 30vw);
+	/* narrow screens: smaller type; nothing to clear at the top any more,
+	   the explore button lives down by the minimap now */
+	@media (max-width: 700px) {
+		.panel {
+			font-size: 0.62rem;
+			gap: 0.5rem;
+			padding: 0.75rem;
 		}
-		.minimap.topdown-active {
-			/* the preview is hidden on mobile topdown, and the enlarged
-			   minimap is JS-sized, so span the full width instead */
-			right: 0;
-			left: 0;
-			width: auto;
+		.panel :global(select),
+		.field select {
+			font-size: 0.8rem !important;
+		}
+		.legend {
+			font-size: 0.72rem;
+			gap: 0.35rem;
+		}
+		.mode-toggle {
+			font-size: 0.62rem;
+			padding: 0.25rem 0.45rem;
 		}
 	}
 
-	.minimap-toggle {
-		position: absolute;
-		right: 0;
-		left: 0;
-		bottom: 7px;
-		width: 100%;
-		text-align: center;
-		pointer-events: auto;
-		background: rgba(10, 5, 16, 0.85);
-		color: #eee;
-		border: 1px solid rgba(255, 255, 255, 0.2);
-		padding: 8px 6px;
-		border-radius: 0px;
-		font-family: var(--font-mono);
-		font-size: 14px !important;
-		cursor: pointer;
-		backdrop-filter: blur(4px);
-		z-index: 999;
-		box-sizing: border-box;
+	/* a new variable slides its label and legend in from the left, so the
+	   recolor isn't the only signal that something changed. CSS keyframes
+	   rather than a svelte transition — the three.js loop next door starves
+	   main-thread-driven ones */
+	.field--enter {
+		animation: control-slide-in 380ms cubic-bezier(0.16, 0.9, 0.3, 1) both;
 	}
-
-	.minimap-toggle:hover {
-		background: rgba(255, 255, 255, 0.18);
+	.legend--enter {
+		/* a beat behind the label, so they read as one sweep */
+		animation: control-slide-in 380ms cubic-bezier(0.16, 0.9, 0.3, 1) 70ms both;
+	}
+	@keyframes control-slide-in {
+		from {
+			transform: translateX(-18px);
+			opacity: 0;
+		}
+		to {
+			transform: translateX(0);
+			opacity: 1;
+		}
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.field--enter,
+		.legend--enter {
+			animation: none;
+		}
 	}
 </style>

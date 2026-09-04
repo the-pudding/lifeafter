@@ -84,7 +84,9 @@ export function buildDoors(scene, doors, config) {
 		// own baseColor/panelMaterial brightening just above it.
 		label.material[4].color.setScalar(DOOR_LABEL_DIM_BRIGHTNESS);
 		// comfortably in front of the panel's own front face (facadeThickness/2).
-		label.position.set(doorWidth / 2, doorHeight * 0.62, facadeThickness / 2);
+		// sits above the knob (doorHeight * 0.5, x near the free edge): the
+		// two-line label is wide enough to reach it, unlike no/yes
+		label.position.set(doorWidth / 2, doorHeight * 0.76, facadeThickness / 2);
 		doorFixtures.add(label);
 
 		// 3. hinges — three barrels along the door's pivot edge (x = 0 in
