@@ -4624,15 +4624,15 @@ export const variableConfig =
 // yes/no lands on the two endpoints and a 5-bucket scale spreads across all
 // of it.
 //
-// The dark end stops at a deep purple rather than going near-black: the room
-// itself is near-black, and a body or minimap dot below roughly this
-// lightness stops reading as a color at all.
+// The dark end is a deep, saturated purple rather than a washed one: it has
+// to stay a colour against a near-black room, so the saturation is what
+// carries it rather than lightness.
 export const GRADIENT_PALETTE = [
-	"#52187d", // dark purple
-	"#7a2299",
-	"#a52aa2",
-	"#d62c9f",
-	"#ff00aa" // bright pink
+	"#3a0a6b", // deep saturated purple
+	"#6b12a3",
+	"#a318b0",
+	"#e015b4",
+	"#ff2ec4" // bright pink
 ];
 
 // blends two hex colors; t = 0 -> a, 1 -> b
@@ -4946,9 +4946,35 @@ export function colorFor(baseVar, rawValue) {
 }
 
 /** Dropdown options grouped by parent, in PARENT_ORDER, for a pulldown menu. */
-export function groupedVariableOptions() {
+// The legend has to stay readable, and the crowd has to stay tellable
+// apart. Anything the bucketing pass could fold lands at four categories
+// or fewer; what's left above that is qualitative or hand-grouped (every
+// religion, every employment status) and can't be folded without inventing
+// a meaning. Those still read fine as a row in the modal, so they stay
+// there — they just aren't offered as something to colour the room by.
+export const MAX_COLORABLE_CATEGORIES = 4;
+
+/** Whether a variable can be used to colour the crowd. */
+export function isColorable(baseVar) {
+	const config = variableConfig[baseVar];
+	if (!config) return false;
+	// numerics are a continuous ramp; bucket counts don't apply
+	if (config.type === "numeric") return numericScale(baseVar) !== null;
+	const scale = (config.categories ?? []).filter(
+		(bucket) => !isAdminBucket(bucket)
+	);
+	return scale.length > 0 && scale.length <= MAX_COLORABLE_CATEGORIES;
+}
+
+/**
+ * Variables grouped for a <select>. `colorableOnly` drops the ones that
+ * can't be shown as a legend — the control panel passes it, the modal
+ * doesn't, so the modal keeps reporting every answer a person gave.
+ */
+export function groupedVariableOptions({ colorableOnly = false } = {}) {
 	const byParent = new Map(PARENT_ORDER.map((parent) => [parent, []]));
 	for (const [key, config] of Object.entries(variableConfig)) {
+		if (colorableOnly && !isColorable(key)) continue;
 		if (!byParent.has(config.parent)) byParent.set(config.parent, []);
 		byParent.get(config.parent).push({ key, label: config.label });
 	}

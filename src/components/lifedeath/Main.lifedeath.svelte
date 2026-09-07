@@ -19,7 +19,11 @@
 	import { formatNearbyPersonLines } from "./people/personSummary.js";
 	import { buildHeightLookup, createHeightScaleFor } from "./people/personHeights.js";
 	import { prepareModel } from "./people/crowdModels.js";
-	import { createStoryBeats } from "./story/storyBeats.js";
+	import {
+		createStoryBeats,
+		storyGapAgeRanges,
+		STORY_AUDIO_TOKEN
+	} from "./story/storyBeats.js";
 	import { createNearbyPanels } from "./people/nearbyPanels.js";
 	import loadCsv from "$utils/loadCsv.js";
 	import {
@@ -113,6 +117,7 @@
 		SCROLL_WALK_NARROW_WIDTH,
 		SCROLL_WALK_WIDE_WIDTH,
 		SIDE_WALL_MARGIN,
+		STORY_GAP_FLOOR_COLOR,
 		TURN_CLEARANCE,
 		VESTIBULE_CEILING_HEIGHT,
 		VESTIBULE_DEPTH,
@@ -206,7 +211,6 @@
 	// rather than splitting the string (which would cut a tag in half).
 	// `playing` is an argument, not a closure read, so the template re-runs
 	// this when it changes and the label stays honest
-	const STORY_AUDIO_TOKEN = /\{\{audio\}\}/g;
 	function storyAudioButton(playing) {
 		const icon = playing
 			? '<path class="wave" d="M15.5 9.2a4 4 0 0 1 0 5.6"/><path class="wave" d="M18 6.8a7.4 7.4 0 0 1 0 10.4"/>'
@@ -215,7 +219,7 @@
 			`<button class="story-audio" type="button" data-story-audio aria-pressed="${playing}">` +
 			`<svg viewBox="0 0 24 24" aria-hidden="true">` +
 			`<path d="M4 9.5h3.2L12 5.4v13.2L7.2 14.5H4z"/>${icon}</svg>` +
-			`${playing ? "Sound on" : "Sound off"}</button>`
+			`${playing ? "Turn off audio" : "Turn on audio"}</button>`
 		);
 	}
 
@@ -226,7 +230,8 @@
 				(_match, label, href) =>
 					`<a href="${href}" target="_blank" rel="noopener noreferrer">${label}</a>`
 			)
-			.replace(STORY_AUDIO_TOKEN, () => storyAudioButton(playing));
+			.split(STORY_AUDIO_TOKEN)
+			.join(storyAudioButton(playing));
 	}
 	// story beat asked to hide the panel/minimap
 	let hidePanel = $state(false);
@@ -236,6 +241,8 @@
 	let hideYear = $state(false);
 	// whether any copy.json entry is active here at all
 	let storyHasBeat = $state(false);
+	// the active beat's id; {id}.mp3 narrates it
+	let narrationId = $state(null);
 	// load screen cross-fade. slow on purpose: the room resolving out of
 	// the black is the opening beat
 	const LOADING_FADE_MS = 2600;
@@ -364,15 +371,282 @@
 	// background music: off until asked for. the file is 13MB, so it is
 	// only fetched on the first unmute, never on load
 	let audioOn = $state(false);
-	let audioEl;
-	// the element is the source of truth, not a flag of our own: play()'s
-	// promise can stay pending, which would leave the button lying about
-	// what's actually happening
-	function toggleAudio() {
-		if (!audioEl) return;
-		if (audioEl.paused) audioEl.play().catch(() => {});
-		else audioEl.pause();
+	let sundayEl;
+	let mondayEl;
+	// overlap when the score changes: long, so one track dissolves into
+	// the other rather than swapping
+	const MUSIC_FADE_MS = 3000;
+	// ducking under narration is a different job — that has to be prompt,
+	// or the voice starts before the bed has moved out of its way
+	const MUSIC_DUCK_FADE_MS = 1300;
+	// Monday scores the parts the reader drives: explore mode, and any
+	// stretch of the room the script doesn't speak over. Sunday scores the
+	// narrated beats.
+	const musicTrack = $derived(exploreMode || !storyHasBeat ? "monday" : "sunday");
+	// [incoming, outgoing] for the track the state currently calls for
+	function trackPair(track) {
+		return track === "monday" ? [mondayEl, sundayEl] : [sundayEl, mondayEl];
 	}
+
+	// the pair currently ramping past each other, or null when settled
+	let musicFade = null;
+	// both tracks play at once for the duration — that overlap IS the
+	// crossfade. stepped from the render loop rather than a timer: this
+	// page keeps the main thread busy enough that setInterval fires
+	// whenever it likes, which stalled the ramp partway
+	function crossfadeMusic(incoming, outgoing) {
+		musicFade = { incoming, outgoing };
+	}
+	// moves `current` toward `target` by at most `step`
+	function approach(current, target, step) {
+		if (current < target) return Math.min(target, current + step);
+		return Math.max(target, current - step);
+	}
+	function advanceMusicFade(dt) {
+		const crossStep = (dt * 1000) / MUSIC_FADE_MS;
+		const duckStep = (dt * 1000) / MUSIC_DUCK_FADE_MS;
+		// the active track always eases toward its target, which drops while
+		// narration is playing so the voice sits on top
+		const target = narrationPlaying ? MUSIC_DUCK_VOLUME : 1;
+		const [active] = trackPair(musicTrack);
+		// coming up as part of a track change moves at the crossfade's pace;
+		// everything else it does is ducking, which is quicker
+		const isCrossfadingIn = musicFade?.incoming === active;
+		if (active && !active.paused) {
+			active.volume = approach(
+				active.volume,
+				target,
+				isCrossfadingIn ? crossStep : duckStep
+			);
+		}
+		if (!musicFade) return;
+		const { incoming, outgoing } = musicFade;
+		if (incoming && incoming.paused) incoming.volume = target;
+		if (outgoing) outgoing.volume = Math.max(0, outgoing.volume - crossStep);
+		const incomingDone = !incoming || Math.abs(incoming.volume - target) < 0.01;
+		if (incomingDone && (!outgoing || outgoing.volume <= 0)) {
+			outgoing?.pause();
+			musicFade = null;
+		}
+	}
+
+	// audioOn is set here rather than from the elements' own play/pause:
+	// during a crossfade the outgoing track pauses, and that event would
+	// otherwise report the music as off while it is still playing
+	function toggleAudio() {
+		const [incoming, outgoing] = trackPair(musicTrack);
+		if (!incoming) return;
+		if (audioOn) {
+			musicFade = null;
+			incoming.pause();
+			outgoing?.pause();
+			audioOn = false;
+			return;
+		}
+		incoming.volume = 0;
+		incoming.play().catch(() => {});
+		crossfadeMusic(incoming, outgoing);
+		audioOn = true;
+	}
+
+	// --- narration -------------------------------------------------------
+	// Each story beat with an id has a matching {id}.mp3 reading it aloud.
+	// It plays once on entering that stretch of the room, over the music,
+	// which ducks under it. Re-entering starts it again from the top.
+	const NARRATION_VOLUME = 1;
+	// past what an <audio> element can do on its own: element volume caps
+	// at 1, so the voice is amplified through a gain node instead
+	const NARRATION_GAIN = 3.6;
+	// quick, not a crossfade: this is an interruption, not a transition
+	const NARRATION_FADE_MS = 350;
+	// where the music sits while someone is talking
+	const MUSIC_DUCK_VOLUME = 0.34;
+	let narrationEl;
+	let narrationFadingOut = false;
+	// built once, on the first beat with sound on. createMediaElementSource
+	// can only be called once per element, and routing through it means the
+	// context has to be running or the voice is silent
+	let narrationSource = null;
+	function ensureNarrationGain() {
+		if (!narrationEl || narrationSource) return;
+		try {
+			audioContext ??= new (window.AudioContext || window.webkitAudioContext)();
+			narrationSource = audioContext.createMediaElementSource(narrationEl);
+			// compressor first: at this much gain the peaks would otherwise
+			// clip, and clipping reads as distortion rather than volume. it
+			// also evens out quiet and loud passages between recordings
+			const compressor = audioContext.createDynamicsCompressor();
+			compressor.threshold.value = -26;
+			compressor.knee.value = 28;
+			compressor.ratio.value = 10;
+			compressor.attack.value = 0.004;
+			compressor.release.value = 0.22;
+			const gain = audioContext.createGain();
+			gain.gain.value = NARRATION_GAIN;
+			narrationSource
+				.connect(compressor)
+				.connect(gain)
+				.connect(audioContext.destination);
+		} catch {
+			// no web audio here; the element plays at its own volume
+			narrationSource = null;
+		}
+	}
+	// drives the ducking, so the music lifts again the moment it ends
+	let narrationPlaying = $state(false);
+
+	function stopNarration() {
+		if (!narrationEl || narrationEl.paused) {
+			narrationPlaying = false;
+			return;
+		}
+		narrationFadingOut = true;
+	}
+
+	function advanceNarrationFade(dt) {
+		if (!narrationEl || !narrationFadingOut) return;
+		narrationEl.volume = Math.max(
+			0,
+			narrationEl.volume - (dt * 1000) / NARRATION_FADE_MS
+		);
+		if (narrationEl.volume <= 0) {
+			narrationEl.pause();
+			narrationFadingOut = false;
+			narrationPlaying = false;
+		}
+	}
+
+	// beat in, beat out. only ever with sound on
+	$effect(() => {
+		const id = narrationId;
+		const soundOn = audioOn;
+		if (!narrationEl) return;
+		if (!soundOn || !id) {
+			stopNarration();
+			return;
+		}
+		narrationFadingOut = false;
+		ensureNarrationGain();
+		if (audioContext?.state === "suspended") audioContext.resume();
+		narrationEl.src = asset(`/assets/app/${id}.mp3`);
+		narrationEl.volume = NARRATION_VOLUME;
+		narrationEl.currentTime = 0;
+		narrationPlaying = true;
+		// a beat with no recording just stays quiet (see onerror below)
+		narrationEl.play().catch(() => {
+			narrationPlaying = false;
+		});
+	});
+
+	// A door: a low wooden thunk rather than the UI's blip. A sine for the
+	// body of it, plus a short noise burst through a lowpass for the knock,
+	// which is what stops it reading as a beep.
+	function playDoorSound() {
+		if (!audioOn) return;
+		try {
+			audioContext ??= new (window.AudioContext || window.webkitAudioContext)();
+			if (audioContext.state === "suspended") audioContext.resume();
+			const start = audioContext.currentTime;
+
+			const body = audioContext.createOscillator();
+			const bodyGain = audioContext.createGain();
+			body.type = "sine";
+			body.frequency.setValueAtTime(190, start);
+			body.frequency.exponentialRampToValueAtTime(70, start + 0.16);
+			bodyGain.gain.setValueAtTime(0.0001, start);
+			bodyGain.gain.exponentialRampToValueAtTime(0.22, start + 0.008);
+			bodyGain.gain.exponentialRampToValueAtTime(0.0001, start + 0.28);
+			body.connect(bodyGain).connect(audioContext.destination);
+			body.start(start);
+			body.stop(start + 0.3);
+
+			// one short buffer of noise, rolled off so it thuds rather than hisses
+			const frames = Math.floor(audioContext.sampleRate * 0.06);
+			const buffer = audioContext.createBuffer(1, frames, audioContext.sampleRate);
+			const samples = buffer.getChannelData(0);
+			for (let i = 0; i < frames; i++) {
+				samples[i] = (Math.random() * 2 - 1) * (1 - i / frames);
+			}
+			const knock = audioContext.createBufferSource();
+			knock.buffer = buffer;
+			const filter = audioContext.createBiquadFilter();
+			filter.type = "lowpass";
+			filter.frequency.value = 900;
+			const knockGain = audioContext.createGain();
+			knockGain.gain.setValueAtTime(0.14, start);
+			knockGain.gain.exponentialRampToValueAtTime(0.0001, start + 0.09);
+			knock.connect(filter).connect(knockGain).connect(audioContext.destination);
+			knock.start(start);
+		} catch {
+			// no audio available; the door just opens quietly
+		}
+	}
+
+	// A short synthesised blip for clicks — cheap enough to build in the
+	// browser that it isn't worth another file. Only sounds when the reader
+	// has turned audio on, and shares that switch rather than having its
+	// own.
+	const CLICK_VOLUME = 0.09;
+	let audioContext = null;
+	function playClick() {
+		if (!audioOn) return;
+		try {
+			audioContext ??= new (window.AudioContext || window.webkitAudioContext)();
+			if (audioContext.state === "suspended") audioContext.resume();
+			const start = audioContext.currentTime;
+			const osc = audioContext.createOscillator();
+			const gain = audioContext.createGain();
+			// a quick drop in pitch reads as a tap rather than a beep
+			osc.type = "sine";
+			osc.frequency.setValueAtTime(1500, start);
+			osc.frequency.exponentialRampToValueAtTime(620, start + 0.035);
+			// ramps, not steps: an instant cut is a pop
+			gain.gain.setValueAtTime(0.0001, start);
+			gain.gain.exponentialRampToValueAtTime(CLICK_VOLUME, start + 0.005);
+			gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.07);
+			osc.connect(gain).connect(audioContext.destination);
+			osc.start(start);
+			osc.stop(start + 0.08);
+		} catch {
+			// no audio available; the click just stays silent
+		}
+	}
+
+	// every button in the piece clicks, without each one having to ask.
+	// people and the minimap are handled at their own call sites, and
+	// neither is a <button>, so nothing double-fires
+	$effect(() => {
+		const onDocumentClick = (event) => {
+			if (event.target.closest?.("button")) playClick();
+		};
+		document.addEventListener("click", onDocumentClick);
+		return () => document.removeEventListener("click", onDocumentClick);
+	});
+
+	// nudges both elements into fetching. `preload="none"` keeps them off
+	// the critical path during load; this flips them to "auto" once the
+	// scene is up, so the audio is already in hand whenever it's wanted
+	function preloadMusic() {
+		for (const el of [sundayEl, mondayEl]) {
+			if (!el) continue;
+			el.preload = "auto";
+			el.load();
+		}
+	}
+
+	// the score follows the mode, but only once the reader has asked for
+	// sound at all
+	$effect(() => {
+		const track = musicTrack;
+		if (!audioOn) return;
+		const [incoming, outgoing] = trackPair(track);
+		if (!incoming) return;
+		if (incoming.paused) {
+			incoming.volume = 0;
+			incoming.play().catch(() => {});
+		}
+		crossfadeMusic(incoming, outgoing);
+	});
 
 	let loadingMessage = $state("Loading people…");
 	// kept mounted through the fade, so the sign doesn't cut
@@ -468,7 +742,7 @@
 	let minimapComponent;
 
 	// dropdown options by parent
-	const variableOptions = groupedVariableOptions();
+	const variableOptions = groupedVariableOptions({ colorableOnly: true });
 
 
 
@@ -526,6 +800,10 @@
 				sceneCleanup();
 				disposeRoot();
 			};
+			// the scene is up, so the network is free: pull both tracks down
+			// now rather than mid-experience, when a mode change would
+			// otherwise stall waiting on a download
+			preloadMusic();
 			// fade rather than cut; unmounted once the transition is done.
 			// no waiting on the line — it just gets cut off wherever it is
 			loadingFading = true;
@@ -596,6 +874,7 @@
 					highlightMap = result.highlightMap;
 					hideYear = result.hideYear;
 					storyHasBeat = result.hasBeat;
+					narrationId = result.narrationId;
 				}
 			});
 			storyBeatsImpl = storyBeats;
@@ -806,6 +1085,11 @@
 					ageMin,
 					ageMax,
 					ageToZ,
+					// quiet stretches of the script, as depth spans
+					storyGapZRanges: storyGapAgeRanges(copy, ageMin, ageMax).map(
+						([start, end]) => [ageToZ(start), ageToZ(end)]
+					),
+					storyGapFloorColor: STORY_GAP_FLOOR_COLOR,
 					exteriorGroup
 				}
 			);
@@ -1183,6 +1467,7 @@
 			// sets the walk target through a door; per-frame easing animates it.
 			// X first, then forward. shared by click and keyboard
 			function walkThroughDoor(door) {
+				playDoorSound();
 				targetWalkX = door.x;
 				pendingDoorWalkZ = AUTO_WALK_INSIDE_Z;
 				autoWalking = true;
@@ -1215,6 +1500,7 @@
 
 			// opens the modal for an index and lights them. shared by raycast + minimap
 			function selectPerson(index) {
+				playClick();
 				clickedPerson = respondents[index];
 				clickedPersonIndex = index;
 			}
@@ -1655,6 +1941,8 @@
 				cameraPitch = targetCameraPitch + roomEntryPitchOffset;
 
 				updateEnteredRoom();
+				advanceMusicFade(dt);
+				advanceNarrationFade(dt);
 				advanceCrowdColors(dt);
 				crowdAnimator.update(dt, simulatedElapsed);
 				updateCamera();
@@ -1694,6 +1982,7 @@
 				updateExteriorVisibility();
 				if (exploreMode) {
 					// story off; clear what it left on screen
+					narrationId = null;
 					storyTexts = [];
 					hidePanel = false;
 					hideMap = false;
@@ -1830,15 +2119,19 @@
 			{#if loadingSignRect}
 				<div
 					class="loading-sign"
+					class:loading-hide={loadingFading}
 					style="left:{loadingSignRect.centerX}px; top:{loadingSignRect.centerY}px; width:{loadingSignRect.width}px;"
 				>
 					{@html signSvg}
 				</div>
 			{/if}
 			{#if loadingLineVisible}
+				<div class="loading-label" class:loading-hide={loadingFading}>
+					loading…
+				</div>
 				<svg
 					class="loading-line"
-					class:loading-line--out={loadingFading}
+					class:loading-hide={loadingFading}
 					viewBox="0 0 120 24"
 					role="img"
 					aria-label={loadingMessage}
@@ -1899,6 +2192,7 @@
 		bottomClear={storyClearPx}
 		bounce={shouldBounceMap}
 		onAcknowledge={() => (minimapAcknowledged = true)}
+		onClickSound={playClick}
 		onPersonClick={(index) => selectPersonImpl?.(index)}
 	/>
 	<!-- covers the walk/topdown swap. CSS transition, not Svelte's, which
@@ -1910,16 +2204,30 @@
 	></div>
 	<!-- shown while pressing into the light at the back wall -->
 	<div class="light-message" class:light-message--on={inLight}>
-		Hi, it's good to see you here. But you can't go in here right now.
+		Hi, it's good to see you. But you can't go in here right now.
 	</div>
 	<!-- background music, off by default -->
+	<!-- mp3, not the wav originals: 1.2MB and 3.5MB against 13MB and 39MB.
+	     neither is fetched until the reader turns sound on; the one being
+	     switched to loads at that moment -->
 	<audio
-		bind:this={audioEl}
-		src={asset("/assets/app/Sunday.wav")}
+		bind:this={sundayEl}
+		src={asset("/assets/app/Sunday.mp3")}
 		loop
 		preload="none"
-		onplay={() => (audioOn = true)}
-		onpause={() => (audioOn = false)}
+	></audio>
+	<!-- the beat's own recording. one element, re-pointed per beat -->
+	<audio
+		bind:this={narrationEl}
+		preload="none"
+		onended={() => (narrationPlaying = false)}
+		onerror={() => (narrationPlaying = false)}
+	></audio>
+	<audio
+		bind:this={mondayEl}
+		src={asset("/assets/app/Monday.mp3")}
+		loop
+		preload="none"
 	></audio>
 	<button
 		class="audio-toggle"
@@ -1939,21 +2247,32 @@
 		</svg>
 	</button>
 	<!-- leaves the story for free roaming, or returns to it -->
-	<button
-		class="explore-toggle"
-		class:explore-toggle--hidden={inLight || currentAge < EXPLORE_MIN_AGE}
-		onclick={() => {
-			exploreMode = !exploreMode;
-			if (exploreMode) {
-				// stays on whichever wave is showing — the reader picks from here
-			} else {
-				// re-arm, so the current beat applies again
-				storyBeatsImpl?.reset();
-			}
-		}}
-	>
-		{exploreMode ? "Return to story" : "Skip to explore"}
-	</button>
+	{#if mode === "topdown"}
+		<!-- the map is the whole view here, so the only thing this corner
+		     has to offer is the way back -->
+		<button
+			class="explore-toggle explore-toggle--wide"
+			onclick={() => (mode = "walk")}
+		>
+			Return to walk mode
+		</button>
+	{:else}
+		<button
+			class="explore-toggle"
+			class:explore-toggle--hidden={inLight || currentAge < EXPLORE_MIN_AGE}
+			onclick={() => {
+				exploreMode = !exploreMode;
+				if (exploreMode) {
+					// stays on whichever wave is showing — the reader picks from here
+				} else {
+					// re-arm, so the current beat applies again
+					storyBeatsImpl?.reset();
+				}
+			}}
+		>
+			{exploreMode ? "Return to story" : "Skip to explore"}
+		</button>
+	{/if}
 	{#if debugMode}
 		<div class="debug-panel">
 			<div>x: {debugStats.x.toFixed(2)}  z: {debugStats.z.toFixed(2)}</div>
@@ -2013,7 +2332,9 @@
 	.lifedeath-room.topdown-active :global(canvas.webgl-canvas) {
 		top: auto;
 		left: auto;
-		right: 24px;
+		/* same right edge and width as the "return to walk mode" button
+		   below it, so the two share a left edge */
+		right: 10px;
 		bottom: 50px;
 		width: 200px;
 		height: 150px;
@@ -2023,8 +2344,9 @@
 		cursor: pointer;
 	}
 
-	/* no room for both the preview and the "Back to walk view" button */
-	@media (max-width: 640px) {
+	/* the preview is a luxury: below this there isn't the room for it
+	   beside the map, and the button alone does the same job */
+	@media (max-width: 900px) {
 		.lifedeath-room.topdown-active :global(canvas.webgl-canvas) {
 			/* !important: only that outranks three.js's inline display */
 			display: none !important;
@@ -2093,11 +2415,6 @@
 	.loading-screen--out {
 		opacity: 0;
 	}
-	/* the load line is the one thing that shouldn't linger over the room.
-	   it carries no transition at all, so this hides it outright */
-	.loading-line--out {
-		opacity: 0;
-	}
 	.loading-sign {
 		position: absolute;
 		/* centred on the projected rect, so left/top are its middle */
@@ -2110,15 +2427,32 @@
 	.loading-sign :global(svg) {
 		width: 100%;
 		height: auto;
+		display: block;
 	}
-	/* the artwork is white; dulled here to the colour unlit tube glass
-	   takes against a dark room. the surrounding tube is a <rect> with a
-	   white *stroke*, not a filled path, so it needs its own rule */
+	/* unlit tubing, but pink rather than grey — a neon sign that hasn't
+	   been switched on yet. no halo: the glow is what "on" looks like, and
+	   the real sign behind it supplies that once the load screen goes. the
+	   tube outline is a <rect> with a white *stroke*, not a filled path, so
+	   it needs its own rule */
 	.loading-sign :global(path) {
-		fill: #392f3c;
+		fill: #6b3350;
 	}
 	.loading-sign :global(rect) {
-		stroke: #392f3c;
+		stroke: #6b3350;
+	}
+
+	/* sits just above the line, both centred on the same axis */
+	.loading-label {
+		position: absolute;
+		left: 50%;
+		top: 50%;
+		transform: translateX(-50%);
+		margin-top: -38px;
+		font-family: var(--font-serif);
+		font-size: 0.85rem;
+		letter-spacing: 0.06em;
+		color: rgba(255, 255, 255, 0.65);
+		white-space: nowrap;
 	}
 	.loading-line {
 		position: absolute;
@@ -2133,6 +2467,8 @@
 		margin-top: -12px;
 		overflow: visible;
 	}
+	/* the same neon treatment the sign gets: a white-hot core in a pink
+	   halo, rather than a flat pink stroke */
 	.loading-line path {
 		fill: none;
 		/* the room's neon pink, so the load reads as part of the piece */
@@ -2164,6 +2500,14 @@
 			animation: none;
 			stroke-dashoffset: 0;
 		}
+	}
+
+	/* the moment the crowd is ready, everything drawn on the load screen
+	   goes at once — only the black behind it keeps fading, so the room
+	   comes up out of the dark on its own. no transition here, and
+	   declared after the elements it hides so nothing outranks it */
+	.loading-hide {
+		opacity: 0;
 	}
 
 	/* top-right, the corner the explore toggle used to hold */
@@ -2237,6 +2581,12 @@
 			font-size: 0.7rem;
 			padding: 0.3rem 0.35rem;
 		}
+	}
+	/* matches the walk-view preview above it rather than the minimap's
+	   width, which the topdown view doesn't sit in anyway. fixed, not
+	   auto, so the two line up on the left whatever the label says */
+	.explore-toggle--wide {
+		width: 200px;
 	}
 	/* out of the way while the light's message is up */
 	.explore-toggle--hidden {

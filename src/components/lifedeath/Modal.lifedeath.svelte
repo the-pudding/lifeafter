@@ -225,6 +225,10 @@
 		height: 100%;
 		height: 100dvh;
 		background: #0a0510;
+		/* thin rule down the open edge, so the panel reads as a panel
+		   against the room rather than bleeding into it */
+		border-right: 1px solid rgba(255, 255, 255, 0.22);
+		box-sizing: border-box;
 		z-index: 999999;
 		transition: left 200ms cubic-bezier(0.25, 0.1, 0.25, 1);
 		overflow-y: scroll;

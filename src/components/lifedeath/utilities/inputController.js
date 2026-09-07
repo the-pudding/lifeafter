@@ -1,4 +1,17 @@
 import { wrapAngle } from "../room/roomMath.js";
+import {
+	MAX_WHEEL_STEP,
+	WHEEL_FULL_SPEED_DELTA,
+	WHEEL_RESPONSE_EXPONENT
+} from "../room/roomConfig.js";
+
+// raw wheel/swipe delta -> the delta the walker actually gets. keys and
+// the door auto-walk don't come through here, so their own rates are
+// untouched by the curve
+function shapeWalkDelta(delta) {
+	const magnitude = Math.min(1, Math.abs(delta) / WHEEL_FULL_SPEED_DELTA);
+	return Math.sign(delta) * magnitude ** WHEEL_RESPONSE_EXPONENT * MAX_WHEEL_STEP;
+}
 
 /**
  * gesture recognition for the walk camera: drag to steer, scroll or
@@ -46,7 +59,7 @@ export function createInputController({
 	function handleWheel(event) {
 		if (getMode() !== "walk") return;
 		event.preventDefault(); // don't also scroll the page
-		walk(event.deltaY * getScrollWalkScale());
+		walk(shapeWalkDelta(event.deltaY) * getScrollWalkScale());
 	}
 
 	// steers only while held
@@ -168,7 +181,10 @@ export function createInputController({
 				const fovScale = getCameraFov() / 60;
 				const BASE_WALK_SPEED = 300;
 
-				walk(dyNormalized * BASE_WALK_SPEED * fovScale * getScrollWalkScale());
+				walk(
+					shapeWalkDelta(dyNormalized * BASE_WALK_SPEED * fovScale) *
+						getScrollWalkScale()
+				);
 			}
 		}
 

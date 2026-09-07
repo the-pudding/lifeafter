@@ -100,6 +100,19 @@ svg {
 	font-family: var(--font-mono);
 }
 
+/* nothing here is meant to be highlighted: a drag is the camera, and a
+   stray selection both looks broken and swallows the gesture. inherited,
+   so it covers the overlays and the modal too */
+.lifedeath-room,
+.lifedeath-room *,
+.shelf,
+.shelf * {
+	-webkit-user-select: none;
+	user-select: none;
+	/* stops the long-press magnifier/callout on iOS */
+	-webkit-touch-callout: none;
+}
+
 .story-overlay {
 	font-family: var(--font-serif);
 	font-weight: 100;

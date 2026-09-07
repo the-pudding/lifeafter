@@ -11,6 +11,17 @@ const DEFAULT_WAVE = "Y1";
  * getters/setters because it reads live walker state and writes Svelte
  * state Main owns. onUpdate delivers everything in one batch per frame.
  */
+/**
+ * Marks where the audio toggle goes in a beat's text. copy.json is
+ * regenerated from a Google Doc (`npm run gdoc`), so anything written into
+ * the file by hand is lost on the next fetch — the opening beat gets this
+ * injected below instead of carrying it. Writing {{audio}} into the doc
+ * still works, and wins: the injection only fires when it's absent.
+ */
+export const STORY_AUDIO_TOKEN = "{{audio}}";
+
+const STORY_AUDIO_MARKUP = `<div class="hints audio">${STORY_AUDIO_TOKEN}</div>`;
+
 export function createStoryBeats({
 	copy,
 	getCurrentAge,
@@ -42,6 +53,10 @@ export function createStoryBeats({
 		lastStoryAssignedWave = null;
 	}
 
+	// the opening beat, by identity — the first shared entry that actually
+	// renders a box. flag-only entries above it don't count
+	const firstTextEntry = (copy.all ?? []).find((entry) => entry.text?.trim());
+
 	// active beats: matching "all" entries plus the walker's zone.
 	// applies the first entry's var_color/wave
 	function update() {
@@ -54,7 +69,8 @@ export function createStoryBeats({
 				hideMap: false,
 				highlightMap: false,
 				hideYear: false,
-				hasBeat: false
+				hasBeat: false,
+				narrationId: null
 			});
 			return;
 		}
@@ -67,6 +83,8 @@ export function createStoryBeats({
 		let matchedHideYear = false;
 		let matchedAny = false;
 		let matchedVariableEntry = null;
+		// the first matching entry that has one; its {id}.mp3 narrates the beat
+		let matchedNarrationId = null;
 		// flags arrive as "true" from the exported spreadsheet
 		const isFlagSet = (value) => value === "true" || value === true;
 		const collect = (entries) => {
@@ -75,7 +93,20 @@ export function createStoryBeats({
 					matchedAny = true;
 					// text-free entries still carry flags. empty text would render
 					// as a blank filled box
-					if (entry.text?.trim()) matches.push(entry.text);
+					if (entry.text?.trim()) {
+						const text = entry.text;
+						matches.push(
+							entry === firstTextEntry && !text.includes(STORY_AUDIO_TOKEN)
+								? `${text} ${STORY_AUDIO_MARKUP}`
+								: text
+						);
+					}
+					// the spreadsheet writes a literal "null" for beats with no
+					// recording, which is not a filename
+					const entryId = String(entry.id ?? "").trim();
+					if (matchedNarrationId === null && entryId && entryId !== "null") {
+						matchedNarrationId = entryId;
+					}
 					if (isFlagSet(entry.hide_panel)) matchedHidePanel = true;
 					if (isFlagSet(entry.hide_map)) matchedHideMap = true;
 					if (isFlagSet(entry.hl_minimap)) matchedHighlightMap = true;
@@ -96,7 +127,8 @@ export function createStoryBeats({
 			highlightMap: matchedHighlightMap,
 			hideYear: matchedHideYear,
 			// any entry matched, text or not — "is the script running here"
-			hasBeat: matchedAny
+			hasBeat: matchedAny,
+			narrationId: matchedNarrationId
 		});
 
 		if (!matchedVariableEntry) {
@@ -131,4 +163,35 @@ export function createStoryBeats({
 	}
 
 	return { update, reset, currentZoneKey };
+}
+
+/**
+ * Age spans with no story beat anywhere — every group in copy.json merged
+ * together, then inverted across the crowd's age range. The room floor is
+ * tinted over these, so a reader can see where the script goes quiet.
+ */
+export function storyGapAgeRanges(copy, ageMin, ageMax) {
+	const covered = Object.values(copy)
+		.filter(Array.isArray)
+		.flat()
+		.map((beat) => [Number(beat.age), Number(beat.age_end)])
+		.filter(([start, end]) => Number.isFinite(start) && Number.isFinite(end))
+		.sort((a, b) => a[0] - b[0]);
+
+	// merge overlapping/touching spans, then take what's left between them
+	const merged = [];
+	for (const [start, end] of covered) {
+		const last = merged[merged.length - 1];
+		if (last && start <= last[1]) last[1] = Math.max(last[1], end);
+		else merged.push([start, end]);
+	}
+
+	const gaps = [];
+	let cursor = ageMin;
+	for (const [start, end] of merged) {
+		if (start > cursor) gaps.push([cursor, Math.min(start, ageMax)]);
+		cursor = Math.max(cursor, end);
+	}
+	if (cursor < ageMax) gaps.push([cursor, ageMax]);
+	return gaps.filter(([start, end]) => end > start);
 }

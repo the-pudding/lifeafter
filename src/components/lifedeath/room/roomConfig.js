@@ -15,6 +15,11 @@ export const MUTED_COLOR = "#cccccc";
 // sign, door frames, lamps
 export const NEON_PINK = "#ff8dce";
 
+// floor tint over age spans with no story beat — lighter and pinker than
+// the floor's own near-black, so the quiet stretches read as different
+// ground. CHANGE THIS to retune those sections.
+export const STORY_GAP_FLOOR_COLOR = "#250819";
+
 // door fills, per zone
 export const DOOR_ZONE_COLORS = {
 	No: "rgb(69, 50, 7)",
@@ -141,7 +146,20 @@ export const ROOM_ENTRY_PITCH_TIME = 0.6; // seconds to close ~63% of that tilt
 
 export const WALK_SPEED = 0.02; // world units of target movement per unit of wheel delta
 
-export const MAX_WHEEL_STEP = 45; // clamps one wheel event so trackpad flings don't teleport
+// the ceiling on how far one input event can move the walker, and the top
+// of the response curve below
+export const MAX_WHEEL_STEP = 60; // clamps one wheel event so trackpad flings don't teleport
+
+// Scroll/swipe response curve. Mapping the delta straight through gives
+// one pace — gentle and hard scrolling differ only by the ratio of their
+// deltas, which is a narrow band in practice. Shaping it by a power curve
+// opens that up: a light scroll inches along where it used to walk, and a
+// firm one covers real ground, all against the same ceiling above.
+// Raise the exponent for finer low-end control, lower it toward 1 to go
+// back to a linear feel.
+export const WHEEL_FULL_SPEED_DELTA = 70; // delta that reaches the top of the curve
+
+export const WHEEL_RESPONSE_EXPONENT = 1.9;
 
 // scroll/swipe walking is scaled down on small screens. a trackpad or
 // touch swipe sends the same pixel deltas whatever the display, but a 13"
@@ -151,7 +169,7 @@ export const SCROLL_WALK_NARROW_WIDTH = 1100; // at or below: slowest
 
 export const SCROLL_WALK_WIDE_WIDTH = 1700; // at or above: unchanged
 
-export const SCROLL_WALK_MIN_SCALE = 0.62;
+export const SCROLL_WALK_MIN_SCALE = 0.3;
 
 // arrow-key rate. x WALK_SPEED = ~5 units/sec
 export const KEY_MOVE_DELTA_PER_SECOND = 250;

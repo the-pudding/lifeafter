@@ -38,6 +38,10 @@ export function buildRoomShell(scene, innerRoomGroup, config) {
 		ageMin,
 		ageMax,
 		ageToZ,
+		// [zStart, zEnd] spans with no story beat, and the colour to lay
+		// over the floor there
+		storyGapZRanges = [],
+		storyGapFloorColor,
 		// the exterior-plaza-only meshes below (exteriorFloor, the plaza's own
 		// debris/pebbles, its backdrop and side walls) go into this shared group
 		// instead of straight onto `scene`.
@@ -59,6 +63,34 @@ export function buildRoomShell(scene, innerRoomGroup, config) {
 	floor.rotation.x = -Math.PI / 2; // lay the plane flat
 	floor.receiveShadow = true;
 	scene.add(floor);
+
+	// patches of floor over the story's quiet stretches. laid just above
+	// the floor rather than cut into it, so the floor itself stays one
+	// plane; polygonOffset keeps them from z-fighting it at depth
+	if (storyGapFloorColor && storyGapZRanges.length > 0) {
+		// no polygonOffset: it pulled the patch in front of the floor grid,
+		// which has to stay legible over these sections. plain height
+		// ordering is enough — everything past the fog is invisible anyway,
+		// and within that range the depth buffer separates 0.01 cleanly
+		const gapFloorMaterial = new THREE.MeshToonMaterial({
+			color: storyGapFloorColor,
+			gradientMap: toonGradientMap,
+			flatShading: true
+		});
+		gapFloorMaterial.userData.outlineParameters = { visible: false };
+		for (const [zStart, zEnd] of storyGapZRanges) {
+			const depth = Math.abs(zEnd - zStart);
+			if (depth <= 0) continue;
+			const patch = new THREE.Mesh(
+				new THREE.PlaneGeometry(roomWidth, depth),
+				gapFloorMaterial
+			);
+			patch.rotation.x = -Math.PI / 2;
+			patch.position.set(0, 0.01, (zStart + zEnd) / 2);
+			patch.receiveShadow = true;
+			scene.add(patch);
+		}
+	}
 
 	// the exterior plaza floor: a separate mesh/material from the interior above
 	// (rather than one floor plane spanning both), so it can be its own
@@ -388,7 +420,7 @@ export function buildRoomShell(scene, innerRoomGroup, config) {
 		ageLineGeometry,
 		new THREE.LineBasicMaterial({ color: AGE_LINE_COLOR })
 	);
-	ageLines.position.y = 0.01; // avoid z-fighting with the floor plane
+	ageLines.position.y = 0.02; // clears the floor, and the story-gap patches over it
 	scene.add(ageLines);
 
 	// A plain LineBasicMaterial's linewidth is ignored by most
@@ -405,7 +437,7 @@ export function buildRoomShell(scene, innerRoomGroup, config) {
 			zoneLineMaterial
 		);
 		zoneLine.rotation.x = -Math.PI / 2;
-		zoneLine.position.set(x, 0.012, 0);
+		zoneLine.position.set(x, 0.025, 0);
 		scene.add(zoneLine);
 	}
 

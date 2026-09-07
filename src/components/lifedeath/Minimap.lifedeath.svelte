@@ -20,6 +20,7 @@
 		bottomClear = 0,
 		bounce = false,
 		onAcknowledge,
+		onClickSound,
 		onPersonClick
 	} = $props();
 
@@ -34,6 +35,22 @@
 	const PERSON_DOT_RADIUS = 0.85; // ~same area as the old 1.5x1.5 square
 	const PERSON_DOT_HIT_RADIUS = 3;
 	// gap between plot and canvas border. small — the corner box is tight
+	// canvas text doesn't inherit css, so the serif stack has to be handed
+	// to ctx.font directly. read once from the same custom property the
+	// dom ui uses, so there's still one source for it
+	let minimapFontStack = null;
+	function serifFont(size, weight = "") {
+		if (minimapFontStack === null) {
+			minimapFontStack =
+				(typeof window !== "undefined" &&
+					getComputedStyle(document.documentElement)
+						.getPropertyValue("--font-serif")
+						.trim()) ||
+				'"Iowan Old Style", "Tiempos Text", "Times New Roman", Times, serif';
+		}
+		return `${weight}${weight ? " " : ""}${size}px ${minimapFontStack}`;
+	}
+
 	const MINIMAP_OUTER_PADDING = 3;
 	// topdown: room below for the "Back to walk view" button
 	const TOPDOWN_BOTTOM_CLEAR = 44;
@@ -119,9 +136,14 @@
 		);
 		const offsetX = (minimapCanvas.width - logicalWidth * scale) / 2;
 		const offsetY = (minimapCanvas.height - logicalHeight * scale) / 2;
-		ctx.setTransform(scale, 0, 0, scale, offsetX, offsetY);
+		// the whole canvas, in device pixels: the logical block is centred
+		// with letterboxing around it, and filling only the block left those
+		// bands holding whatever last spilled into them — a heading cone
+		// reaching the edge stayed lit there for good
+		ctx.setTransform(1, 0, 0, 1, 0, 0);
 		ctx.fillStyle = bgColorCss;
-		ctx.fillRect(0, 0, logicalWidth, logicalHeight);
+		ctx.fillRect(0, 0, minimapCanvas.width, minimapCanvas.height);
+		ctx.setTransform(scale, 0, 0, scale, offsetX, offsetY);
 		// inside the padding inset. the bg fill above still covers the full box
 		ctx.save();
 		ctx.translate(MINIMAP_OUTER_PADDING, MINIMAP_OUTER_PADDING);
@@ -152,7 +174,7 @@
 			ctx.textAlign = "right";
 			ctx.textBaseline = "middle";
 			ctx.fillStyle = "rgba(255, 255, 255, 0.6)";
-			ctx.font = `${axisFontLogicalPx}px monospace`;
+			ctx.font = serifFont(axisFontLogicalPx);
 		}
 		for (let age = ageAxisStart; age <= ageAxisEnd; age += 10) {
 			const y = axisTopMargin + worldZToMinimapPx(ageToZ(age));
@@ -171,7 +193,7 @@
 			ctx.textBaseline = "alphabetic";
 			ctx.fillStyle = "rgba(255, 255, 255, 0.85)";
 			let groupFontPx = axisFontLogicalPx * 1.3;
-			ctx.font = `${groupFontPx}px monospace`;
+			ctx.font = serifFont(groupFontPx);
 			const zoneColumnWidth = minimapScaleX * zoneWidth;
 			const widestGroupLabelWidth = Math.max(
 				ctx.measureText("No").width,
@@ -180,7 +202,7 @@
 			);
 			if (widestGroupLabelWidth > zoneColumnWidth * 0.85) {
 				groupFontPx *= (zoneColumnWidth * 0.85) / widestGroupLabelWidth;
-				ctx.font = `${groupFontPx}px monospace`;
+				ctx.font = serifFont(groupFontPx);
 			}
 			const groupLabelY = axisTopMargin - 3;
 			ctx.fillText(
@@ -282,6 +304,12 @@
 			const coneGradient = ctx.createLinearGradient(walkerCanvasX, lineY, farX, farY);
 			coneGradient.addColorStop(0, "rgba(255, 255, 255, 0.6)");
 			coneGradient.addColorStop(1, "rgba(255, 255, 255, 0)");
+			ctx.save();
+			// clipped to the plot: pointed at a wall the cone would otherwise
+			// run out over the axis labels and past the box
+			ctx.beginPath();
+			ctx.rect(axisLeftMargin, axisTopMargin, MINIMAP_WIDTH_PX, MINIMAP_HEIGHT_PX);
+			ctx.clip();
 			ctx.fillStyle = coneGradient;
 			ctx.beginPath();
 			ctx.moveTo(walkerCanvasX, lineY);
@@ -289,6 +317,7 @@
 			ctx.lineTo(farX - perpX, farY - perpY);
 			ctx.closePath();
 			ctx.fill();
+			ctx.restore();
 		}
 		ctx.fillStyle = "rgba(254, 253, 254,1)";
 		ctx.beginPath();
@@ -298,7 +327,7 @@
 		// age, below the dot. black-stroked to stay legible over the scatter
 		if (currentAge !== null && currentAge !== undefined) {
 			const ageLabelFontPx = axisFontLogicalPx * 1.15;
-			ctx.font = `bold ${ageLabelFontPx}px monospace`;
+			ctx.font = serifFont(ageLabelFontPx, "bold");
 			ctx.textAlign = "center";
 			ctx.textBaseline = "top";
 			ctx.lineJoin = "round";
@@ -453,6 +482,7 @@
 	bind:this={minimapCanvas}
 	onclick={(event) => {
 		onAcknowledge?.();
+		onClickSound?.();
 		if (mode !== "topdown") {
 			mode = "topdown";
 			return;
@@ -465,10 +495,10 @@
 	onmouseleave={handleMinimapMouseLeave}
 ></canvas>
 
-<!-- hl_minimap beat: a glowing ring over the corner map, saying "tap here".
-     pointer-events off, so the tap lands on the canvas underneath -->
+<!-- hl_minimap beat: a pulsing glow behind the corner map. the canvas is
+     opaque, so this reads as light spilling out from behind its edges -->
 {#if bounce && mode !== "topdown" && !hidden}
-	<div class="minimap-tap" aria-hidden="true"></div>
+	<div class="minimap-glow" aria-hidden="true"></div>
 {/if}
 
 <style>
@@ -510,62 +540,45 @@
 		opacity: 0;
 		pointer-events: none;
 	}
-	/* the hl_minimap cue: a soft white ring that breathes, centred on the
-	   corner map. sits over the canvas rather than moving it, so the map
-	   itself stays still and legible. transform/opacity only, so it runs on
-	   the compositor — the three.js loop next door keeps the main thread
-	   busy enough that anything else stutters. */
-	.minimap-tap {
+	/* the hl_minimap cue: the corner map lit from behind. sits under the
+	   canvas (z-index 5), which is opaque, so only the halo shows. no
+	   pointer events, and the map itself never moves — the old version
+	   hopped it, which made it harder to actually hit */
+	.minimap-glow {
 		position: absolute;
 		right: 10px;
 		bottom: 50px;
 		width: 124px;
 		height: 244px;
+		z-index: 4;
 		pointer-events: none;
-		z-index: 6;
-		display: grid;
-		place-items: center;
+		background: rgba(255, 54, 168, 0.5);
+		box-shadow: 0 0 34px 14px rgba(255, 54, 168, 0.55);
+		animation: minimap-glow-pulse 2s ease-in-out infinite;
 	}
-	.minimap-tap::after {
-		content: "";
-		width: 46px;
-		height: 46px;
-		border-radius: 50%;
-		border: 2px solid rgba(255, 255, 255, 0.9);
-		background: rgba(255, 255, 255, 0.12);
-		box-shadow:
-			0 0 18px 6px rgba(255, 255, 255, 0.45),
-			inset 0 0 12px rgba(255, 255, 255, 0.35);
-		animation: minimap-tap-pulse 1.8s ease-out infinite;
-	}
-	@keyframes minimap-tap-pulse {
-		0% {
-			transform: scale(0.72);
-			opacity: 0.35;
-		}
-		45% {
-			transform: scale(1);
-			opacity: 1;
-		}
+	/* opacity and transform only, so it runs on the compositor: the
+	   three.js loop next door starves main-thread-driven animation */
+	@keyframes minimap-glow-pulse {
+		0%,
 		100% {
-			transform: scale(1.35);
-			opacity: 0;
+			opacity: 0.3;
+			transform: scale(0.99);
+		}
+		50% {
+			opacity: 1;
+			transform: scale(1.04);
 		}
 	}
 	@media (max-width: 640px) {
-		.minimap-tap {
+		.minimap-glow {
 			width: min(100px, 25vw);
 			height: min(197px, 49.2vw);
 		}
-		.minimap-tap::after {
-			width: 34px;
-			height: 34px;
-		}
 	}
 	@media (prefers-reduced-motion: reduce) {
-		.minimap-tap::after {
+		.minimap-glow {
 			animation: none;
-			opacity: 0.9;
+			opacity: 0.7;
 		}
 	}
 

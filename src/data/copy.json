@@ -2,15 +2,17 @@
   "hed": "life after death?",
   "all": [
     {
+      "id": "null",
       "age": "16",
       "age_end": "18",
       "hide_panel": "true",
       "hide_map": "true",
       "hide_year": "true",
       "wave": "1",
-      "text": "<div class=\"hints click\">Click on a door.</div> <div class=\"hints audio\">{{audio}}</div>"
+      "text": "<div class=\"hints click\">Click on a door.</div>"
     },
     {
+      "id": "2",
       "age": "20",
       "age_end": "22",
       "hide_panel": "true",
@@ -20,14 +22,16 @@
       "text": "The thousands of people here answered a question about the afterlife as part of the [Global Flourishing Study](https://globalflourishingstudy.com/). Keep walking!\r\n\r\n\r\n<div class=\"hints scroll\">Scroll to walk</div>"
     },
     {
+      "id": "3",
       "age": "24",
       "age_end": "25",
       "hl_minimap": "true",
       "hide_year": "true",
       "wave": "1",
-      "text": "Here’s a mini-map to guide you. Notice how younger people are in the front and older people are in the back."
+      "text": "Here’s a mini-map to guide you. Notice how younger people are in the front and older people are in the back.\r\n\r\n\r\n<div class=\"hints click\">Click the minimap.</div>"
     },
     {
+      "id": "4",
       "age": "25",
       "age_end": "26",
       "hl_minimap": "true",
@@ -36,6 +40,7 @@
       "text": "As you explore, you can click on a person to learn more about them.\r\n\r\n\r\n<div class=\"hints click\">Click on a person</div>"
     },
     {
+      "id": "5",
       "age": "29",
       "age_end": "30",
       "var_color": "RELIGIOUS_AFFILIATION",
@@ -44,6 +49,7 @@
       "text": "As expected, belief in an afterlife is [closely correlated](https://www.nature.com/articles/s41598-024-79103-w) to our religious affiliation."
     },
     {
+      "id": "6",
       "age": "30",
       "age_end": "31",
       "var_color": "BELIEVE_GOD_BROAD",
@@ -52,6 +58,7 @@
       "text": "And, of course, it’s correlated with whether we believe in God or gods."
     },
     {
+      "id": "7",
       "age": "31",
       "age_end": "32",
       "var_color": "ATTEND_SVCS",
@@ -60,6 +67,7 @@
       "text": "But belief is cheap. That’s why researchers like to hone in on how often they attend religious services."
     },
     {
+      "id": "8",
       "age": "32",
       "age_end": "33",
       "var_color": "REL_IMPORTANT",
@@ -68,6 +76,7 @@
       "text": "That said, some people can’t make it to church. So researchers also like to ask how important people say religion is in their lives."
     },
     {
+      "id": "9",
       "age": "33",
       "age_end": "34",
       "var_color": "REL_IMPORTANT",
@@ -76,6 +85,7 @@
       "text": "I’ve been bothering you a lot. I’ll let you walk around for a bit."
     },
     {
+      "id": "10",
       "age": "40",
       "age_end": "41",
       "wave": "1",
@@ -83,6 +93,7 @@
       "text": "Scholars long believed that the rise of science knowledge would create an increasingly secular world. But that [hasn’t been the case](https://www.cambridge.org/core/books/sacred-and-secular/5CE209CE245D444D40BB44D0DDD78F43)."
     },
     {
+      "id": "11",
       "age": "41",
       "age_end": "42",
       "wave": "1",
@@ -90,6 +101,7 @@
       "text": "From the 1980s to mid-2000s, religion exploded—particularly in former Soviet countries, as well as places like China, Mexico, and Brazil. It also rose sharply in the U.S."
     },
     {
+      "id": "12",
       "age": "42",
       "age_end": "43",
       "wave": "1",
@@ -97,6 +109,7 @@
       "text": "But since then, religious belief has fallen in most countries—especially in the U.S."
     },
     {
+      "id": "13",
       "age": "43",
       "age_end": "44",
       "wave": "1",
@@ -104,6 +117,7 @@
       "text": "One theory is that religion enforced pro-fertility norms when infant mortality was high. But those societal needs faded and so did the need for religion. When older generations died, a smaller portion of people were tied to religion."
     },
     {
+      "id": "14",
       "age": "50",
       "age_end": "51",
       "wave": "1",
@@ -111,6 +125,7 @@
       "text": "The portion of people who are religious—and are sure of an afterlife—has stayed relatively steady because of two coinciding trends. One is that developed countries became more secular but, in turn, their fertility rates dropped."
     },
     {
+      "id": "15",
       "age": "51",
       "age_end": "52",
       "wave": "1",
@@ -118,6 +133,7 @@
       "text": "The other is that people in developing countries still face existential threats, and religion continues to provide security and predictability. Fertility rates in those countries have stayed high."
     },
     {
+      "id": "16",
       "age": "52",
       "age_end": "53",
       "wave": "1",
@@ -125,6 +141,7 @@
       "text": "Those two things mean that humanity is still quite religious, which explains why there are so many people on the <span class=belief>right side</span> of this room."
     },
     {
+      "id": "17",
       "age": "53",
       "age_end": "55",
       "wave": "1",
@@ -132,6 +149,7 @@
       "text": "But there’s one more thing happening: Even though people are less devoted to religion in developed countries, belief in the afterlife has stayed steady—and even increased in some countries, especially among younger people."
     },
     {
+      "id": "18",
       "age": "60",
       "age_end": "61",
       "wave": "1",
@@ -139,6 +157,7 @@
       "text": "We’ve built stories, rituals, and communities to help us cope with the uncertainty of whether there is an existence for us on the other side."
     },
     {
+      "id": "19",
       "age": "61",
       "age_end": "62",
       "wave": "1",
@@ -146,6 +165,7 @@
       "text": "For many of us, knowing that there is something better in the afterlife has helped us cope with the brutal nature of our lives."
     },
     {
+      "id": "20",
       "age": "62",
       "age_end": "63",
       "wave": "1",
@@ -153,6 +173,7 @@
       "text": "But when we encounter people with different stories and rituals, we sometimes [see them as not one of us](https://doi.org/10.1016/j.paid.2023.112352). These disagreements have caused great arguments, fights, and sometimes pain and suffering."
     },
     {
+      "id": "21",
       "age": "63",
       "age_end": "64",
       "wave": "1",
@@ -160,6 +181,7 @@
       "text": "After all, if they don’t share our beliefs about the afterlife, doesn’t that mean they live in an entirely different reality than we do?"
     },
     {
+      "id": "22",
       "age": "66",
       "age_end": "68",
       "wave": "1",
@@ -167,6 +189,7 @@
       "text": "But the reality is that, while the unstoppable forces of time push us forward in this room, we are able to walk side to side—change our minds, explore left, right, middle, and everything in between."
     },
     {
+      "id": "23",
       "age": "68",
       "age_end": "70",
       "wave": "2",
@@ -174,6 +197,7 @@
       "text": "In fact, that’s exactly what a bunch of people did between 2023 and 2024. Their changing beliefs were often tied to their evolving relationship with religious communities."
     },
     {
+      "id": "24",
       "age": "70",
       "age_end": "72",
       "wave": "2",
@@ -181,6 +205,7 @@
       "text": "Maybe gathering, talking, and being around each other is how social creatures like us explore such overwhelming questions."
     },
     {
+      "id": "25",
       "age": "72",
       "age_end": "74",
       "wave": "2",
@@ -188,15 +213,17 @@
       "text": "We come into this world alone, and we leave it alone. But in between, we get to be here."
     },
     {
+      "id": "null",
       "age": "74",
       "age_end": "100",
       "wave": "2",
       "hide_year": "true",
-      "text": "Keep walking, or click “Skip to Explore.”"
+      "text": "<div class=\"hints scroll\">Keep walking or click “Skip to Explore”</span>"
     }
   ],
   "no": [
     {
+      "id": "no1",
       "age": "18",
       "age_end": "20",
       "hide_map": "true",
@@ -206,6 +233,7 @@
       "text": "You’re among people who <span class=no_belief>do not believe</span> in an afterlife. You heretic! (Just kidding.)\r\n\r\n\r\n<div class=\"hints scroll\">Scroll to walk</div>"
     },
     {
+      "id": "no2",
       "age": "22",
       "age_end": "24",
       "hide_map": "true",
@@ -216,6 +244,7 @@
   ],
   "unsure": [
     {
+      "id": "unsure1",
       "age": "18",
       "age_end": "20",
       "hide_map": "true",
@@ -225,6 +254,7 @@
       "text": "You’re among people who are <span class=unsure>unsure</span> if there’s an afterlife. You have plenty of fence-sitters with you here.\r\n\r\n\r\n<div class=\"hints scroll\">Scroll to walk</div>"
     },
     {
+      "id": "unsure2",
       "age": "22",
       "age_end": "24",
       "hide_map": "true",
@@ -235,6 +265,7 @@
   ],
   "yes": [
     {
+      "id": "yes1",
       "age": "18",
       "age_end": "20",
       "hide_map": "true",
@@ -244,6 +275,7 @@
       "text": "You’re among people who <span class=belief>believe</span> there is life after death. Most other people in the world agree with you.\r\n\r\n\r\n<div class=\"hints scroll\">Scroll to walk</div>"
     },
     {
+      "id": "yes2",
       "age": "22",
       "age_end": "24",
       "hide_map": "true",
