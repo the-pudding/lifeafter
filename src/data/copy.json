@@ -9,7 +9,7 @@
       "hide_map": "true",
       "hide_year": "true",
       "wave": "1",
-      "text": "<div class=\"hints click\">Click on a door.</div>"
+      "text": "<div class=\"hints click\">Click on a door</div>"
     },
     {
       "id": "2",
@@ -28,7 +28,7 @@
       "hl_minimap": "true",
       "hide_year": "true",
       "wave": "1",
-      "text": "Here’s a mini-map to guide you. Notice how younger people are in the front and older people are in the back.\r\n\r\n\r\n<div class=\"hints click\">Click the minimap.</div>"
+      "text": "Here’s a mini-map to guide you. Notice how younger people are in the front and older people are in the back.\r\n\r\n\r\n<div class=\"hints click\">Click the minimap</div>"
     },
     {
       "id": "4",
