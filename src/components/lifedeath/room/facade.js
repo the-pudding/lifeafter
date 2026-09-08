@@ -7,10 +7,7 @@ import bylineSvg from "$svg/byline.svg?raw";
 // dim state for the wordmark/byline links; lit fully on hover
 export const FACADE_LINK_DIM_BRIGHTNESS = 0.7;
 
-// --- sign geometry -----------------------------------------------------
-// module scope, not inside buildFacade: the loading screen draws its own
-// copy of this sign and has to land it in exactly the same place, before
-// any of this is built.
+// sign geometry, at module scope so the loading screen can place its own copy
 export const SIGN_WIDTH = 5.4;
 
 export const SIGN_HEIGHT = (SIGN_WIDTH * 63) / 318;
@@ -29,17 +26,11 @@ const BYLINE_WIDTH = 1.95;
 const BYLINE_HEIGHT = (BYLINE_WIDTH * 56) / 271; // byline.svg's own 271x56 viewBox
 const BYLINE_GAP = 0.22; // clearance below the sign's own bottom edge
 
-// where the wordmark+sign+byline cluster's visual center sits relative to
-// the sign's bottom edge, per unit of scale. lets a caller place the
-// cluster by its center instead of by the sign's own anchor
+// the cluster's centre relative to the sign's bottom edge, per unit of scale
 const CLUSTER_CENTER_OFFSET =
 	(SIGN_HEIGHT / 2 + LOGO_Y + LOGO_HEIGHT / 2 - (BYLINE_GAP + BYLINE_HEIGHT)) / 2;
 
-/**
- * Where the sign panel itself ends up, in world units, for a given fov
- * scale and cluster center. One source of truth for buildFacade's own
- * layout and for the loading screen that has to match it.
- */
+// where the sign lands in world units, for a given scale and cluster centre
 export function signPlacement({
 	doorHeight,
 	doorZ,
@@ -50,8 +41,7 @@ export function signPlacement({
 	const signBottomAnchor = doorHeight + SIGN_ABOVE_DOOR - SIGN_HEIGHT / 2;
 	const requested =
 		centerY === null ? signBottomAnchor : centerY - CLUSTER_CENTER_OFFSET * scale;
-	// never let the byline sink onto the door lamps (doorHeight + 0.4,
-	// sphere radius 0.15), however low the requested center is
+	// never lets the byline sink onto the door lamps
 	const lowestBottomY = doorHeight + 0.75 + (BYLINE_GAP + BYLINE_HEIGHT) * scale;
 	const bottomY = Math.max(lowestBottomY, requested);
 	return {
@@ -66,9 +56,7 @@ export function signPlacement({
 
 export function excludeDirectionalLights(material) {
 	material.onBeforeCompile = (shader) => {
-		// onBeforeCompile runs before three resolves #include directives, so the
-		// shader source here still says literally "#include
-		// <lights_fragment_begin>".
+		// runs before three resolves its includes, so the directive is still text
 		const patchedChunk = THREE.ShaderChunk.lights_fragment_begin.replace(
 			"#if ( NUM_DIR_LIGHTS > 0 ) && defined( RE_Direct )",
 			"#if ( 0 > 1 ) && defined( RE_Direct )"
@@ -80,10 +68,7 @@ export function excludeDirectionalLights(material) {
 	};
 }
 
-/**
- * builds the brick facade (backing wall, running-bond brick relief, the
- * neon building sign and its point light) and adds it to the scene.
- */
+// builds the brick facade, its neon sign and the sign's light
 export function buildFacade(scene, config) {
 	const {
 		toonGradientMap,
@@ -95,39 +80,31 @@ export function buildFacade(scene, config) {
 		outerWallHalfWidth,
 		roomHeight,
 		facadeLightLayer,
-		// every last thing this function builds is the building's OUTSIDE face.
+		// everything built here is the building's outside face
 		exteriorGroup
 	} = config;
 
-	// brick sizing/spacing, declared up front (rather than down by the
-	// brick relief itself) because the grout backing below already needs
-	// BRICK_DEPTH to know how much of that depth it should fill.
+	// brick sizing, declared up front because the grout backing needs the depth
 	const BRICK_WIDTH = .8;
 	const BRICK_HEIGHT = 0.3;
 	const BRICK_GAP = 0.07; // mortar gap between adjacent bricks
-	// how far the grout backing below extends out into the recess behind the
-	// bricks.
+	// how far the grout fills the recess behind the bricks
 	const GROUT_DEPTH = BRICK_DEPTH * 0.96;
-	// the brick's own outermost possible face, as a local offset from
-	// doorZ — for anything (the sign, the door lamps) that needs to clear
-	// the bricks rather than sit flush with the grout behind them.
+	// the brick's outermost face, for anything that has to clear it
 	const BRICK_FRONT_LOCAL_Z = facadeThickness / 2 + BRICK_DEPTH;
 
-	// the backing wall behind the bricks.
+	// the backing wall behind the bricks
 	const facadeMaterial = new THREE.MeshToonMaterial({
 		color: "#000000",
 		gradientMap: toonGradientMap
 	});
 	facadeMaterial.userData.outlineParameters = { visible: false };
 	excludeDirectionalLights(facadeMaterial);
-	// depth/position for the lower/upper tier boxes below: back face stays
-	// anchored at doorZ - facadeThickness/2 (unchanged from before), the
-	// front face is what moves out by GROUT_DEPTH.
+	// depth and position of the two tiers below
 	const facadeDepth = facadeThickness + GROUT_DEPTH;
 	const facadeZ = doorZ + GROUT_DEPTH / 2;
 
-	// the lower tier's solid segments left over once each door opening is cut
-	// out.
+	// the solid segments left once the door openings are cut out
 	function facadeSolidXRanges() {
 		const halfDoor = doorWidth / 2;
 		const ranges = [];
@@ -140,9 +117,7 @@ export function buildFacade(scene, config) {
 		if (x < outerWallHalfWidth) ranges.push([x, outerWallHalfWidth]);
 		return ranges;
 	}
-	// boxed like the other walls (see roomShell.js) — straddling doorZ
-	// the same way each door's own panel already does, rather than
-	// extruding outward only, so the facade and the doors set into it stay flush.
+	// boxed like the other walls, straddling the door plane so both sit flush
 	for (const [xStart, xEnd] of facadeSolidXRanges()) {
 		const width = xEnd - xStart;
 		const lowerTier = new THREE.Mesh(
@@ -155,8 +130,7 @@ export function buildFacade(scene, config) {
 		lowerTier.receiveShadow = true;
 		exteriorGroup.add(lowerTier);
 	}
-	// the upper tier is one continuous solid lintel spanning the full
-	// (wide) width, holding the sign above the doors.
+	// one continuous lintel across the top, holding the sign
 	const upperTierHeight = roomHeight * 1.2 - doorHeight;
 	const upperTier = new THREE.Mesh(
 		new THREE.BoxGeometry(outerWallHalfWidth * 2, upperTierHeight, facadeDepth),
@@ -168,11 +142,11 @@ export function buildFacade(scene, config) {
 	upperTier.receiveShadow = true;
 	exteriorGroup.add(upperTier);
 
-	// real 3D brick, not an image of brick.
+	// real geometry, not an image of brick
 	const MAX_BRICK_PROTRUSION = BRICK_DEPTH - GROUT_DEPTH;
 	const groutFrontLocalZ = facadeThickness / 2 + GROUT_DEPTH;
 
-	// one brick per row/column across a rectangular region of the facade.
+	// one brick per row and column across a region of the facade
 	function brickPositionsFor(xStart, xEnd, yStart, yEnd) {
 		const positions = [];
 		const rows = Math.max(1, Math.round((yEnd - yStart) / BRICK_HEIGHT));
@@ -208,10 +182,9 @@ export function buildFacade(scene, config) {
 		)
 	);
 
-	// unit width (1 world unit); each instance is scaled on X to its own
-	// brick's actual width (full-width bricks get scale 1).
+	// a unit-width brick, scaled on x to each instance's real width
 	const brickGeometry = new THREE.BoxGeometry(1, BRICK_HEIGHT - BRICK_GAP, BRICK_DEPTH);
-	// toon, not standard: a hard 2-step ramp, no PBR falloff
+	// toon shaded: a hard two-step ramp, no pbr falloff
 	const brickMaterial = new THREE.MeshToonMaterial({
 		color: "#2d1625",
 		gradientMap: toonGradientMap
@@ -231,25 +204,19 @@ export function buildFacade(scene, config) {
 	const brickPlacementHelper = new THREE.Object3D();
 	const brickInstanceColor = new THREE.Color();
 	brickPositions.forEach(({ x, y, width }, i) => {
-		// how far this particular brick pokes out past the grout.
+		// how far this brick pokes out past the grout
 		const protrusion = (0.8 + Math.random() * 0.2) * MAX_BRICK_PROTRUSION;
 		const brickFrontLocalZ = groutFrontLocalZ + protrusion;
 		brickPlacementHelper.position.set(
 			x,
-			// A little per-brick jitter, on top of the running-bond
-			// pattern itself, so the coursing reads as real, slightly
-			// imperfect masonry rather than a perfect grid — kept small
-			// on purpose, this is meant to read as subtle, not chaotic.
+			// a little jitter, so the coursing isn't a perfect grid
 			y + (Math.random() - 0.5) * 0.01,
 			doorZ + brickFrontLocalZ - BRICK_DEPTH / 2
 		);
 		brickPlacementHelper.scale.set(width - BRICK_GAP, 1, 1);
 		brickPlacementHelper.updateMatrix();
 		brickInstances.setMatrixAt(i, brickPlacementHelper.matrix);
-		// slight per-brick color variation (both lighter/darker and a
-		// little hue drift) so the wall doesn't read as one color
-		// stamped identically across every brick — real brick always has
-		// some kiln-to-kiln variation.
+		// per-brick colour variation, so the wall isn't one flat colour
 		brickInstanceColor
 			.copy(brickBaseColor)
 			.offsetHSL(
@@ -263,21 +230,15 @@ export function buildFacade(scene, config) {
 	if (brickInstances.instanceColor) brickInstances.instanceColor.needsUpdate = true;
 	exteriorGroup.add(brickInstances);
 
-	// everything sign-related (the "Life after death?" panel, the wordmark, the
-	// byline) is parented under this one group instead of going straight into
-	// exteriorGroup, positioned at what was previously buildingSign's own
-	// anchor.
+	// the sign and wordmark share a group, so they scale together
 	const signZ = signPlacement({ doorHeight, doorZ, facadeThickness }).z;
-	// was +0.6 originally, which put buildingSign's own bounding box (height 4,
-	// scaled up to MAX_SIGN_SCALE for mobile legibility, see Main's
-	// updateTextFovScale) low enough to genuinely overlap the "Unsure" door's
-	// own label at scale.
+	// high enough that a scaled-up sign clears the door labels
 	const signY = doorHeight + 1.9;
 	const signGroup = new THREE.Group();
 	signGroup.position.set(0, signY, signZ);
 	exteriorGroup.add(signGroup);
 
-	// the building's name.
+	// the building's name
 	const buildingSign = makeSvgNeonPanel(signSvg, {
 		width: SIGN_WIDTH,
 		height: SIGN_HEIGHT,
@@ -286,7 +247,7 @@ export function buildFacade(scene, config) {
 	});
 	signGroup.add(buildingSign);
 
-	// the wordmark logo, glowing above the "Life after death?" sign.
+	// the wordmark, above the sign
 	const wordmarkLogo = makeSvgNeonPanel(wordmarkSvg, {
 		width: LOGO_WIDTH,
 		height: LOGO_HEIGHT,
@@ -294,23 +255,18 @@ export function buildFacade(scene, config) {
 		glowColor: "#ff36a8"
 	});
 	wordmarkLogo.position.set(0, LOGO_Y, 0);
-	// starts dimmed (see FACADE_LINK_DIM_BRIGHTNESS above); Main's
-	// setFacadeSignHover brightens it back to full on hover.
+	// starts dimmed; main lights it fully on hover
 	wordmarkLogo.material[4].color.setScalar(FACADE_LINK_DIM_BRIGHTNESS);
 	signGroup.add(wordmarkLogo);
 
-	// the byline, below the sign in smaller neon text.
+	// the byline, below the sign
 	const byline = makeSvgNeonPanel(bylineSvg, {
 		width: BYLINE_WIDTH,
 		height: BYLINE_HEIGHT,
 		color: "#ff36a8",
 		glowColor: "#ff36a8"
 	});
-	// lays out the sign block for a given fov scale. it grows UP from a
-	// fixed bottom edge rather than out from its center, so the big mobile
-	// scale doesn't push the sign — and the byline under it — down into the
-	// door labels. the byline sits outside signGroup and so needs its own
-	// placement either way
+	// places the sign and byline for a given scale, growing up from a fixed edge
 	function layoutSign(scale = 1, centerY = null) {
 		const placed = signPlacement({
 			doorHeight,
@@ -326,12 +282,9 @@ export function buildFacade(scene, config) {
 	byline.material[4].color.setScalar(FACADE_LINK_DIM_BRIGHTNESS);
 	exteriorGroup.add(byline);
 
-	// the sign's own pool of light on the brick around it — see
-	// facadeLightLayer above for why this only affects the facade and
-	// nothing else in the scene.
+	// the sign's pool of light on the brick, kept to the facade's own layer
 	const signLight = new THREE.PointLight("#ff36a8", 1, 7, 2);
-	// out past the bricks' own front face, next to the sign itself — not
-	// embedded in/behind the brick relief.
+	// out past the brick faces, beside the sign rather than behind it
 	signLight.position.set(0, doorHeight + 0.3, doorZ + BRICK_FRONT_LOCAL_Z + 0.25);
 	signLight.layers.set(facadeLightLayer);
 	signLight.castShadow = true;

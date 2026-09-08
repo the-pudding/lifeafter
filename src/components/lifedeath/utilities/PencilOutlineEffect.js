@@ -6,8 +6,7 @@ import {
 	UniformsUtils
 } from "three";
 
-// A fork of three.js's own OutlineEffect
-// (examples/jsm/effects/OutlineEffect.js).
+// a fork of three's own OutlineEffect
 class PencilOutlineEffect {
 	constructor(renderer, parameters = {}) {
 		this.enabled = true;
@@ -25,22 +24,17 @@ class PencilOutlineEffect {
 			parameters.defaultKeepAlive !== undefined
 				? parameters.defaultKeepAlive
 				: false;
-		// how unevenly the stroke width varies vertex-to-vertex (0 = the
-		// plain, uniform OutlineEffect line; 1 = thickness can swing all
-		// the way down to 0 at its jitteriest vertices).
+		// how unevenly the stroke width varies between vertices
 		const defaultThicknessJitter =
 			parameters.defaultThicknessJitter !== undefined
 				? parameters.defaultThicknessJitter
 				: 0.9;
-		// how far the extrusion direction itself wanders off the true
-		// normal — this is what makes the line bow and waver rather than
-		// just pulse thicker/thinner in place.
+		// how far the extrusion wanders off the true normal, so the line bows
 		const defaultNormalJitter =
 			parameters.defaultNormalJitter !== undefined
 				? parameters.defaultNormalJitter
 				: 0.3;
-		// how finely the jitter pattern repeats across a mesh's own local
-		// coordinates.
+		// how finely the jitter repeats across a mesh's own coordinates
 		const defaultNoiseFrequency =
 			parameters.defaultNoiseFrequency !== undefined
 				? parameters.defaultNoiseFrequency
@@ -75,15 +69,14 @@ class PencilOutlineEffect {
 			"uniform float outlineNormalJitter;",
 			"uniform float outlineNoiseFrequency;",
 
-			// A raw hash (used only as value-noise's per-cell corner value, below) has
-			// no spatial coherence at all.
+			// a raw hash, used only as the per-cell corner value below
 			"float pencilHash( vec3 p ) {",
 			"	p = fract( p * 0.3183099 + vec3( 0.1, 0.2, 0.3 ) );",
 			"	p *= 17.0;",
 			"	return fract( p.x * p.y * p.z * ( p.x + p.y + p.z ) );",
 			"}",
 
-			// trilinearly-interpolated (and smoothstepped) value noise.
+			// smoothstepped, trilinearly interpolated value noise
 			"float pencilValueNoise( vec3 p ) {",
 			"	vec3 i = floor( p );",
 			"	vec3 f = fract( p );",
@@ -100,7 +93,7 @@ class PencilOutlineEffect {
 			"		u.z );",
 			"}",
 
-			// two octaves.
+			// two octaves
 			"vec3 pencilSketchJitter( vec3 p ) {",
 			"	vec3 coarse = vec3(",
 			"		pencilValueNoise( p ),",

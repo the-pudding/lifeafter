@@ -6,8 +6,7 @@ export const PEOPLE_DATA_URL = asset("/data/people.json");
 // per-country average adult height, age 19
 export const HEIGHT_DATA_URL = asset("/data/height26.csv");
 
-// rigged humanoids w/ baked "Walk" clip, one per gender x body type.
-// CC-BY-4.0 (Sketchfab, "Base Mesh 246 Tri")
+// rigged bodies with a baked walk clip. CC-BY-4.0, Sketchfab "Base Mesh 246 Tri"
 export const BASE_URL = asset("/assets/app/bodies_clothes/");
 
 export const MALE_BODY_URLS = [
@@ -130,10 +129,10 @@ export const NEARBY_PERSON_FOV_HALF_ANGLE = Math.PI / 4; // 45° either side of 
 // trimmed off half-fov so panels don't clip at the edge
 export const NEARBY_PERSON_FOV_SCREEN_MARGIN = (5 * Math.PI) / 180; // 5°
 
-// head-to-panel gap, on top of the leader line's length
+// gap between head and panel, on top of the line's length
 export const NEARBY_PERSON_HEAD_GAP = 0.05;
 
-// max panels at once. depth-tested meshes, so z-buffer sorts overlaps
+// most panels shown at once
 export const NEARBY_PEOPLE_MAX = 4;
 
 // panel width at reference distance. height follows line count
@@ -142,12 +141,7 @@ export const NEARBY_PANEL_WORLD_WIDTH = 0.8;
 // distance where a panel is its literal world size
 export const NEARBY_PANEL_REFERENCE_DISTANCE = 3.5;
 
-// panels are sized in world units, so how big they land on screen is set
-// by the camera's fov — and the fov solve opens up to ~120° on a narrow
-// phone aspect to keep the three doors in frame, which shrinks the text
-// to nothing. scaled against the fov a desktop gets, so a panel holds
-// roughly its pixel size on any viewport. capped, or a phone's panel
-// swallows the screen.
+// panels scale against this fov, so they hold their pixel size on any viewport
 export const NEARBY_PANEL_REFERENCE_FOV = 64;
 
 export const NEARBY_PANEL_MAX_FOV_SCALE = 2.6;
@@ -160,23 +154,22 @@ export const NEARBY_PANEL_MAX_APPARENT_SCALE = 1.4;
 // panel fade in/out
 export const NEARBY_PANEL_FADE_SECONDS = 0.28;
 
-// leader line head -> panel: length, draw time, world thickness
+// leader line from head to panel: length, draw time, thickness
 export const NEARBY_PANEL_LINE_LENGTH = 0.2;
 
 export const NEARBY_PANEL_LINE_SECONDS = 0.18;
 
 export const NEARBY_PANEL_LINE_WIDTH = 0.005;
 
-// matches makeLabelPanel's own border, so the stem reads as part of the
-// panel's outline rather than as a separate white rule
+// matches the panel's own border
 export const NEARBY_PANEL_LINE_COLOR = "#ffffff";
 
 export const NEARBY_PANEL_LINE_OPACITY = 0.35;
 
-// selection re-rank interval. drops are per-frame; only adds throttled
+// how often the selection re-ranks; drops are immediate
 export const NEARBY_SELECTION_REFRESH_INTERVAL = 0.35; // seconds
 
-// hysteresis. scales an incumbent's sq. distance; challenger needs ~22% closer
+// hysteresis: a challenger has to be about 22% closer to take a slot
 export const NEARBY_INCUMBENT_STICKINESS = 0.6;
 
 // breathing wobble, as Y scale

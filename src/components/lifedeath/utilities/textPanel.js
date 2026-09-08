@@ -1,7 +1,80 @@
 import * as THREE from "three";
 
-// wraps a drawn canvas in a thin box; a flat plane broke OutlineEffect
-// and z-fought its mount
+// the head panels' typeface. canvas text can't inherit css, so the stack
+// is read off the same custom property the dom ui uses
+let panelFontStack = null;
+function panelFont(sizePx) {
+	if (panelFontStack === null) {
+		panelFontStack =
+			(typeof window !== "undefined" &&
+				getComputedStyle(document.documentElement)
+					.getPropertyValue("--font-mono")
+					.trim()) ||
+			"Menlo, Consolas, Monaco, monospace";
+	}
+	return `400 ${sizePx}px ${panelFontStack}`;
+}
+
+// the dark end of the gradient is unreadable on a near-black panel, so any
+// line colour below this lightness gets lifted, hue and saturation kept
+const MIN_PANEL_TEXT_LIGHTNESS = 0.62;
+
+// "#abc", "#aabbcc" or "rgb(r, g, b)" -> 0..1 components
+function parseColorComponents(color) {
+	if (typeof color !== "string") return null;
+	const hex = color.trim().replace(/^#/, "");
+	if (/^[0-9a-f]{3}$/i.test(hex)) {
+		return [...hex].map((char) => parseInt(char + char, 16) / 255);
+	}
+	if (/^[0-9a-f]{6}$/i.test(hex)) {
+		return [0, 2, 4].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);
+	}
+	const rgb = color.match(/-?[\d.]+/g);
+	return rgb && rgb.length >= 3 ? rgb.slice(0, 3).map((n) => Number(n) / 255) : null;
+}
+
+// raises a colour to the floor above, leaving anything already light alone
+function readableOnDark(color) {
+	const rgb = parseColorComponents(color);
+	if (!rgb) return color;
+	const [r, g, b] = rgb;
+	const max = Math.max(r, g, b);
+	const min = Math.min(r, g, b);
+	const lightness = (max + min) / 2;
+	if (lightness >= MIN_PANEL_TEXT_LIGHTNESS) return color;
+
+	// hsl round trip, so only l moves
+	const delta = max - min;
+	const saturation =
+		delta === 0
+			? 0
+			: delta / (1 - Math.abs(2 * lightness - 1) || Number.EPSILON);
+	let hue = 0;
+	if (delta !== 0) {
+		if (max === r) hue = ((g - b) / delta) % 6;
+		else if (max === g) hue = (b - r) / delta + 2;
+		else hue = (r - g) / delta + 4;
+		hue *= 60;
+		if (hue < 0) hue += 360;
+	}
+	const l = MIN_PANEL_TEXT_LIGHTNESS;
+	const c = (1 - Math.abs(2 * l - 1)) * Math.min(1, saturation);
+	const x = c * (1 - Math.abs(((hue / 60) % 2) - 1));
+	const m = l - c / 2;
+	const sector = Math.floor(hue / 60) % 6;
+	const [rr, gg, bb] = [
+		[c, x, 0],
+		[x, c, 0],
+		[0, c, x],
+		[0, x, c],
+		[x, 0, c],
+		[c, 0, x]
+	][sector];
+	const to255 = (v) => Math.round(Math.min(1, Math.max(0, v + m)) * 255);
+	return `rgb(${to255(rr)}, ${to255(gg)}, ${to255(bb)})`;
+}
+
+// wraps a drawn canvas in a thin box
 function wrapCanvasInPanel(
 	canvas,
 	width,
@@ -11,33 +84,23 @@ function wrapCanvasInPanel(
 	depthWrite = true
 ) {
 	const texture = new THREE.CanvasTexture(canvas);
-	// the canvas is drawn in sRGB; without this three treats it as linear
-	// and the text renders washed out.
+	// the canvas is srgb; without this the text renders washed out
 	texture.colorSpace = THREE.SRGBColorSpace;
-	// always minified, and at anisotropy 1 the mip filter softens the text
+	// always minified, so anisotropy keeps the text from softening
 	texture.anisotropy = anisotropy;
 	const faceMaterial = new THREE.MeshBasicMaterial({
 		map: texture,
 		transparent: true,
-		// not DoubleSide: this material goes on both the +z and -z faces, and
-		// FrontSide culling means exactly one ever rasterizes. DoubleSide let
-		// the mirrored back face win and the sign read backwards.
+		// frontside on both faces, so the mirrored back never wins
 		depthTest: true,
-		// a transparent quad that writes depth stamps its *whole* rectangle,
-		// clear texels included, so an overlapping panel drawn after it gets
-		// cut off — which is why the wordmark lost a chunk to the sign's own
-		// (glow-padded, much larger than its art) box
+		// a transparent quad writing depth would cut out whatever overlaps it
 		depthWrite,
-		// pulls written depth toward the camera to win z-fighting against the
-		// surface this is mounted on. factor stays 0 because it scales with
-		// the polygon's depth slope, which blows up at grazing angles; units
-		// is the flat, angle-independent bias that actually works.
+		// biases depth toward the camera, to win against its mount
 		polygonOffset: true,
 		polygonOffsetFactor: 0,
 		polygonOffsetUnits: depthBiasUnits
 	});
-	// invisible: the box is sized to the full canvas, so a visible edge
-	// would draw a bar around the sign rather than hug the text.
+	// invisible, or the box's edges draw a bar around the art
 	const edgeMaterial = new THREE.MeshBasicMaterial({
 		transparent: true,
 		opacity: 0,
@@ -45,9 +108,7 @@ function wrapCanvasInPanel(
 	});
 	const depth = Math.min(width, height) * 0.05;
 	const geometry = new THREE.BoxGeometry(width, height, depth);
-	// BoxGeometry's face groups are ordered [+x, -x, +y, -y, +z, -z] —
-	// the canvas texture goes on the front/back (+z/-z), the thin edges
-	// (the sides) get the invisible material above.
+	// face order is [+x, -x, +y, -y, +z, -z]: the canvas goes front and back
 	const materials = [
 		edgeMaterial,
 		edgeMaterial,
@@ -56,7 +117,7 @@ function wrapCanvasInPanel(
 		faceMaterial,
 		faceMaterial
 	];
-	// otherwise the box's full rectangle gets outlined, not the glyphs.
+	// or the box's rectangle gets outlined instead of the glyphs
 	faceMaterial.userData.outlineParameters = { visible: false };
 	edgeMaterial.userData.outlineParameters = { visible: false };
 	const mesh = new THREE.Mesh(geometry, materials);
@@ -64,8 +125,7 @@ function wrapCanvasInPanel(
 	return { mesh, texture };
 }
 
-// draws text to a canvas and wraps it, avoiding a font asset for real
-// TextGeometry. `neon` adds blur passes for a glowing-tube look.
+// draws text to a canvas and wraps it; `neon` adds a glowing-tube look
 export function makeTextPanel(
 	text,
 	{ width, height, fontSize, color = "#ff29d8", neon = true, depthBiasUnits }
@@ -86,7 +146,7 @@ export function makeTextPanel(
 		const lineText = lines[i]; // Corrected string variable usage
 
 		if (neon) {
-			// 1. crisp Neon Outline (Defines the glass edge sharply)
+			// crisp outline: the glass edge
 			ctx.save();
 			ctx.strokeStyle = color;
 			ctx.lineWidth = 4;
@@ -95,7 +155,7 @@ export function makeTextPanel(
 			ctx.strokeText(lineText, cx, cy, maxWidth);
 			ctx.restore();
 
-			// 2. tight Color Glow (Minimal blur to prevent light wash out)
+			// tight colour glow, kept small so it doesn't wash out
 			ctx.save();
 			ctx.fillStyle = color;
 			ctx.shadowColor = color;
@@ -103,7 +163,7 @@ export function makeTextPanel(
 			ctx.fillText(lineText, cx, cy, maxWidth);
 			ctx.restore();
 
-			// 3. sharp White Core (Pure white tube center, 0 blur for max legibility)
+			// sharp white core: the tube centre
 			ctx.save();
 			ctx.fillStyle = "#ffffff";
 			ctx.shadowColor = "transparent";
@@ -118,15 +178,12 @@ export function makeTextPanel(
 	return wrapCanvasInPanel(canvas, width, height, depthBiasUnits).mesh;
 }
 
-// dark panel of text lines, same depth-tested box as the others. lines
-// wrap to `width`. entries are strings or { text, color }. returns the
-// texture too, since callers rebuild and must dispose it
+// dark panel of wrapped text lines; returns the texture so callers can dispose it
 export function makeLabelPanel(
 	lines,
 	{
 		width,
-		// ~33-35 monospace characters per line. much larger and ordinary
-		// lines wrap needlessly, stacking the panel up person-height.
+		// tuned against the wrapped line length
 		fontSizeFraction = 0.0465,
 		color = "#ffffff",
 		background = "rgba(0, 0, 0, 0.82)",
@@ -135,19 +192,16 @@ export function makeLabelPanel(
 		anisotropy = 1
 	}
 ) {
-	// reference resolution for drawing. on-screen size comes from `width`,
-	// and every measurement below is a fraction of this, so raising it is a
-	// pure supersample: same layout, more texels per glyph.
+	// reference resolution; raising it supersamples without changing layout
 	const CANVAS_WIDTH = 1024;
 	const fontSizePx = CANVAS_WIDTH * fontSizeFraction;
 	const lineHeightPx = fontSizePx * 1.5;
 	const paddingPx = fontSizePx * 0.6;
 	const maxTextWidthPx = CANVAS_WIDTH - paddingPx * 2;
 
-	// greedily word-wraps each line to fit maxTextWidthPx, measured against
-	// the real font metrics.
+	// word-wraps a line against the real font metrics
 	const measureCtx = document.createElement("canvas").getContext("2d");
-	measureCtx.font = `400 ${fontSizePx}px "Menlo", monospace`;
+	measureCtx.font = panelFont(fontSizePx);
 	function wrapLine(entry) {
 		const text = typeof entry === "string" ? entry : entry.text;
 		const lineColor = typeof entry === "string" ? color : (entry.color ?? color);
@@ -187,12 +241,12 @@ export function makeLabelPanel(
 	ctx.fill();
 	ctx.stroke();
 
-	ctx.font = `400 ${fontSizePx}px "Menlo", monospace`;
+	ctx.font = panelFont(fontSizePx);
 	ctx.textAlign = "center";
 	ctx.textBaseline = "middle";
 	const cx = canvas.width / 2;
 	for (let i = 0; i < wrappedLines.length; i++) {
-		ctx.fillStyle = wrappedLines[i].color;
+		ctx.fillStyle = readableOnDark(wrappedLines[i].color);
 		ctx.fillText(wrappedLines[i].text, cx, paddingPx + lineHeightPx * (i + 0.5), maxTextWidthPx);
 	}
 
@@ -200,9 +254,7 @@ export function makeLabelPanel(
 	return wrapCanvasInPanel(canvas, width, height, depthBiasUnits, anisotropy);
 }
 
-// neon effect over a rasterized SVG. returns blank, since decoding is
-// async; the texture fills in on load. canvas is padded by `glowPadding`
-// so the glow doesn't clip. `color` = letterforms, `glowColor` = halo
+// neon treatment over a rasterised svg; returns blank until it decodes
 export function makeSvgNeonPanel(
 	svgMarkup,
 	{
@@ -216,9 +268,7 @@ export function makeSvgNeonPanel(
 ) {
 	const panelWidth = width * (1 + glowPadding);
 	const panelHeight = height * (1 + glowPadding);
-	// sized so the shorter side never drops below MIN_DIMENSION. a fixed
-	// width starves wide SVGs like the ~5:1 sign, whose thin neon stroke
-	// pixelates first.
+	// sized off the shorter side, so wide art keeps its stroke resolution
 	const BASE_RESOLUTION = 1024;
 	const MIN_DIMENSION = 480;
 	const canvas = document.createElement("canvas");
@@ -242,13 +292,11 @@ export function makeSvgNeonPanel(
 		panelHeight,
 		depthBiasUnits,
 		1,
-		// these hang on the facade and overlap each other's padding, so they
-		// must not write depth over one another
+		// these overlap each other's padding, so none may write depth
 		false
 	);
 
-	// the dark letterform fill becomes the neon color; the light highlight
-	// fill stays white and serves as the hot core.
+	// dark letterforms take the neon colour; white fills stay as the hot core
 	const recolored = svgMarkup
 		.replace(/fill="black"/gi, `fill="${color}"`)
 		.replace(/fill="#000000"/gi, `fill="${color}"`)
@@ -261,7 +309,7 @@ export function makeSvgNeonPanel(
 		const drawHeight = canvas.height / (1 + glowPadding);
 		const offsetX = (canvas.width - drawWidth) / 2;
 		const offsetY = (canvas.height - drawHeight) / 2;
-		// blurred passes build the halo, then a crisp pass for the edge.
+		// blurred passes build the halo, then a crisp pass for the edge
 		ctx.clearRect(0, 0, canvas.width, canvas.height);
 		ctx.save();
 		ctx.shadowColor = glowColor;

@@ -1,6 +1,6 @@
-// pure math for the walk sim, crowd LOD, and camera. no three.js or Svelte
+// pure math for the walk, the crowd and the camera
 
-/** Keeps an angle in (-π, π] so it doesn't grow without bound as someone spins around and around while steering. */
+// keeps an angle in (-π, π]
 export function wrapAngle(angle) {
 	return (
 		((((angle + Math.PI) % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2)) -
@@ -8,7 +8,7 @@ export function wrapAngle(angle) {
 	);
 }
 
-/** The shortest signed angular distance from `a` to `b` (radians, in (-π, π]) — always the short way around, even across the -π/π wraparound. */
+// the shortest signed angle from `a` to `b`, across the wraparound
 export function shortestAngleDelta(a, b) {
 	let delta = (b - a) % (Math.PI * 2);
 	if (delta > Math.PI) delta -= Math.PI * 2;
@@ -16,21 +16,17 @@ export function shortestAngleDelta(a, b) {
 	return delta;
 }
 
-/**
- * rotation.y facing a body's front toward (dx, dz). these GLBs are rigged
- * facing local +Z, not the usual -Z, so forward is (sin y, cos y) and
- * atan2's arguments are swapped.
- */
+// the rotation facing a body toward (dx, dz); these models face local +z
 export function directionToYaw(dx, dz) {
 	return Math.atan2(dx, dz);
 }
 
-/** Eases a 0..1 progress value in and out, so a transition accelerates/decelerates gently rather than snapping linearly. */
+// eases a 0..1 progress in and out
 export function smoothstep(t) {
 	return t * t * (3 - 2 * t);
 }
 
-/** The first band (ascending by maxDistance) the given distance falls within — the last band acts as a catch-all for anything beyond it. */
+// the first band a distance falls within; the last is a catch-all
 export function pickLodBand(distance, bands) {
 	for (const band of bands) {
 		if (distance <= band.maxDistance) return band;
@@ -38,10 +34,7 @@ export function pickLodBand(distance, bands) {
 	return bands[bands.length - 1];
 }
 
-/**
- * age <-> depth mapping. young at the front (larger Z), old at the back.
- * both directions share it, so a round trip is stable.
- */
+// maps age to depth and back: young at the front, old at the back
 export function createAgeZMapping({ ageMin, ageMax, halfDepth, roomDepth }) {
 	function ageToZ(age) {
 		const t = (age - ageMin) / (ageMax - ageMin || 1);
@@ -56,9 +49,7 @@ export function createAgeZMapping({ ageMin, ageMax, halfDepth, roomDepth }) {
 	return { ageToZ, zToAge };
 }
 
-/**
- * pushes back to their side of the door plane, unless that door is open.
- */
+// pushes back to their side of the door plane, unless that door is open
 export function createOuterDoorCollisionResolver({
 	doors,
 	doorZ,
@@ -78,9 +69,7 @@ export function createOuterDoorCollisionResolver({
 	};
 }
 
-/**
- * same for the inner wall, unless they're in a corridor opening.
- */
+// the same for the inner wall, unless they're in an opening
 export function createInnerWallCollisionResolver({
 	zoneXs,
 	halfDepth,
@@ -98,14 +87,7 @@ export function createInnerWallCollisionResolver({
 	};
 }
 
-/**
- * critically-damped spring toward `target`, speed-capped. the standard
- * SmoothDamp. unlike an exponential ease it carries velocity frame to
- * frame, so it accelerates, decelerates, and re-curves without jolting
- * when `target` changes mid-flight.
- *
- * returns { value, velocity }; feed velocity back in (0 to start).
- */
+// a speed-capped spring toward `target`, carrying velocity between frames
 export function smoothDamp(current, target, velocity, smoothTime, maxSpeed, dt) {
 	smoothTime = Math.max(0.0001, smoothTime);
 	const omega = 2 / smoothTime;
@@ -118,7 +100,7 @@ export function smoothDamp(current, target, velocity, smoothTime, maxSpeed, dt) 
 	const temp = (velocity + omega * change) * dt;
 	let nextVelocity = (velocity - omega * temp) * exp;
 	let value = adjustedTarget + (change + temp) * exp;
-	// snap on overshoot
+	// snaps on overshoot
 	if (originalTarget - current > 0 === value > originalTarget) {
 		value = originalTarget;
 		nextVelocity = (value - originalTarget) / dt;
@@ -126,10 +108,7 @@ export function smoothDamp(current, target, velocity, smoothTime, maxSpeed, dt) 
 	return { value, velocity: nextVelocity };
 }
 
-/**
- * vertical fov (deg) reproducing a horizontal half-angle at an aspect.
- * clamped, so an extreme aspect can't reach fisheye or pinhole.
- */
+// the vertical fov giving a horizontal half-angle at an aspect, clamped
 export function computeFovForHorizontalHalfAngle(
 	halfAngleRad,
 	aspect,

@@ -1,5 +1,5 @@
 <script>
-	// overlay UI. no three.js — just reads/writes the props Main passes
+	// overlay ui; reads and writes the props main passes
 	let {
 		variableOptions,
 		selectedVariable = $bindable(),
@@ -11,17 +11,13 @@
 		hideMap = false,
 		hideYear = false,
 		hidden = false,
-		// story mode leaves the dropdown as a read-only label; explore hands
-		// the variable back to the reader
+		// story mode leaves the dropdown as a label; explore hands it over
 		exploreMode = false,
 		panelHeight = $bindable(0)
 	} = $props();
 
 	let panelEl;
-	// reports the panel's bottom edge so the topdown map can clear it —
-	// its own height plus wherever it starts, since narrow screens push it
-	// down past the explore button. content varies with variable and
-	// viewport, so a fixed guess drifts
+	// reports the panel's bottom edge, so the topdown map can clear it
 	$effect(() => {
 		if (!panelEl) return;
 		const resizeObserver = new ResizeObserver(() => {
@@ -36,8 +32,7 @@
 	{#if loadingMessage}
 		<div class="loading">{loadingMessage}</div>
 	{:else}
-		<!-- keyed on the variable, so picking a new one remounts these and
-		     re-runs the slide-in: the change reads as a change -->
+		<!-- keyed on the variable, so a new one remounts and slides in -->
 		{#key selectedVariable}
 			<label class="field field--enter">
 				<!-- <span>Color by</span> -->
@@ -53,14 +48,14 @@
 			</label>
 
 			{#if legendData?.kind === "gradient"}
-			<!-- continuous scale: the ramp itself, with its two ends -->
+			<!-- a continuous scale: the ramp and its two ends -->
 			<div class="legend legend--gradient legend--enter">
 				<span class="legend-end">{legendData.min}</span>
 				<div
 					class="legend-ramp"
 					style:background="linear-gradient(to right, {legendData.stops.join(', ')})"
 				></div>
-				<span class="legend-end">{legendData.max}</span>
+				<span class="legend-end">{legendData.maxLabel ?? legendData.max}</span>
 			</div>
 		{:else if legendData?.kind === "categorical"}
 			<div class="legend legend--enter">
@@ -118,7 +113,7 @@
 		border-radius: 0.5rem;
 		color: #eee;
 		font-family: var(--font-serif);
-		font-size: 0.7rem;
+		font-size: 0.8rem;
 		line-height: 1.6;
 		/* backdrop-filter: blur(3px); */
 		/* width: 100%; */
@@ -138,8 +133,8 @@
 	}
 
 	.field select {
-		font-size: 0.95rem !important;
-		/* reset.css targets the bare tag and would win over the mono font */
+		font-size: 1.05rem !important;
+		/* reset.css targets the bare tag and would win otherwise */
 		font-family: inherit;
 		font-weight: 700;
 		background:black;
@@ -150,12 +145,12 @@
 		max-width: 600px;
 	}
 
-	/* story mode: reads as a caption, not a control. browsers grey out and
-	   fade a disabled select, so colour and opacity are restated here */
+	/* story mode: a caption, not a control. browsers fade a disabled select */
 	.field select:disabled {
 		border-color: transparent;
-		/* no border or box to sit inside, so drop the inset too and let it
-		   line up with the legend below it */
+		/* no box: it reads as the chart's headline on the room */
+		background: transparent;
+		/* no box to sit inside, so it lines up with the legend below */
 		padding-left: 0;
 		padding-right: 0;
 		color: white;
@@ -171,7 +166,7 @@
 	margin-left: 0px;
 	color: var(--color-light-purple);
     gap: 0.5rem; /* tighter gap between items */
-    font-size: 0.85rem;
+    font-size: 0.95rem;
 }
 
 .legend--gradient {
@@ -213,7 +208,7 @@
 		border: 1px solid rgba(255, 255, 255, 0.25);
 		border-radius: 0rem;
 		padding: 0.3rem 0.55rem;
-		font-size: 0.68rem;
+		font-size: 0.78rem;
 		cursor: pointer;
 		transition:
 			color 150ms ease-out,
@@ -225,7 +220,7 @@
 		border-color: rgba(255, 255, 255, 0.45);
 	}
 
-	/* selected = white, unselected = dimmed */
+	/* selected is white, unselected dimmed */
 	.mode-toggle.active {
 		background: transparent;
 		border-color: #fff;
@@ -252,8 +247,7 @@
 		font-size: 0.7rem;
 	}
 
-	/* fade, not cut. CSS transition, since the render loop starves Svelte's.
-	   pointer-events dropped so a hidden panel isn't clickable */
+	/* fades rather than cuts, and a hidden panel can't be clicked */
 	.panel {
 		transition: opacity 320ms ease-out;
 	}
@@ -263,13 +257,18 @@
 	}
 
 
-	/* narrow screens: smaller type; nothing to clear at the top any more,
-	   the explore button lives down by the minimap now */
+	/* narrow screens: smaller type */
 	@media (max-width: 700px) {
 		.panel {
 			font-size: 0.62rem;
 			gap: 0.5rem;
 			padding: 0.75rem;
+			/* stops clear of the audio button in the corner */
+			box-sizing: border-box;
+			max-width: calc(100% - 58px);
+		}
+		.field select {
+			max-width: 100%;
 		}
 		.panel :global(select),
 		.field select {
@@ -285,15 +284,12 @@
 		}
 	}
 
-	/* a new variable slides its label and legend in from the left, so the
-	   recolor isn't the only signal that something changed. CSS keyframes
-	   rather than a svelte transition — the three.js loop next door starves
-	   main-thread-driven ones */
+	/* a new variable slides its label and legend in from the left */
 	.field--enter {
 		animation: control-slide-in 380ms cubic-bezier(0.16, 0.9, 0.3, 1) both;
 	}
 	.legend--enter {
-		/* a beat behind the label, so they read as one sweep */
+		/* a beat behind the label, so the two read as one sweep */
 		animation: control-slide-in 380ms cubic-bezier(0.16, 0.9, 0.3, 1) 70ms both;
 	}
 	@keyframes control-slide-in {

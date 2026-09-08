@@ -1,14 +1,9 @@
 import { smoothstep, shortestAngleDelta, pickLodBand, directionToYaw } from "../room/roomMath.js";
 
-// below this, a person's positionBlend is considered to have caught up
-// with the shared target — avoids treating floating-point dust as a
-// still-pending Y1<->Y2 move forever.
+// below this, a person has caught up with the shared wave target
 const POSITION_BLEND_EPSILON = 1e-4;
 
-/**
- * computes a collision-free layout for one wave (Y1 or Y2) via rejection
- * sampling against a spatial hash grid.
- */
+// a collision-free layout for one wave, by rejection sampling
 export function computeLayout(respondents, getZone, getAge, config) {
 	const { ageToZ, zoneWidth, halfWidth, halfDepth, roomDepth } = config;
 	const MIN_SPACING = 0.85; // minimum center-to-center distance between any two people
@@ -22,8 +17,7 @@ export function computeLayout(respondents, getZone, getAge, config) {
 	function farEnoughFromEveryoneElse(x, z) {
 		const cx = Math.floor(x / cellSize);
 		const cz = Math.floor(z / cellSize);
-		// A person can only be too close to someone in the same or an
-		// adjacent cell, since cells are sized to MIN_SPACING.
+		// cells are spacing-sized, so only neighbours can be too close
 		for (let dx = -1; dx <= 1; dx++) {
 			for (let dz = -1; dz <= 1; dz++) {
 				const bucket = occupiedCells.get(`${cx + dx},${cz + dz}`);
@@ -38,13 +32,11 @@ export function computeLayout(respondents, getZone, getAge, config) {
 		return true;
 	}
 
-	// horizontal placement uses the full zone width (there's no bar or
-	// other obstacle at the boundary anymore), with just a small wall margin.
+	// placed across the full zone width, less a small wall margin
 	const WALL_MARGIN = 1.5;
 	const HALF_ZONE = zoneWidth / 2;
 
-	// zone is -1 (No), 0 (Unsure), or 1 (Yes). wallMargin shrinks on each
-	// retry so dense age bands find room.
+	// the zone is -1, 0 or 1; the margin shrinks on each retry
 	function zoneBounds(zone, wallMargin) {
 		if (zone < 0) return [-halfWidth + wallMargin, -HALF_ZONE];
 		if (zone > 0) return [HALF_ZONE, halfWidth - wallMargin];
@@ -58,19 +50,18 @@ export function computeLayout(respondents, getZone, getAge, config) {
 		let x, z;
 		const MAX_ATTEMPTS = 40;
 		for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
-			// widen the search area on each retry so dense age bands still
-			// find room instead of exhausting all 40 attempts.
+			// widens on each retry, so dense age bands still find room
 			const widen = 1 + attempt / MAX_ATTEMPTS;
 			const [min, max] = zoneBounds(zone, WALL_MARGIN / widen);
 			x = min + Math.random() * (max - min);
-			// clamped so jitter never pushes the front-most age band past halfDepth into the facade.
+			// clamped, so jitter can't push the front band into the facade
 			z = Math.min(
 				halfDepth - WALL_MARGIN,
 				baseZ + (Math.random() - 0.5) * (roomDepth / 40) * widen
 			);
 			if (farEnoughFromEveryoneElse(x, z)) break;
 		}
-		// if every attempt failed, keep the last candidate rather than leaving the person unplaced.
+		// if every attempt failed, keep the last candidate anyway
 
 		const key = cellKeyFor(x, z);
 		if (!occupiedCells.has(key)) occupiedCells.set(key, []);
@@ -80,7 +71,7 @@ export function computeLayout(respondents, getZone, getAge, config) {
 	});
 }
 
-// A person's Y1 -> Y2 walk is a straight line between the two endpoints.
+// a person's walk between waves is a straight line between endpoints
 function buildBlendPath(x1, z1, x2, z2) {
 	const waypoints = [
 		{ x: x1, z: z1 },
@@ -89,8 +80,7 @@ function buildBlendPath(x1, z1, x2, z2) {
 	return { waypoints, fractions: [0, 1] };
 }
 
-// evaluates a person's blend path at progress t (0..1, same as
-// person.__positionBlend), finding the segment t falls in and lerping within it.
+// the point along a person's path at progress t
 function evaluateBlendPath({ waypoints, fractions }, t) {
 	for (let i = 0; i < fractions.length - 1; i++) {
 		if (t <= fractions[i + 1] || i === fractions.length - 2) {
@@ -106,10 +96,7 @@ function evaluateBlendPath({ waypoints, fractions }, t) {
 	return { x: last.x, z: last.z };
 }
 
-/**
- * seeds every respondent's simulation state (position, blend path, gait
- * variation, wander/idle state machine) from their Y1/Y2 layouts.
- */
+// seeds every respondent's simulation state from their two layouts
 export function initializeCrowdState(
 	respondents,
 	y1Layout,
@@ -118,22 +105,19 @@ export function initializeCrowdState(
 	{ heightScaleFor } = {}
 ) {
 	respondents.forEach((person, i) => {
-		// the fixed Y1/Y2 layout endpoints; __x/__z (below) is wherever
-		// between them the room is currently showing (see __positionBlend).
+		// the fixed endpoints; the live position sits somewhere between them
 		person.__xY1 = y1Layout[i].x;
 		person.__zY1 = y1Layout[i].z;
 		person.__xY2 = y2Layout[i].x;
 		person.__zY2 = y2Layout[i].z;
-		// the straight-line route between those two endpoints.
+		// the route between those endpoints
 		person.__blendPath = buildBlendPath(
 			person.__xY1,
 			person.__zY1,
 			person.__xY2,
 			person.__zY2
 		);
-		// this person's own progress (0 = Y1, 1 = Y2) along __blendPath, eased
-		// toward the shared target independently per-person (see the animator's
-		// update()) at a pace derived from THEIR OWN distance below.
+		// their own progress along that route, eased at their own pace
 		person.__positionBlend = initialBlend;
 		const startPos = evaluateBlendPath(person.__blendPath, initialBlend);
 		person.__x = startPos.x;
@@ -142,33 +126,25 @@ export function initializeCrowdState(
 			person.__xY2 - person.__xY1,
 			person.__zY2 - person.__zY1
 		);
-		// tracks the current timed Y1<->Y2 move, if any (see update()'s own
-		// distance-covered ramp).
+		// tracks the current timed move between waves, if any
 		person.__blendMoveActive = false;
 		person.__blendMoveStartBlend = initialBlend;
 		person.__blendMoveStartTime = 0;
 		person.__blendMoveTarget = initialBlend;
 		person.__offsetX = 0;
 		person.__offsetZ = 0;
-		// independent height/weight variation, so the crowd isn't a field of
-		// identical clones.
+		// height and build variation, so the crowd isn't identical clones
 		person.__heightScale = heightScaleFor
 			? heightScaleFor(person)
 			: 1 + Math.random() * 0.1;
 		person.__widthScale = 0.7 + Math.random() * 0.6;
-		// which way this person is facing (radians); turned smoothly
-		// toward their actual movement each frame (see the animator's
-		// update()). starts random.
+		// which way they face, turned smoothly toward their movement
 		person.__facingYaw = Math.random() * Math.PI * 2;
-		// 0..1, how "in motion" this person is — eases leg/arm swing
-		// in/out as they start/stop moving.
+		// how in motion they are, easing the limb swing in and out
 		person.__walkAmount = 0;
-		// this person's own smoothed ground speed (world units/sec), so
-		// their walk clip's playback rate tracks it instead of a flat 1x.
+		// their smoothed ground speed, which drives the clip's playback rate
 		person.__walkSpeed = 0;
-		// ambient wandering is an idle <-> shuffle state machine (see
-		// updateWander below): mostly stands still, occasionally shuffles
-		// to a nearby resting spot. staggered randomly so the room doesn't move in lockstep.
+		// idle and shuffle: mostly standing, occasionally moving a step
 		person.__wanderRadius = 0 + Math.random() * 0.5;
 		person.__wanderX = 0;
 		person.__wanderZ = 0;
@@ -179,35 +155,23 @@ export function initializeCrowdState(
 		person.__moveToZ = 0;
 		person.__moveStart = 0;
 		person.__moveDuration = 1;
-		// long, widely-staggered idle stretches so most of the crowd is
-		// standing still at any given moment — occasional shuffles (see
-		// updateWander) are the exception, not a constant fidget.
+		// long staggered idles, so most of the crowd is still at any moment
 		person.__nextMoveTime = 2 + Math.random() * 20;
-		// 0..1 progress through the current shuffle (0 when idle).
+		// progress through the current shuffle, zero when idle
 		person.__moveT = 0;
-		// A random 0..1 fraction of the walk clip's duration, so each
-		// mixer starts at a different point instead of stepping in unison.
+		// a random offset into the walk clip, so nobody steps in unison
 		person.__animOffsetFraction = Math.random();
-		// A random phase seed for the idle breathing wobble, so the crowd doesn't breathe in unison.
+		// a random phase for the breathing wobble
 		person.__breathPhase = Math.random() * Math.PI * 2;
-		// about 1 in 10 people stand with arms crossed while idle (the
-		// body GLB's own ArmsCrossed clip); everyone else gets the
-		// regular Idle clip (see crowd.js's spawnCrowd).
+		// about one in ten stands with arms crossed while idle
 		person.__armsCrossed = Math.random() < 0.1;
-		// this frame's voluntary (rest-position-only) movement direction
-		// — set each frame in Pass 1, read in Pass 2 to catch a wander
-		// move that starts out behind current facing.
+		// this frame's own movement, set in the first pass and read in the second
 		person.__voluntaryMoveDx = 0;
 		person.__voluntaryMoveDz = 0;
 	});
 }
 
-/**
- * owns the crowd's own per-frame simulation: wander/idle shuffling,
- * walker- and person-vs-person collision, facing, walk-cycle blending, LOD
- * (color/outline/animation-freeze by distance), and writing each person's
- * final transform plus their blob shadow and minimap dot.
- */
+// the crowd's per-frame simulation: wander, collision, facing, gait and lod
 export function createCrowdAnimator({
 	respondents,
 	personRoots,
@@ -258,12 +222,10 @@ export function createCrowdAnimator({
 	hoveredPersonBrightness,
 	lodFreezeDistance
 }) {
-	// rebuilt every frame: "cx,cz" -> array of respondent indices in that
-	// cell. reused via .clear() to avoid allocating a new Map per frame.
+	// a spatial grid of who's where, rebuilt each frame and reused
 	const personGrid = new Map();
 
-	// advances one person's idle/shuffle state machine and returns their
-	// current (wanderX, wanderZ) offset. facing is handled centrally in update().
+	// advances one person's idle and shuffle, returning their offset
 	function updateWander(person, elapsedSeconds) {
 		if (person.__moving) {
 			const t = (elapsedSeconds - person.__moveStart) / person.__moveDuration;
@@ -272,7 +234,7 @@ export function createCrowdAnimator({
 				person.__wanderZ = person.__moveToZ;
 				person.__moving = false;
 				person.__moveT = 0;
-				// stand still for a while before the next shuffle, randomized so people don't step in sync.
+				// stands still a while before the next shuffle
 				person.__nextMoveTime = elapsedSeconds + Math.random() * 20;
 			} else {
 				const eased = smoothstep(Math.max(0, t));
@@ -283,10 +245,7 @@ export function createCrowdAnimator({
 				person.__moveT = Math.max(0, Math.min(1, t));
 			}
 		} else if (elapsedSeconds >= person.__nextMoveTime) {
-			// time to shuffle: pick a new resting spot within this
-			// person's own small assigned area (a disk of radius
-			// wanderRadius around their base position) and glide there
-			// over a brief, randomized duration.
+			// picks a new resting spot nearby and glides there
 			const angle = Math.random() * Math.PI * 2;
 			const radius = Math.random() * person.__wanderRadius;
 			person.__moveFromX = person.__wanderX;
@@ -312,20 +271,15 @@ export function createCrowdAnimator({
 		const walkAmountFactor = 1 - Math.exp(-dt / walkAmountSmoothTime);
 		const walkSpeedFactor = 1 - Math.exp(-dt / walkSpeedSmoothTime);
 
-		// pass 1: advance decay + wander for everyone, and bucket each
-		// pre-repulsion position into a spatial grid so pass 2 only
-		// checks nearby cells instead of scanning everyone.
+		// first pass: wander everyone, and bucket them into the grid
 		personGrid.clear();
 		for (let i = 0; i < respondents.length; i++) {
 			const person = respondents[i];
-			// A pending Y1<->Y2 move: turn to face the new travel direction at
-			// blendTurnTime (much faster than facingTurnTime's ordinary wander turn) and
-			// hold position until that turn has mostly landed.
+			// a pending wave move: turn to face it, and hold until the turn lands
 			const blendDelta = targetPositionBlend - person.__positionBlend;
 			const hasPendingBlendMove = Math.abs(blendDelta) > POSITION_BLEND_EPSILON;
 			if (hasPendingBlendMove) {
-				// the fixed Y1<->Y2 route's own direction, flipped depending on which way
-				// this person is currently headed (blendDelta's sign).
+				// the route's direction, flipped to whichever way they're headed
 				const forward = blendDelta > 0;
 				const pathDx = person.__xY2 - person.__xY1;
 				const pathDz = person.__zY2 - person.__zY1;
@@ -341,8 +295,7 @@ export function createCrowdAnimator({
 					blendTurnGateAngle;
 				if (isTurnedToward) {
 					const targetBlend = forward ? 1 : 0;
-					// (Re)start the timed move the first frame it's turned enough to walk, or if
-					// the shared target flipped mid-walk (a rapid wave toggle).
+					// starts the timed move once they've turned enough to walk
 					if (!person.__blendMoveActive || person.__blendMoveTarget !== targetBlend) {
 						person.__blendMoveActive = true;
 						person.__blendMoveStartBlend = person.__positionBlend;
@@ -351,10 +304,7 @@ export function createCrowdAnimator({
 					}
 					const elapsedMove = elapsedSeconds - person.__blendMoveStartTime;
 					const rampSeconds = Math.max(blendMoveEaseSeconds, 1e-6);
-					// distance covered so far along this move: a linear
-					// speed ramp 0 -> positionTransitionSpeed over
-					// [0, rampSeconds] (integrates to a quadratic in t),
-					// then constant positionTransitionSpeed after.
+					// distance covered so far: a speed ramp, then a constant
 					const distanceCovered =
 						elapsedMove < rampSeconds
 							? (positionTransitionSpeed * elapsedMove * elapsedMove) /
@@ -365,8 +315,7 @@ export function createCrowdAnimator({
 						person.__blendPathDistance > 0
 							? Math.min(1, distanceCovered / person.__blendPathDistance)
 							: 1;
-					// progress is already clamped to 1 above, so this lands exactly on the
-					// target once distanceCovered catches up to blendPathDistance.
+					// lands exactly on the target once the distance catches up
 					person.__positionBlend =
 						person.__blendMoveStartBlend +
 						(person.__blendMoveTarget - person.__blendMoveStartBlend) * progress;
@@ -374,15 +323,12 @@ export function createCrowdAnimator({
 			} else {
 				person.__blendMoveActive = false;
 			}
-			// where this person's "resting" spot is right now, along
-			// their Y1 -> Y2 route (see buildBlendPath) — this is what
-			// makes the crowd walk across the room when toggled.
+			// their resting spot right now, somewhere along their route
 			const { x: blendedX, z: blendedZ } = evaluateBlendPath(
 				person.__blendPath,
 				person.__positionBlend
 			);
-			// this frame's pre-update resting spot (blend + wander, not
-			// the collision nudge below), so we can tell how far/which way they actually moved.
+			// the spot before any collision nudge, so movement can be measured
 			const prevRestX = person.__x + person.__wanderX;
 			const prevRestZ = person.__z + person.__wanderZ;
 			person.__x = blendedX;
@@ -391,9 +337,7 @@ export function createCrowdAnimator({
 			person.__offsetZ *= decay;
 			updateWander(person, elapsedSeconds); // updates person.__wanderX/__wanderZ
 
-			// face wherever the combined movement is actually taking them, turning
-			// smoothly and only while moving (so standing still keeps facing the last
-			// walked direction).
+			// faces where they're actually moving, and only while moving
 			const moveDx = person.__x + person.__wanderX - prevRestX;
 			const moveDz = person.__z + person.__wanderZ - prevRestZ;
 			const isMoving = moveDx * moveDx + moveDz * moveDz > moveFacingEpsilonSq;
@@ -402,13 +346,11 @@ export function createCrowdAnimator({
 				person.__facingYaw +=
 					shortestAngleDelta(person.__facingYaw, desiredYaw) * facingFactor;
 			}
-			// voluntary movement only (not the collision-push offset, applied separately
-			// below).
+			// their own movement, without the collision push
 			person.__voluntaryMoveDx = moveDx;
 			person.__voluntaryMoveDz = moveDz;
 			person.__walkAmount += ((isMoving ? 1 : 0) - person.__walkAmount) * walkAmountFactor;
-			// how fast they're actually covering ground, smoothed the
-			// same way as elsewhere — keeps the walk clip's rate in sync with real ground speed.
+			// their smoothed ground speed, which keeps the clip's rate in step
 			const currentSpeed = dt > 0 ? Math.hypot(moveDx, moveDz) / dt : 0;
 			person.__walkSpeed += (currentSpeed - person.__walkSpeed) * walkSpeedFactor;
 
@@ -420,8 +362,7 @@ export function createCrowdAnimator({
 			bucket.push(i);
 		}
 
-		// pass 2: walker-collision, then person-vs-person repulsion
-		// against grid neighbors, then write the final transforms.
+		// second pass: collisions, then the final transforms
 		for (let i = 0; i < respondents.length; i++) {
 			const person = respondents[i];
 			const wanderX = person.__wanderX;
@@ -475,14 +416,13 @@ export function createCrowdAnimator({
 			const finalZ = person.__z + wanderZ + person.__offsetZ;
 			const finalX = person.__x + wanderX + person.__offsetX;
 
-			// their own voluntary movement this frame, from pass 1
+			// their own movement this frame, from the first pass
 			const isActivelyMoving =
 				person.__voluntaryMoveDx * person.__voluntaryMoveDx +
 					person.__voluntaryMoveDz * person.__voluntaryMoveDz >
 				moveFacingEpsilonSq;
 
-			// within faceCameraRadius, override the movement-based facing and turn to
-			// look at the walker instead.
+			// close in, they turn to face the walker instead
 			const toWalkerX = renderWalkX - finalX;
 			const toWalkerZ = renderWalkZ - finalZ;
 			const distToWalkerSq = toWalkerX * toWalkerX + toWalkerZ * toWalkerZ;
@@ -500,17 +440,14 @@ export function createCrowdAnimator({
 			const yaw = person.__facingYaw;
 			const heightScale = person.__heightScale;
 			const widthScale = person.__widthScale;
-			// being shoved by the walker or another person just slides someone aside
-			// with no special animation handling at all (cheaper, and it isn't their own
-			// motion to react to).
+			// being shoved just slides them; it isn't their own motion
 			const isVoluntaryBackward =
 				isActivelyMoving &&
 				person.__voluntaryMoveDx * Math.sin(yaw) +
 					person.__voluntaryMoveDz * Math.cos(yaw) <
 					0;
 
-			// LOD: this person's own body/shape is always what's rendered (root stays
-			// visible).
+			// lod dims and thins with distance; it never swaps the body
 			const distToWalker = Math.sqrt(distToWalkerSq);
 			const band = pickLodBand(distToWalker, lodColorBands);
 			const isFrozen =
@@ -531,13 +468,10 @@ export function createCrowdAnimator({
 			bodyMaterial.userData.outlineParameters.thickness = band.outlineThickness;
 			skinMaterial.userData.outlineParameters.thickness = band.outlineThickness;
 
-			// advance this person's walk clip, cross-faded against the (also looping)
-			// Idle/ArmsCrossed rest action by how much they're moving.
+			// advances the walk clip, cross-faded against their idle by how much they move
 			const mixer = personMixers[i];
 			const walkAction = personWalkActions[i];
-			// also read by the breathing block below (breathSpeedFactor) so a person
-			// striding faster breathes with more amplitude, not just a faster-cycling
-			// phase.
+			// also read by the breathing below, so a faster stride breathes deeper
 			const speedScale = Math.min(
 				maxWalkTimescale,
 				Math.max(minWalkTimescale, person.__walkSpeed / walkAnimSpeed)
@@ -545,10 +479,7 @@ export function createCrowdAnimator({
 			if (mixer && !isFrozen) {
 				const restAction = personRestActions[i];
 				if (isVoluntaryBackward) {
-					// their own next wander step is behind where they're still facing: instead
-					// of the Walk clip looping forward while they visibly move backward (a
-					// moonwalk), hold at a fixed "one foot stepped back" point in the clip until
-					// facing catches up.
+					// moving behind their facing: hold a stepped-back pose rather than moonwalk
 					walkAction.paused = true;
 					walkAction.time = walkAction.getClip().duration * stepBackHoldFraction;
 					walkAction.weight = 1;
@@ -562,11 +493,9 @@ export function createCrowdAnimator({
 				mixer.update(dt);
 			}
 
-			// position/orient/scale this person's whole clone at once.
+			// places, turns and scales the whole clone at once
 			const root = personRoots[i];
-			// beyond renderCullDistance they're fully faded into the fog
-			// anyway (see Main's walkFog) — skipping the draw call
-			// entirely for everyone out there is the actual perf win, not just the visual fade.
+			// past the cull distance they're lost in fog, so skip the draw entirely
 			root.visible = distToWalker <= renderCullDistance;
 			const baseHeightScale = heightScale * walkerScaleCorrection;
 			const baseWidthScale = widthScale * walkerScaleCorrection;
@@ -579,8 +508,7 @@ export function createCrowdAnimator({
 				const cyclePhase =
 					(walkAction.time / clipDuration) * Math.PI * 2 * breathCyclesPerStride;
 				const walkPhaseValue = Math.sin(cyclePhase);
-				// striding faster (higher speedScale, same value driving the walk clip's own
-				// timeScale just above) breathes deeper, not just faster-cycling.
+				// a faster stride breathes deeper, not just quicker
 				const BREATH_SPEED_FACTOR_MIN = 0.7;
 				const BREATH_SPEED_FACTOR_MAX = 1.6;
 				const speedT =
@@ -588,8 +516,7 @@ export function createCrowdAnimator({
 				const breathSpeedFactor =
 					BREATH_SPEED_FACTOR_MIN +
 					speedT * (BREATH_SPEED_FACTOR_MAX - BREATH_SPEED_FACTOR_MIN);
-				// walkBreathAmplitudeScale scales just this walking term, independent of
-				// breathingAmplitude (which also sets the idle-standing breath above).
+				// scales the walking breath alone, apart from the idle one
 				breath =
 					(idlePhaseValue * (1 - person.__walkAmount) +
 						walkPhaseValue *
@@ -604,16 +531,14 @@ export function createCrowdAnimator({
 			root.rotation.y = yaw;
 			root.scale.set(baseWidthScale, baseHeightScale * (1 + breath), baseWidthScale);
 
-			// the blob shadow: a flat disc on the floor under the person,
-			// sized with their width (footprint), not height. dropped once
-			// frozen/far — scaled to nothing rather than left out of the instance count.
+			// the shadow disc, sized to their footprint and scaled away when far
 			placementHelper.quaternion.copy(flatRotation);
 			placementHelper.position.set(finalX, 0.015, finalZ);
 			placementHelper.scale.setScalar(isFrozen ? 0 : widthScale);
 			placementHelper.updateMatrix();
 			shadows.setMatrixAt(i, placementHelper.matrix);
 
-			// this person's flat position for the 2D minimap (see Minimap.lifedeath.svelte's draw()).
+			// their flat position, for the minimap
 			minimapX[i] = finalX;
 			minimapZ[i] = finalZ;
 		}

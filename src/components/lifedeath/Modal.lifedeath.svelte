@@ -1,25 +1,23 @@
 <script>
-	// left shelf for the clicked crowd member. every variable they answered,
-	// grouped like the "Color by" dropdown
+	// left shelf for the clicked person: every variable they answered
 	import {
 		variableConfig,
 		groupedVariableOptions,
 		getColumns,
 		getCategoryFor,
 		columnForWave,
+		numericScale,
 		parseNumericValue
 	} from "$data/variable_config.js";
 	import { tidyMarital } from "./people/personSummary.js";
 
-	// `wave` is bindable, so this and the control panel share one state —
-	// flipping here also walks the crowd
+	// `wave` is bindable, so flipping it here also walks the crowd
 	let { person, wave = $bindable("Y1"), onclose } = $props();
 
 	const open = $derived(person != null);
 	const groups = groupedVariableOptions();
 
-	// as recorded, not the lumped legend label ("Married", not
-	// "Married/Partnered"). config still flags admin codes as missing
+	// the value as recorded, not the bucket label
 	function formatValue(key, config, column) {
 		const raw = person?.[column];
 		if (raw === null || raw === undefined || raw === "") return "—";
@@ -34,36 +32,18 @@
 		return String(raw);
 	}
 
-	// some top buckets are open-ended catch-alls ("3+", "20+") whose stated
-	// max is arbitrary. detected by span vs. the bucket before; if much
-	// wider, its start is the ceiling
-	function effectiveMaxFor(config) {
-		const sorted = [...config.ranges].sort((a, b) => a.min - b.min);
-		const last = sorted[sorted.length - 1];
-		const secondLast = sorted[sorted.length - 2];
-		if (secondLast) {
-			const lastSpan = last.max - last.min;
-			const secondLastSpan = secondLast.max - secondLast.min || 1;
-			if (lastSpan > secondLastSpan * 3) return last.min;
-		}
-		return last.max;
+	// the variable's own span, shared with the legend so an open-ended top
+	// bucket ("3+") reads the same in both
+	function numericScaleFor(key, config) {
+		return config.type === "numeric" ? numericScale(key) : null;
 	}
 
-	// the variable's own full span, since not every numeric is 0-10
-	function numericScaleFor(config) {
-		if (config.type !== "numeric" || !config.ranges?.length) return null;
-		const min = Math.min(...config.ranges.map((r) => r.min));
-		const max = effectiveMaxFor(config);
-		return max > min ? { min, max } : null;
-	}
-
-	// 0..1 bar fill, clamped for values outside the configured ranges
+	// bar fill from 0 to 1, clamped
 	function fillFractionFor(value, scale) {
 		return Math.max(0, Math.min(1, (value - scale.min) / (scale.max - scale.min)));
 	}
 
-	// small counts read better as pips, one per unit — "63% full" means
-	// nothing for "3 children"
+	// small counts read better as pips than as a bar
 	function isPipVariable(key, config) {
 		return (
 			config.parent === "Health & Habits" || key === "NUM_CHILDREN" || key === "NUM_HOUSEHOLD"
@@ -73,7 +53,7 @@
 	const age = $derived(person?.[wave === "Y1" ? "AGE_Y1" : "AGE_Y2"] ?? null);
 	const waveYearLabel = $derived(wave === "Y1" ? "2022-23" : "2024");
 
-	// as recorded, or null for missing/admin codes
+	// the answer as recorded, or null for missing and admin codes
 	function rawAnswer(currentPerson, baseVar, waveKey) {
 		const column = columnForWave(baseVar, waveKey);
 		const raw = column ? currentPerson[column] : null;
@@ -88,7 +68,7 @@
 		return "person";
 	}
 
-	// plain-language intro from whatever they answered
+	// a plain-language intro built from their answers
 	function buildIntroSentence(currentPerson, waveKey) {
 		if (!currentPerson) return "";
 		const noun = genderNoun(currentPerson.GENDER);
@@ -163,7 +143,7 @@
 						{@const config = variableConfig[key]}
 						{@const column = columnForWave(key, wave)}
 						{@const isPip = isPipVariable(key, config)}
-						{@const scale = !isPip ? numericScaleFor(config) : null}
+						{@const scale = !isPip ? numericScaleFor(key, config) : null}
 						{@const numericValue =
 							isPip || scale ? parseNumericValue(key, person[column]) : null}
 						<div class="stat">
@@ -180,7 +160,7 @@
 								{/if}
 							{:else if scale && numericValue !== null}
 								{@const fraction = fillFractionFor(numericValue, scale)}
-								<div class="rangeBar" role="img" aria-label="{formatValue(key, config, column)} of {scale.min} to {scale.max}">
+								<div class="rangeBar" role="img" aria-label="{formatValue(key, config, column)} of {scale.min} to {scale.maxLabel}">
 									<div class="rangeBarFill" style="width: {fraction * 100}%">
 										{#if fraction >= 0.22}
 											<span class="rangeBarValue rangeBarValue--inside"
@@ -218,15 +198,11 @@
 		top: 0px;
 		width: 380px;
 		max-width: 100%;
-		/* height:100% of a position:fixed element resolves against the
-		   viewport, which on mobile browsers includes address-bar space —
-		   100dvh (with 100% as the fallback) tracks the real visible
-		   height as it shows/hides, same fix as .lifedeath-room. */
+		/* dvh tracks the real visible height as a mobile address bar moves */
 		height: 100%;
 		height: 100dvh;
 		background: #0a0510;
-		/* thin rule down the open edge, so the panel reads as a panel
-		   against the room rather than bleeding into it */
+		/* thin rule down the open edge, so it reads against the room */
 		border-right: 1px solid rgba(255, 255, 255, 0.22);
 		box-sizing: border-box;
 		z-index: 999999;
@@ -249,8 +225,7 @@
 	.shelf.shelfopen {
 		left: 0px;
 	}
-	/* below 450px the shelf takes the whole screen; the closed offset has to
-	   match the width, or a sliver of it stays on screen */
+	/* below 450px it takes the whole screen, closed offset included */
 	@media (max-width: 449px) {
 		.shelf {
 			width: 100%;
@@ -274,10 +249,7 @@
 		top: 0px;
 		width: 100%;
 		box-sizing: border-box;
-		/* sticky, but with no z-index it still stacks in plain DOM order —
-		   later content scrolling underneath (e.g. a .rangeBarValue--outside
-		   label, itself position:absolute) could paint over it once it
-		   scrolled up to y=0. this keeps it on top regardless. */
+		/* keeps it above content scrolling underneath it */
 		z-index: 20;
 	}
 	.detailsClose:hover {
@@ -337,11 +309,7 @@
 		display: block;
 		color: rgba(255, 255, 255, 1);
 	}
-	/* A numeric variable's own value shown as how full a bar is (see
-	   numericScaleFor/fillFractionFor) instead of a bare number — the
-	   track is the variable's own full min..max span, same purple accent
-	   as .wave-toggle.active for one consistent "this app's accent color"
-	   throughout the modal. */
+	/* a numeric answer as how full a bar is, over the variable's own span */
 	.rangeBar {
 		position: relative;
 		margin-top: 3px;
@@ -364,14 +332,12 @@
 		font-size: 0.72rem;
 		white-space: nowrap;
 	}
-	/* enough fill to fit the label inside it — right-aligned near the
-	   fill's own leading (right) edge, over the accent color. */
+	/* enough fill to hold the label inside it */
 	.rangeBarValue--inside {
 		padding-right: 4px;
 		color: #fff;
 	}
-	/* not enough fill — the label sits just past the bar's own leading
-	   edge instead, over the track rather than the (too-thin) fill. */
+	/* too little fill, so the label sits just past the bar's edge */
 	.rangeBarValue--outside {
 		position: absolute;
 		top: 50%;
@@ -379,9 +345,7 @@
 		margin-left: 4px;
 		color: rgba(255, 255, 255, 0.85);
 	}
-	/* small discrete counts (see isPipVariable) — one dot per unit, filled
-	   up to the value, same track/fill colors as .rangeBar for one
-	   consistent "this is how full/many" visual language. */
+	/* small counts as one dot per unit, filled up to the value */
 	.pipRow {
 		display: flex;
 		flex-wrap: wrap;

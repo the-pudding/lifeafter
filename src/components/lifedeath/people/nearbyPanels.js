@@ -25,13 +25,7 @@ import {
 	NEARBY_SELECTION_REFRESH_INTERVAL
 } from "./peopleConfig.js";
 
-/**
- * floating info panels above nearby crowd members: who gets one, building
- * the label texture, and positioning/scaling/billboarding each frame.
- *
- * getters because it reads live walker/camera state. owns three.js
- * resources that need disposing when a person loses their slot.
- */
+// info panels above nearby crowd members: picking, building, placing
 export function createNearbyPanels({
 	respondents,
 	personRoots,
@@ -47,12 +41,15 @@ export function createNearbyPanels({
 	getMode,
 	getPositionMode,
 	getSelectedVariable,
-	getHasStoryText
+	getHasStoryText,
+	// whoever the pointer is over, who gets a panel whatever the selection
+	// rules say — it's a deliberate ask, not a proximity guess
+	getHoveredPersonIndex = () => null
 }) {
-	// once, not per panel. keeps minified label text crisp
+	// max anisotropy, read once
 	const maxAnisotropy = renderer.capabilities.getMaxAnisotropy();
 
-	// bigger as the fov widens, so the label holds its pixel size
+	// panel scale for the current fov, so it holds its pixel size
 	function viewportPanelScale() {
 		const referenceHalfFov = THREE.MathUtils.degToRad(
 			NEARBY_PANEL_REFERENCE_FOV / 2
@@ -64,7 +61,7 @@ export function createNearbyPanels({
 
 	const nearbyVisibilityRaycaster = new THREE.Raycaster();
 	const nearbyVisibilityDirection = new THREE.Vector3();
-	// -> sq. distance if near, in-cone and unblocked. else null
+	// sq. distance if this person qualifies, else null
 	function qualifiesForNearbyPanel(index, blockerMeshes, cosHalfAngle) {
 		const root = personRoots[index];
 		if (!root.visible) return null;
@@ -73,21 +70,20 @@ export function createNearbyPanels({
 		const distSq = dx * dx + dz * dz;
 		if (distSq >= NEARBY_PERSON_MAX_DISTANCE * NEARBY_PERSON_MAX_DISTANCE)
 			return null;
-		// unit vector, so the dot is cos(angle) * dist — avoids a sqrt
+		// unit forward, so the dot avoids a sqrt
 		const forwardX = Math.sin(getCameraYaw());
 		const forwardZ = -Math.cos(getCameraYaw());
 		const dot = dx * forwardX + dz * forwardZ;
 		if (dot <= 0 || dot * dot < cosHalfAngle * cosHalfAngle * distSq) {
 			return null;
 		}
-		// line of sight vs. structure only. counting people starved the
-		// selection; panels sit above heads and the z-buffer sorts the rest
+		// line of sight against structure only
 		const headTop = computeHeadTopPoint(index);
 		nearbyVisibilityDirection.subVectors(headTop, camera.position);
 		const distanceToHead = nearbyVisibilityDirection.length();
 		nearbyVisibilityDirection.normalize();
 		nearbyVisibilityRaycaster.set(camera.position, nearbyVisibilityDirection);
-		// stop short, or their own body blocks them
+		// stop short of the head, or their own body blocks it
 		nearbyVisibilityRaycaster.far = distanceToHead - 0.05;
 		if (
 			nearbyVisibilityRaycaster.intersectObjects(blockerMeshes, true).length > 0
@@ -97,8 +93,7 @@ export function createNearbyPanels({
 		return distSq;
 	}
 
-	// head height from the real bbox, so it tracks each body model.
-	// cached and de-scaled, so breathing doesn't bob the panel
+	// head height from the bbox, cached and de-scaled so breathing can't bob it
 	const nearbyHeadBox = new THREE.Box3();
 	const nearbyHeadTopPoint = new THREE.Vector3();
 	const nearbyStableHeadHeights = new Map();
@@ -109,7 +104,7 @@ export function createNearbyPanels({
 		// setFromObject reads child matrixWorlds
 		root.updateMatrixWorld(true);
 		nearbyHeadBox.setFromObject(root);
-		// feet at y=0, so max.y is height
+		// feet at y=0, so max.y is the height
 		const breathFreeHeight =
 			root.scale.y > 0 ? nearbyHeadBox.max.y / root.scale.y : 0;
 		const baseHeightScale =
@@ -118,7 +113,7 @@ export function createNearbyPanels({
 		nearbyStableHeadHeights.set(index, height);
 		return height;
 	}
-	// head top, no gap yet. X/Z live, Y fixed
+	// head top: x/z live, y fixed
 	function computeHeadTopPoint(index) {
 		const root = personRoots[index];
 		nearbyHeadTopPoint.set(
@@ -129,15 +124,11 @@ export function createNearbyPanels({
 		return nearbyHeadTopPoint;
 	}
 
-	// leader line, drawn before the panel appears. unit quad standing on its
-	// own origin, so scale.y is the drawn length. shared across panels —
-	// they differ only by transform
+	// leader line: a unit quad on its own origin, so scale.y is its length
 	const nearbyLineGeometry = new THREE.PlaneGeometry(1, 1).translate(0, 0.5, 0);
 	const nearbyLineMaterial = new THREE.MeshBasicMaterial({
 		color: NEARBY_PANEL_LINE_COLOR,
-		// same translucent white as the panel's drawn border. depth-tested,
-		// so bodies in front still hide it, but no depth write — a
-		// transparent quad that writes depth punches out whatever overlaps
+		// matches the panel's border. depth-tested but never writes depth
 		transparent: true,
 		opacity: NEARBY_PANEL_LINE_OPACITY,
 		depthTest: true,
@@ -146,11 +137,10 @@ export function createNearbyPanels({
 	});
 	nearbyLineMaterial.userData.outlineParameters = { visible: false };
 
-	// personIndex -> { mesh, texture, wave, variable }. keyed by respondent
-	// so a panel survives rank changes. wave+variable are the text cache key
+	// live panels by person index; wave+variable are the texture cache key
 	const nearbyPanels = new Map();
 	function disposeNearbyPanel(record) {
-		// geometry/material are shared, so the line is only unparented
+		// the line's geometry and material are shared, so only unparent it
 		record.line.parent?.remove(record.line);
 		record.mesh.parent?.remove(record.mesh);
 		record.mesh.geometry.dispose();
@@ -177,12 +167,12 @@ export function createNearbyPanels({
 		line.renderOrder = 9;
 		line.visible = false;
 		innerRoomGroup.add(line);
-		// only the face materials carry the canvas; edges are invisible
+		// only the face materials carry the canvas
 		const fadeMaterials = (
 			Array.isArray(mesh.material) ? mesh.material : [mesh.material]
 		).filter((material) => material.map);
 		for (const material of fadeMaterials) material.opacity = 0;
-		// cache key. either changing rebuilds the texture
+		// wave and variable are the cache key for the texture
 		return {
 			mesh,
 			texture,
@@ -195,19 +185,18 @@ export function createNearbyPanels({
 			variable: getSelectedVariable()
 		};
 	}
-	// mark for fade-out. the update loop disposes it when invisible
+	// mark for fade-out; the update loop disposes it at zero
 	function dropNearbyPanel(index) {
 		const record = nearbyPanels.get(index);
 		if (record) record.fadingOut = true;
 	}
-	// two stages: the line draws up, then the panel fades in. reversed on
-	// the way out. keeps following, disposes once both are gone
+	// draws the line, then fades the panel in; reversed on the way out
 	function advancePanelFade(index, record, dt) {
 		const lineStep = dt / NEARBY_PANEL_LINE_SECONDS;
 		const step = dt / NEARBY_PANEL_FADE_SECONDS;
 		if (record.fadingOut) {
 			record.opacity = Math.max(0, record.opacity - step);
-			// line retracts only once the panel it carries is gone
+			// the line retracts only once its panel is gone
 			if (record.opacity <= 0) {
 				record.lineProgress = Math.max(0, record.lineProgress - lineStep);
 			}
@@ -229,14 +218,14 @@ export function createNearbyPanels({
 		return true;
 	}
 
-	// current selection, as respondent indices
+	// currently selected respondent indices
 	let nearbySelected = [];
 	let nearbySelectionTimer = NEARBY_SELECTION_REFRESH_INTERVAL; // fills all slots on the very first frame
-	// reused, to avoid reallocating each refresh
+	// reused each refresh
 	const nearbyCandidates = [];
 	function updateNearbyPersonInfo(dt) {
 		if (!getInsideRoom() || getMode() !== "walk") {
-			// dispose outright — nothing to position against once the view is gone
+			// nothing to position against, so dispose outright
 			for (const [index, record] of [...nearbyPanels]) {
 				disposeNearbyPanel(record);
 				nearbyPanels.delete(index);
@@ -246,18 +235,26 @@ export function createNearbyPanels({
 			return;
 		}
 
-		// story text owns the screen: fade out, pick nobody new.
-		// they keep tracking their person via the pass below
+		// the pointer's own pick, if they're still on screen
+		const hovered = getHoveredPersonIndex();
+		const hoveredIndex =
+			hovered !== null && hovered !== undefined && personRoots[hovered]?.visible
+				? hovered
+				: null;
+
+		// story text owns the screen: fade out and pick nobody new, except
+		// whoever they're pointing at
 		if (getHasStoryText()) {
-			for (const index of nearbySelected) dropNearbyPanel(index);
-			nearbySelected = [];
+			for (const index of nearbySelected) {
+				if (index !== hoveredIndex) dropNearbyPanel(index);
+			}
+			nearbySelected = hoveredIndex === null ? [] : [hoveredIndex];
 			nearbySelectionTimer = NEARBY_SELECTION_REFRESH_INTERVAL;
 		} else {
-			// blockers: structure only
+			// structure blocks line of sight, people don't
 			const blockerMeshes = occluderMeshes;
 
-			// cone = narrower of the fixed cone and the camera's horizontal fov,
-			// less an edge margin. camera.fov is vertical, so convert
+			// selection cone: the narrower of the fixed cone and the camera's
 			const verticalHalfFovRad = THREE.MathUtils.degToRad(camera.fov / 2);
 			const horizontalHalfFovRad = Math.atan(
 				Math.tan(verticalHalfFovRad) * camera.aspect
@@ -271,6 +268,7 @@ export function createNearbyPanels({
 
 			// drops are immediate; only adds are throttled
 			nearbySelected = nearbySelected.filter((index) => {
+				if (index === hoveredIndex) return true;
 				if (
 					qualifiesForNearbyPanel(index, blockerMeshes, cosHalfAngle) !== null
 				)
@@ -283,8 +281,7 @@ export function createNearbyPanels({
 			if (nearbySelectionTimer >= NEARBY_SELECTION_REFRESH_INTERVAL) {
 				nearbySelectionTimer = 0;
 
-				// re-rank everyone, incl. the selected, so the set follows the
-				// walker instead of freezing once the slots fill
+				// re-rank everyone, so the set follows the walker
 				const incumbents = new Set(nearbySelected);
 				nearbyCandidates.length = 0;
 				for (let i = 0; i < personRoots.length; i++) {
@@ -294,7 +291,7 @@ export function createNearbyPanels({
 						cosHalfAngle
 					);
 					if (distSq === null) continue;
-					// nothing displayable for this wave/variable
+					// nothing to show for this wave and variable
 					if (
 						formatNearbyPersonLines(
 							respondents[i],
@@ -304,8 +301,7 @@ export function createNearbyPanels({
 					) {
 						continue;
 					}
-					// incumbents rank as if closer, so a marginal challenger doesn't
-					// churn the selection and rebuild textures
+					// incumbents rank as if closer, so the set doesn't churn
 					nearbyCandidates.push({
 						index: i,
 						rank: incumbents.has(i)
@@ -318,6 +314,9 @@ export function createNearbyPanels({
 				const winners = nearbyCandidates
 					.slice(0, NEARBY_PEOPLE_MAX)
 					.map((candidate) => candidate.index);
+				if (hoveredIndex !== null && !winners.includes(hoveredIndex)) {
+					winners.push(hoveredIndex);
+				}
 				// losers give up their panel
 				for (const index of nearbySelected) {
 					if (!winners.includes(index)) dropNearbyPanel(index);
@@ -325,57 +324,57 @@ export function createNearbyPanels({
 				nearbySelected = winners;
 			}
 
-			// rebuild only if missing or stale. a reselected fading panel
-			// just fades back in
-			for (const index of nearbySelected) {
-				let record = nearbyPanels.get(index);
-				if (
-					record &&
-					(record.wave !== getPositionMode() ||
-						record.variable !== getSelectedVariable())
-				) {
-					disposeNearbyPanel(record);
-					record = null;
-				}
-				if (!record) {
-					record = buildNearbyPanel(index);
-					nearbyPanels.set(index, record);
-				}
-				record.fadingOut = false;
-			}
 		}
 
-		// position every live panel, fading ones included
+		// build whatever the selection settled on, story text or not, so a
+		// hovered person still gets their panel. only if missing or stale
+		for (const index of nearbySelected) {
+			let record = nearbyPanels.get(index);
+			if (
+				record &&
+				(record.wave !== getPositionMode() ||
+					record.variable !== getSelectedVariable())
+			) {
+				disposeNearbyPanel(record);
+				record = null;
+			}
+			if (!record) {
+				record = buildNearbyPanel(index);
+				nearbyPanels.set(index, record);
+			}
+			record.fadingOut = false;
+		}
+
+		// place every live panel, fading ones included
 		const viewportScale = viewportPanelScale();
 		for (const [index, record] of [...nearbyPanels]) {
 			if (!advancePanelFade(index, record, dt)) continue;
 			const headTop = computeHeadTopPoint(index);
-			// to the pre-gap point; the gap is too small to warrant a second pass
+			// measured to the head, not the panel
 			const distance = camera.position.distanceTo(headTop);
-			// what plain perspective would give, clamped to stay legible
+			// plain perspective, clamped to stay legible
 			const naturalApparentScale = NEARBY_PANEL_REFERENCE_DISTANCE / distance;
 			const apparentScale =
 				Math.min(
 					NEARBY_PANEL_MAX_APPARENT_SCALE,
 					Math.max(NEARBY_PANEL_MIN_APPARENT_SCALE, naturalApparentScale)
 				) * viewportScale;
-			// apparent size -> world scale. inside the band these cancel to 1
+			// apparent size back to world scale
 			const scale =
 				apparentScale * (distance / NEARBY_PANEL_REFERENCE_DISTANCE);
-			// bottom edge sits a line-length plus gap above the head, so line
-			// count grows the panel upward instead of into the face
+			// anchored by its bottom edge, so it grows upward
 			const halfPanelHeight = record.mesh.geometry.parameters.height / 2;
 			const stemLength = NEARBY_PANEL_LINE_LENGTH + NEARBY_PERSON_HEAD_GAP;
 			record.mesh.position.set(
 				headTop.x,
-				// stem scales with the panel
+				// the stem scales with the panel
 				headTop.y + (stemLength + halfPanelHeight) * scale,
 				headTop.z
 			);
 			record.mesh.scale.setScalar(scale);
 			// face the camera
 			record.mesh.quaternion.copy(camera.quaternion);
-			// stands on the head, drawn up to the panel's bottom edge
+			// stands on the head, drawn up to the panel
 			record.line.position.copy(headTop);
 			record.line.quaternion.copy(camera.quaternion);
 			record.line.scale.set(

@@ -7,10 +7,107 @@
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 	%sveltekit.head%
 	<script data-goatcounter="https://thepudding.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+	<!--
+		the first paint, before the bundle runs. the same purple and the same
+		squiggle as the app's load screen, which takes over on mount and
+		removes #preboot. the colours are literals because app.css, where
+		--bg-color lives, hasn't loaded yet
+	-->
+	<style>
+		html, body {
+			background: #0d0815;
+		}
+		#preboot {
+			position: fixed;
+			inset: 0;
+			z-index: 9999;
+			background: #0d0815;
+			pointer-events: none;
+		}
+		#preboot .preboot-label {
+			position: absolute;
+			left: 50%;
+			top: 50%;
+			transform: translateX(-50%);
+			margin-top: -38px;
+			font-family: "Iowan Old Style", "Tiempos Text", "Times New Roman", Times, serif;
+			font-size: 0.85rem;
+			letter-spacing: 0.06em;
+			color: rgba(255, 255, 255, 0.65);
+			white-space: nowrap;
+		}
+		#preboot .preboot-line {
+			position: absolute;
+			left: 50%;
+			top: 50%;
+			width: 120px;
+			height: 24px;
+			margin-left: -60px;
+			margin-top: -12px;
+			/* clips the wipes when they sit outside */
+			overflow: hidden;
+		}
+		#preboot .preboot-line svg {
+			position: absolute;
+			inset: 0;
+			width: 100%;
+			height: 100%;
+		}
+		#preboot .preboot-line path {
+			fill: none;
+			stroke: #ff36a8;
+			stroke-width: 1.6;
+			stroke-linecap: round;
+			stroke-linejoin: round;
+		}
+		/* the page colour over the line, transformed rather than repainted, so
+		   the compositor keeps it moving while the bundle blocks the thread */
+		#preboot .preboot-wipe {
+			position: absolute;
+			inset: 0;
+			background: #0d0815;
+			will-change: transform;
+		}
+		#preboot .preboot-wipe--draw {
+			animation: preboot-draw 5400ms ease-in-out infinite;
+		}
+		#preboot .preboot-wipe--rub {
+			animation: preboot-rub 5400ms ease-in-out infinite;
+		}
+		@keyframes preboot-draw {
+			0% { transform: translateX(0); }
+			45%, 100% { transform: translateX(100%); }
+		}
+		@keyframes preboot-rub {
+			0%, 55% { transform: translateX(-100%); }
+			100% { transform: translateX(0); }
+		}
+		@media (prefers-reduced-motion: reduce) {
+			#preboot .preboot-wipe--draw { animation: none; transform: translateX(100%); }
+			#preboot .preboot-wipe--rub { animation: none; transform: translateX(-100%); }
+		}
+	</style>
 </head>
 
 <body>
 	<a href="#content" class="skip-to-main">Skip to main content</a>
+	<div id="preboot">
+		<div class="preboot-label">loading…</div>
+		<div class="preboot-line" role="img" aria-label="Loading">
+			<svg viewBox="0 0 120 24">
+				<!-- deliberately uneven; an even sine reads as a progress bar -->
+				<path
+					d="M2 13 C 4 9, 6 17, 9 12 S 11 6, 14 15 S 17 19, 21 10
+					   S 24 2, 29 14 S 36 21, 43 11 S 48 8, 52 13
+					   S 56 22, 61 12 S 64 3, 68 9 S 71 16, 75 11
+					   S 82 1, 88 15 S 93 21, 99 10 S 104 6, 108 14
+					   S 113 18, 118 12"
+				/>
+			</svg>
+			<div class="preboot-wipe preboot-wipe--draw"></div>
+			<div class="preboot-wipe preboot-wipe--rub"></div>
+		</div>
+	</div>
 	<div>%sveltekit.body%</div>
 </body>
 

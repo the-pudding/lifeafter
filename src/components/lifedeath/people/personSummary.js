@@ -1,4 +1,4 @@
-// survey row -> info panel lines
+// survey row to info panel lines
 import {
 	variableConfig,
 	columnForWave,
@@ -9,14 +9,13 @@ import {
 	parseNumericValue
 } from "$data/variable_config.js";
 
-// SELFID "Country:  Ethnicity" -> display. no colon = not a real pair, dropped
+// selfid "country: ethnicity" for display; no colon means no pair
 function formatSelfId(raw) {
 	if (typeof raw !== "string" || !raw.includes(":")) return null;
 	return raw.replace(/:\s+/, ": ");
 }
 
-// last line: selected variable's value, in its config color. value only —
-// the control panel already names the question. AFTER_DEATH gets prose
+// last line: the selected variable's value, in its colour
 export function selectedVariableLine(person, waveKey, baseVar) {
 	const config = variableConfig[baseVar];
 	const column = columnForWave(baseVar, waveKey);
@@ -24,21 +23,20 @@ export function selectedVariableLine(person, waveKey, baseVar) {
 	const raw = person[column];
 	if (raw === null || raw === undefined || raw === "") return null;
 
-	// numeric: the answer itself against its scale, not a bucket label,
-	// coloured from the same continuous ramp the crowd uses
+	// numeric answers read against their scale, on the crowd's ramp
 	const scale = config.type === "numeric" ? numericScale(baseVar) : null;
 	if (scale) {
 		const value = parseNumericValue(baseVar, raw);
 		const color = gradientColorForValue(baseVar, raw);
 		if (value === null || !color) return null;
-		return { text: `${value} of ${scale.max}`, color };
+		return { text: `${value} of ${scale.maxLabel}`, color };
 	}
 
 	const bucket =
 		config.type === "numeric"
 			? getRangeFor(baseVar, raw)
 			: getCategoryFor(baseVar, raw);
-	// unmapped -> rendered muted, nothing to label
+	// unmapped values render muted, with nothing to label
 	if (!bucket) return null;
 	// admin codes aren't answers
 	if (bucket.key === "no_answer") return null;
@@ -57,7 +55,7 @@ export function selectedVariableLine(person, waveKey, baseVar) {
 	return { text: value, color: bucket.color };
 }
 
-// raw answer, not the lumped legend label. admin codes dropped
+// the raw answer, dropping admin codes
 function rawAnswer(person, baseVar, waveKey) {
 	const column = columnForWave(baseVar, waveKey);
 	if (!column) return null;
@@ -67,13 +65,12 @@ function rawAnswer(person, baseVar, waveKey) {
 	return raw;
 }
 
-// survey wording -> reading wording
+// survey wording to reading wording
 export function tidyMarital(raw) {
 	return raw === "Single/Never been married" ? "Single" : raw;
 }
 
-// lines: age/gender/marital, race/ethnicity, religion, selected variable.
-// missing dropped. entries are strings or { text, color }
+// panel lines for a person; entries are strings or { text, color }
 export function formatNearbyPersonLines(person, waveKey, baseVar) {
 	const age = person[waveKey === "Y1" ? "AGE_Y1" : "AGE_Y2"];
 	const gender = rawAnswer(person, "GENDER", waveKey);

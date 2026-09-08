@@ -1,49 +1,13 @@
-// Editable display config for every GFS variable used by the recolor
-// dropdown / minimap legend. One entry per BASE variable name — i.e.
-// with the "_Y1"/"_Y2" suffix stripped, since a variable's categories,
-// ranges, and colors are the same across both survey years. `columns`
-// on each entry lists the actual people.json column name(s) to pull
-// the raw value from (most have both _Y1 and _Y2; some retrospective/
-// recruit-only questions have just _Y1; GENDER/SELFID1/SELFID2 have no
-// suffix at all).
+// display config for every GFS variable: one entry per base name, with the
+// _Y1/_Y2 suffix stripped and `columns` listing the real people.json columns
 //
-//   type: "categorical"
-//     categories: [{ key, label, color, values }, ...]
-//     `values` is the list of raw people.json strings folded into
-//     that one category — this is the "truncate multiple values into
-//     one category" knob. Every categorical variable ends with a
-//     "No Answer" catch-all for the survey's admin codes
-//     ("(Saw, skipped)", "(Refused)", "(DK)", ...).
+//   categorical -> categories: [{ key, label, color, values }]
+//     `values` lists the raw strings folded into that bucket
+//   numeric -> valueMap turns worded answers into numbers, ranges bucket them
 //
-//   type: "numeric"
-//     valueMap maps non-numeric raw strings to a number first (many
-//     0–10 scale questions render 0 and 10 as words like "Strongly
-//     disagree"/"Strongly agree" instead of digits; CIGARETTES uses
-//     "None/Do not smoke" -> 0, etc). Whatever's left over is parsed
-//     as-is. ranges: [{ key, label, color, min, max }, ...] bucket the
-//     resulting number — this is the "give ranges for each category" knob.
-//
-// COLOR RULE (this pass) — one shared 5-color spectrum, PALETTE, for
-// every job the old three separate palettes (colors_div, colors_asc,
-// colors_diverging) used to split across: ordinal scales (low -> high,
-// disagree -> agree) read across it start-to-end, and purely qualitative
-// variables (GENDER, MARITAL_STATUS, ...) just pick whichever 2-5 of its
-// five stops read most distinctly against each other for that variable's
-// own category count — nothing here is order-sensitive for those.
-//
-// Every stop is a fully saturated, bright color on purpose (the old
-// colors_asc/colors_diverging faded their low end down into a near-black
-// desaturated purple to signal "low" — but a dark, muted swatch is
-// exactly the hardest kind of color to actually differentiate from
-// another dark, muted swatch at a glance, which was the original
-// complaint). Ordered start-to-end: warm amber/orange, coral (its own
-// transitional stop), vivid purple (the midpoint), magenta (transitional
-// again), bright pink.
-//
-// "No Answer" stays a fixed neutral gray (#55505f) and "(Does not
-// apply)" stays a fixed muted plum (#4a4550) in every variable — outside
-// PALETTE entirely, so they read as "no data," not as another data point
-// on the spectrum.
+// PALETTE tells categories apart; GRADIENT_PALETTE below is the ordered ramp.
+// no-answer buckets keep a fixed grey, does-not-apply a muted plum.
+
 export const PALETTE = [
   "#ffb200", // 0 — warm amber/orange
   "#ff6a5c", // 1 — coral
@@ -4613,20 +4577,7 @@ export const variableConfig =
 }
 ;
 
-// --- Gradient scales ---------------------------------------------------
-//
-// PALETTE above is for telling categories APART. Anything with an order to
-// it — every numeric range, and every categorical whose categories run
-// low->high, never->always, disagree->agree, no->yes — reads better as one
-// continuous ramp, so those get GRADIENT_PALETTE instead: dark purple at
-// the low end through to bright pink at the high end. A scale's colors are
-// sampled evenly across the ramp, however many buckets it has, so a 2-value
-// yes/no lands on the two endpoints and a 5-bucket scale spreads across all
-// of it.
-//
-// The dark end is a deep, saturated purple rather than a washed one: it has
-// to stay a colour against a near-black room, so the saturation is what
-// carries it rather than lightness.
+// the ordered ramp, dark purple to bright pink, sampled evenly per scale
 export const GRADIENT_PALETTE = [
 	"#3a0a6b", // deep saturated purple
 	"#6b12a3",
@@ -4635,7 +4586,7 @@ export const GRADIENT_PALETTE = [
 	"#ff2ec4" // bright pink
 ];
 
-// blends two hex colors; t = 0 -> a, 1 -> b
+// blends two hex colours
 function mixHex(a, b, t) {
 	const parse = (hex) => [
 		parseInt(hex.slice(1, 3), 16),
@@ -4650,7 +4601,7 @@ function mixHex(a, b, t) {
 		.join("")}`;
 }
 
-/** Color at position `t` (0-1) along GRADIENT_PALETTE. */
+// the colour at position `t` along the ramp
 export function gradientColorAt(t) {
 	const clamped = Math.min(1, Math.max(0, t));
 	const scaled = clamped * (GRADIENT_PALETTE.length - 1);
@@ -4659,15 +4610,13 @@ export function gradientColorAt(t) {
 	return mixHex(GRADIENT_PALETTE[low], GRADIENT_PALETTE[high], scaled - low);
 }
 
-/** `count` colors spread evenly across the ramp, endpoints included. */
+// `count` colours spread evenly across the ramp
 export function gradientScale(count) {
 	if (count <= 1) return [GRADIENT_PALETTE[GRADIENT_PALETTE.length - 1]];
 	return Array.from({ length: count }, (_, i) => gradientColorAt(i / (count - 1)));
 }
 
-// Variables with no inherent order — identity, religion, employment, and
-// the like. A ramp would imply a low-to-high reading that isn't there, so
-// these keep PALETTE's distinct stops.
+// variables with no inherent order, which keep the distinct palette
 const QUALITATIVE_VARS = new Set([
 	"GENDER",
 	"MARITAL_STATUS",
@@ -4687,10 +4636,7 @@ const QUALITATIVE_VARS = new Set([
 	"AFTER_DEATH"
 ]);
 
-// Pick order for the qualitative variables above. Coral sits last on
-// purpose: against bright pink it's the one pair that reads as the same
-// color at a glance, so it only comes out once a variable has more
-// categories than there are distinct stops.
+// pick order for those; coral is last, since it reads as pink at a glance
 const QUALITATIVE_ORDER = [
 	PALETTE[4], // bright pink
 	PALETTE[0], // warm amber
@@ -4699,24 +4645,11 @@ const QUALITATIVE_ORDER = [
 	PALETTE[1] // coral
 ];
 
-// --- Bucketing ---------------------------------------------------------
-//
-// The `values` arrays above fold several raw answers into one category.
-// That folding only earns its keep once a variable has enough answers to
-// be unreadable otherwise, so it's re-derived here:
-//
-//   <= MAX_UNGROUPED_ANSWERS raw answers -> no folding at all, one
-//     category per answer, labelled with the answer itself
-//   more than that -> folded into even groups, preferring the most groups
-//     that divide the answers exactly (4, then 3, then 2)
-//
-// Numeric variables aren't folded at all — they're a continuous ramp, see
-// gradientColorForValue below. Qualitative variables aren't either: their
-// categories have no order, so "consecutive groups" would be meaningless.
+// re-derives the buckets: few answers stay whole, many fold into even groups
 const MAX_UNGROUPED_ANSWERS = 4;
 const GROUP_TARGETS = [4, 3, 2];
 
-// most groups that divide n exactly; failing that, the most groups
+// the most groups that divide n exactly, else the most groups
 function groupCountFor(n) {
 	return GROUP_TARGETS.find((k) => n % k === 0) ?? GROUP_TARGETS[0];
 }
@@ -4736,9 +4669,7 @@ function evenChunks(items, count) {
 	return chunks;
 }
 
-// admin codes ("(Refused)", "(Does not apply)") sit outside the scale.
-// the label test catches buckets that mix a real answer in with the admin
-// codes but still announce themselves as the no-answer bucket
+// admin codes sit outside the scale, including buckets that only say so
 function isAdminBucket(bucket) {
 	return (
 		bucket.key === "no_answer" ||
@@ -4748,14 +4679,7 @@ function isAdminBucket(bucket) {
 	);
 }
 
-// Read off the hand-authored entries before anything below rewrites them:
-//
-//   handGrouped — a category folding this many raw answers is a deliberate
-//     grouping ("Religiously Affiliated" over 14 religions), not an
-//     ordinal fold, and regrouping it into even chunks is nonsense
-//   brightFirst — the author put the palette's bright end on the FIRST
-//     category, i.e. listed the scale high -> low ("Yes | No"). the ramp
-//     has to be flipped for those, so bright always means the high end
+// read off the hand-written entries: is it grouped by hand, and listed high first
 const HAND_GROUPED_MIN_VALUES = 4;
 const scaleIntent = new Map();
 for (const [baseVar, config] of Object.entries(variableConfig)) {
@@ -4815,10 +4739,7 @@ for (const [baseVar, config] of Object.entries(variableConfig)) {
 	];
 }
 
-// Repaint every ordered scale onto the ramp, and every qualitative one
-// onto the pick order above. Runs once at module load, so the entries
-// above stay readable as "which values fold into which bucket" without a
-// hand-picked color on all ~300 of them.
+// repaints every scale, once at module load
 for (const [baseVar, config] of Object.entries(variableConfig)) {
 	// the room's own variable keeps its hand-set door colors
 	if (baseVar === "AFTER_DEATH") continue;
@@ -4856,12 +4777,9 @@ for (const [baseVar, config] of Object.entries(variableConfig)) {
 	}
 }
 
-// --- Helpers for consuming the config above ---------------------------
+// helpers for reading the config above
 
-// A numeric variable's full span. The top bucket is sometimes an
-// open-ended catch-all ("3+", "20+") whose stated max is arbitrary —
-// detected by comparing its span to the bucket below it; if it's much
-// wider, its start is the real ceiling.
+// a numeric variable's full span, ignoring an open-ended top bucket's max
 export function numericScale(baseVar) {
 	const config = variableConfig[baseVar];
 	if (config?.type !== "numeric" || !config.ranges?.length) return null;
@@ -4869,20 +4787,22 @@ export function numericScale(baseVar) {
 	const last = sorted[sorted.length - 1];
 	const secondLast = sorted[sorted.length - 2];
 	let max = last.max;
+	// an open-ended top bucket ("3+") stands in for everything above it, so the
+	// ramp stops at its floor and the legend keeps the plus
+	let maxOpen = /\+/.test(last.label ?? "");
 	if (secondLast) {
 		const lastSpan = last.max - last.min;
 		const secondLastSpan = secondLast.max - secondLast.min || 1;
-		if (lastSpan > secondLastSpan * 3) max = last.min;
+		if (lastSpan > secondLastSpan * 3) {
+			max = last.min;
+			maxOpen = true;
+		}
 	}
 	const min = Math.min(...sorted.map((range) => range.min));
-	return max > min ? { min, max } : null;
+	return max > min ? { min, max, maxOpen, maxLabel: `${max}${maxOpen ? "+" : ""}` } : null;
 }
 
-/**
- * A numeric answer's color, sampled continuously along the ramp rather
- * than snapped to a range bucket — a 0-10 scale reads as a gradient, not
- * as three steps. Null for missing/unparseable values.
- */
+// a numeric answer's colour, sampled continuously along the ramp
 export function gradientColorForValue(baseVar, rawValue) {
 	const scale = numericScale(baseVar);
 	if (!scale) return null;
@@ -4891,24 +4811,19 @@ export function gradientColorForValue(baseVar, rawValue) {
 	return gradientColorAt((value - scale.min) / (scale.max - scale.min));
 }
 
-/** The actual people.json column name(s) for a base variable, e.g. "AGE" -> ["AGE_Y1","AGE_Y2"]. */
+// the people.json columns for a base variable
 export function getColumns(baseVar) {
 	return variableConfig[baseVar]?.columns ?? [];
 }
 
-/**
- * The one column for a base variable that matches the given wave — null if
- * this variable has no column at all. Variables with only a single column
- * (no suffix, like GENDER, or a recruit-only "_Y1"-only question like REL1)
- * aren't really wave-specific, so that one column is returned for either wave.
- */
+// the column matching a wave; single-column variables answer for either
 export function columnForWave(baseVar, waveKey) {
 	const columns = getColumns(baseVar);
 	if (columns.length <= 1) return columns[0] ?? null;
 	return columns.find((column) => column.endsWith(`_${waveKey}`)) ?? null;
 }
 
-/** For a numeric variable: raw people.json value -> number, or null if unmapped/unparseable. */
+// a numeric variable's raw value as a number, or null
 export function parseNumericValue(baseVar, rawValue) {
 	const config = variableConfig[baseVar];
 	if (!config || config.type !== "numeric" || rawValue === null || rawValue === undefined) {
@@ -4920,7 +4835,7 @@ export function parseNumericValue(baseVar, rawValue) {
 	return Number.isFinite(parsed) ? parsed : null;
 }
 
-/** For a numeric variable: raw people.json value -> its range bucket, or null. */
+// a numeric variable's range bucket for a raw value
 export function getRangeFor(baseVar, rawValue) {
 	const config = variableConfig[baseVar];
 	if (!config || config.type !== "numeric") return null;
@@ -4929,14 +4844,14 @@ export function getRangeFor(baseVar, rawValue) {
 	return config.ranges.find((range) => num >= range.min && num <= range.max) ?? null;
 }
 
-/** For a categorical variable: raw people.json value -> its category bucket, or null. */
+// a categorical variable's bucket for a raw value
 export function getCategoryFor(baseVar, rawValue) {
 	const config = variableConfig[baseVar];
 	if (!config || config.type !== "categorical") return null;
 	return config.categories.find((category) => category.values.includes(rawValue)) ?? null;
 }
 
-/** The display color for a raw people.json value, regardless of variable type. */
+// the display colour for a raw value, whatever the variable's type
 export function colorFor(baseVar, rawValue) {
 	const config = variableConfig[baseVar];
 	if (!config) return null;
@@ -4945,16 +4860,10 @@ export function colorFor(baseVar, rawValue) {
 	return bucket?.color ?? null;
 }
 
-/** Dropdown options grouped by parent, in PARENT_ORDER, for a pulldown menu. */
-// The legend has to stay readable, and the crowd has to stay tellable
-// apart. Anything the bucketing pass could fold lands at four categories
-// or fewer; what's left above that is qualitative or hand-grouped (every
-// religion, every employment status) and can't be folded without inventing
-// a meaning. Those still read fine as a row in the modal, so they stay
-// there — they just aren't offered as something to colour the room by.
+// past this many categories a legend stops being readable
 export const MAX_COLORABLE_CATEGORIES = 4;
 
-/** Whether a variable can be used to colour the crowd. */
+// whether a variable can colour the crowd
 export function isColorable(baseVar) {
 	const config = variableConfig[baseVar];
 	if (!config) return false;
@@ -4966,11 +4875,7 @@ export function isColorable(baseVar) {
 	return scale.length > 0 && scale.length <= MAX_COLORABLE_CATEGORIES;
 }
 
-/**
- * Variables grouped for a <select>. `colorableOnly` drops the ones that
- * can't be shown as a legend — the control panel passes it, the modal
- * doesn't, so the modal keeps reporting every answer a person gave.
- */
+// variables grouped for a <select>; `colorableOnly` drops the unshowable ones
 export function groupedVariableOptions({ colorableOnly = false } = {}) {
 	const byParent = new Map(PARENT_ORDER.map((parent) => [parent, []]));
 	for (const [key, config] of Object.entries(variableConfig)) {

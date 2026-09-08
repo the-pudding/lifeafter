@@ -3,24 +3,16 @@ import { ZONE_WIDTH } from "../room/roomConfig.js";
 // wave to revert to when no beat names one
 const DEFAULT_WAVE = "Y1";
 
-/**
- * copy.json narration: which beats are active for the walker's age and
- * position, plus the flags a beat can set (hide panel/minimap, hop the
- * minimap, force a variable/wave).
- *
- * getters/setters because it reads live walker state and writes Svelte
- * state Main owns. onUpdate delivers everything in one batch per frame.
- */
-/**
- * Marks where the audio toggle goes in a beat's text. copy.json is
- * regenerated from a Google Doc (`npm run gdoc`), so anything written into
- * the file by hand is lost on the next fetch — the opening beat gets this
- * injected below instead of carrying it. Writing {{audio}} into the doc
- * still works, and wins: the injection only fires when it's absent.
- */
+// which copy.json beats are active for the walker, and the flags they set
+// marks where the audio toggle goes in a beat's text
 export const STORY_AUDIO_TOKEN = "{{audio}}";
 
+// the same, for the explore button on the closing beat
+export const STORY_EXPLORE_TOKEN = "{{explore}}";
+
 const STORY_AUDIO_MARKUP = `<div class="hints audio">${STORY_AUDIO_TOKEN}</div>`;
+
+const STORY_EXPLORE_MARKUP = `<div class="hints audio">${STORY_EXPLORE_TOKEN}</div>`;
 
 export function createStoryBeats({
 	copy,
@@ -40,10 +32,9 @@ export function createStoryBeats({
 		return "unsure";
 	}
 
-	// last entry to set variable/wave, by identity — fires once on entry,
-	// not every frame in range
+	// the last entry to set a variable or wave, so it fires once on entry
 	let lastAppliedStoryVariableEntry = null;
-	// what it wrote, so the revert can tell story-set from walker-set
+	// what it wrote, so the revert can tell story picks from manual ones
 	let lastStoryAssignedVariable = null;
 	let lastStoryAssignedWave = null;
 
@@ -53,12 +44,14 @@ export function createStoryBeats({
 		lastStoryAssignedWave = null;
 	}
 
-	// the opening beat, by identity — the first shared entry that actually
-	// renders a box. flag-only entries above it don't count
-	const firstTextEntry = (copy.all ?? []).find((entry) => entry.text?.trim());
+	// the opening and closing beats: the first and last shared entries
+	// that render a box. each gets its button injected, since copy.json is
+	// regenerated from the doc and can't carry them
+	const textEntries = (copy.all ?? []).filter((entry) => entry.text?.trim());
+	const firstTextEntry = textEntries[0];
+	const lastTextEntry = textEntries[textEntries.length - 1];
 
-	// active beats: matching "all" entries plus the walker's zone.
-	// applies the first entry's var_color/wave
+	// beats matching the walker: shared entries plus their zone
 	function update() {
 		const currentAge = getCurrentAge();
 		if (currentAge === null) {
@@ -83,26 +76,26 @@ export function createStoryBeats({
 		let matchedHideYear = false;
 		let matchedAny = false;
 		let matchedVariableEntry = null;
-		// the first matching entry that has one; its {id}.mp3 narrates the beat
+		// the first matching id; its {id}.mp3 narrates the beat
 		let matchedNarrationId = null;
-		// flags arrive as "true" from the exported spreadsheet
+		// flags arrive as strings from the spreadsheet
 		const isFlagSet = (value) => value === "true" || value === true;
 		const collect = (entries) => {
 			for (const entry of entries ?? []) {
 				if (currentAge >= Number(entry.age) && currentAge < Number(entry.age_end)) {
 					matchedAny = true;
-					// text-free entries still carry flags. empty text would render
-					// as a blank filled box
+					// text-free entries still carry flags
 					if (entry.text?.trim()) {
-						const text = entry.text;
-						matches.push(
-							entry === firstTextEntry && !text.includes(STORY_AUDIO_TOKEN)
-								? `${text} ${STORY_AUDIO_MARKUP}`
-								: text
-						);
+						let text = entry.text;
+						if (entry === firstTextEntry && !text.includes(STORY_AUDIO_TOKEN)) {
+							text += ` ${STORY_AUDIO_MARKUP}`;
+						}
+						if (entry === lastTextEntry && !text.includes(STORY_EXPLORE_TOKEN)) {
+							text += ` ${STORY_EXPLORE_MARKUP}`;
+						}
+						matches.push(text);
 					}
-					// the spreadsheet writes a literal "null" for beats with no
-					// recording, which is not a filename
+					// the spreadsheet writes "null" for beats with no recording
 					const entryId = String(entry.id ?? "").trim();
 					if (matchedNarrationId === null && entryId && entryId !== "null") {
 						matchedNarrationId = entryId;
@@ -126,14 +119,13 @@ export function createStoryBeats({
 			hideMap: matchedHideMap,
 			highlightMap: matchedHighlightMap,
 			hideYear: matchedHideYear,
-			// any entry matched, text or not — "is the script running here"
+			// whether the script is running here at all
 			hasBeat: matchedAny,
 			narrationId: matchedNarrationId
 		});
 
 		if (!matchedVariableEntry) {
-			// revert once on leaving a range, but only if the value is still
-			// what the story wrote — a manual pick survives until the next beat
+			// revert on leaving, unless the reader has since picked their own
 			if (lastAppliedStoryVariableEntry) {
 				if (getSelectedVariable() === lastStoryAssignedVariable) {
 					setSelectedVariable("AFTER_DEATH");
@@ -144,20 +136,19 @@ export function createStoryBeats({
 			}
 			clearLatches();
 		} else if (matchedVariableEntry !== lastAppliedStoryVariableEntry) {
-			// fields default independently. a new beat overrides a manual pick
+			// each field defaults on its own; a new beat overrides a manual pick
 			const variable = matchedVariableEntry.var_color || "AFTER_DEATH";
 			const wave = matchedVariableEntry.wave === "1" ? "Y1" : "Y2";
 			setSelectedVariable(variable);
 			setPositionMode(wave);
 			lastAppliedStoryVariableEntry = matchedVariableEntry;
-			// for the revert above
+			// remembered for the revert above
 			lastStoryAssignedVariable = variable;
 			lastStoryAssignedWave = wave;
 		}
 	}
 
-	// forget the last applied beat, so the current one re-fires.
-	// used when returning from explore mode
+	// forget the last applied beat, so the current one fires again
 	function reset() {
 		clearLatches();
 	}
@@ -165,11 +156,17 @@ export function createStoryBeats({
 	return { update, reset, currentZoneKey };
 }
 
-/**
- * Age spans with no story beat anywhere — every group in copy.json merged
- * together, then inverted across the crowd's age range. The room floor is
- * tinted over these, so a reader can see where the script goes quiet.
- */
+// the age the script runs out at: past this there are no beats left
+export function storyEndAge(copy) {
+	const ends = Object.values(copy)
+		.filter(Array.isArray)
+		.flat()
+		.map((beat) => Number(beat.age_end))
+		.filter((age) => Number.isFinite(age));
+	return ends.length > 0 ? Math.max(...ends) : null;
+}
+
+// age spans no beat covers, used to tint the floor where the script is quiet
 export function storyGapAgeRanges(copy, ageMin, ageMax) {
 	const covered = Object.values(copy)
 		.filter(Array.isArray)
@@ -178,7 +175,7 @@ export function storyGapAgeRanges(copy, ageMin, ageMax) {
 		.filter(([start, end]) => Number.isFinite(start) && Number.isFinite(end))
 		.sort((a, b) => a[0] - b[0]);
 
-	// merge overlapping/touching spans, then take what's left between them
+	// merge overlapping spans, then take the gaps between them
 	const merged = [];
 	for (const [start, end] of covered) {
 		const last = merged[merged.length - 1];

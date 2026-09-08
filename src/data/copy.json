@@ -34,7 +34,6 @@
       "id": "4",
       "age": "25",
       "age_end": "26",
-      "hl_minimap": "true",
       "hide_year": "true",
       "wave": "1",
       "text": "As you explore, you can click on a person to learn more about them.\r\n\r\n\r\n<div class=\"hints click\">Click on a person</div>"
@@ -79,7 +78,6 @@
       "id": "9",
       "age": "33",
       "age_end": "34",
-      "var_color": "REL_IMPORTANT",
       "wave": "1",
       "hide_year": "true",
       "text": "I’ve been bothering you a lot. I’ll let you walk around for a bit."
@@ -90,6 +88,7 @@
       "age_end": "41",
       "wave": "1",
       "hide_year": "true",
+      "var_color": "REL_IMPORTANT",
       "text": "Scholars long believed that the rise of science knowledge would create an increasingly secular world. But that [hasn’t been the case](https://www.cambridge.org/core/books/sacred-and-secular/5CE209CE245D444D40BB44D0DDD78F43)."
     },
     {
@@ -98,6 +97,7 @@
       "age_end": "42",
       "wave": "1",
       "hide_year": "true",
+      "var_color": "REL_IMPORTANT",
       "text": "From the 1980s to mid-2000s, religion exploded—particularly in former Soviet countries, as well as places like China, Mexico, and Brazil. It also rose sharply in the U.S."
     },
     {
@@ -106,12 +106,14 @@
       "age_end": "43",
       "wave": "1",
       "hide_year": "true",
+      "var_color": "REL_IMPORTANT",
       "text": "But since then, religious belief has fallen in most countries—especially in the U.S."
     },
     {
       "id": "13",
       "age": "43",
       "age_end": "44",
+      "var_color": "NUM_CHILDREN",
       "wave": "1",
       "hide_year": "true",
       "text": "One theory is that religion enforced pro-fertility norms when infant mortality was high. But those societal needs faded and so did the need for religion. When older generations died, a smaller portion of people were tied to religion."
@@ -120,6 +122,7 @@
       "id": "14",
       "age": "50",
       "age_end": "51",
+      "var_color": "NUM_CHILDREN",
       "wave": "1",
       "hide_year": "true",
       "text": "The portion of people who are religious—and are sure of an afterlife—has stayed relatively steady because of two coinciding trends. One is that developed countries became more secular but, in turn, their fertility rates dropped."
@@ -128,6 +131,7 @@
       "id": "15",
       "age": "51",
       "age_end": "52",
+      "var_color": "NUM_CHILDREN",
       "wave": "1",
       "hide_year": "true",
       "text": "The other is that people in developing countries still face existential threats, and religion continues to provide security and predictability. Fertility rates in those countries have stayed high."
@@ -215,10 +219,10 @@
     {
       "id": "null",
       "age": "74",
-      "age_end": "100",
+      "age_end": "78",
       "wave": "2",
       "hide_year": "true",
-      "text": "<div class=\"hints scroll\">Keep walking or click “Skip to Explore”</span>"
+      "text": "<div class=\"hints\">Keep walking or explore</span>"
     }
   ],
   "no": [

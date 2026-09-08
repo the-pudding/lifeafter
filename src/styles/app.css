@@ -49,6 +49,7 @@
 	--color-no-belief: #d6791c;
 	--color-unsure: #7a1ea8;
 	--color-belief: #e60b9a;
+	--bg-color: #0d0815;
 	/* "1" second duration */
 	--1s: 1ms;
 }
@@ -95,21 +96,21 @@ svg {
 	width: 100%;
 	height: auto;
 }
-
+main, .loading-screen {
+	background: var(--bg-color) !important;
+}
 .lifedeath-room {
 	font-family: var(--font-mono);
 }
 
-/* nothing here is meant to be highlighted: a drag is the camera, and a
-   stray selection both looks broken and swallows the gesture. inherited,
-   so it covers the overlays and the modal too */
+/* nothing here is selectable: a drag is the camera */
 .lifedeath-room,
 .lifedeath-room *,
 .shelf,
 .shelf * {
 	-webkit-user-select: none;
 	user-select: none;
-	/* stops the long-press magnifier/callout on iOS */
+	/* stops the long-press callout on ios */
 	-webkit-touch-callout: none;
 }
 
@@ -129,11 +130,7 @@ svg {
 	padding: 5px;
 }
 
-/* Below this width the minimap (bottom-right, see Minimap.lifedeath.svelte's
-   own `min(124px, 30vw)` mobile size) starts eating into the same
-   horizontal band this box's default 600px/95vw width assumes is free —
-   shrunk to leave it clear, with its own left/right padding so the text
-   doesn't run flush up against either the screen edge or that reserved space. */
+/* narrower, to leave the minimap's corner clear */
 @media (max-width: 800px) {
 	.story-overlay {
 		box-sizing: border-box;
@@ -151,70 +148,73 @@ svg {
 	}
 }
 
-/* new text arrives as a burst of light: white, blown out past its own
-   edges, snapping down to a sharp black box. the text flips dark ->
-   light with it, so it stays readable through the flash */
-/* a filament going out, along the box's bottom edge only: the box stays
-   black, and the light spills below it. most of the brightness is dumped
-   in the first ~60ms, cooling through amber to an ember. stops carry the
-   curve, so the animations run linear */
+/* a filament going out along the box's bottom edge */
 @keyframes story-flash {
 	0% {
-		box-shadow: 0 13px 26px -5px rgba(255, 214, 150, 0.6);
+		text-shadow:
+			0 0 4px rgba(255, 236, 200, 0.95),
+			0 0 14px rgba(255, 198, 120, 0.85),
+			0 0 30px rgba(255, 170, 80, 0.6);
 	}
 	14% {
-		box-shadow: 0 9px 19px -5px rgba(255, 180, 90, 0.34);
+		text-shadow:
+			1px 1px 0 rgba(60, 30, 10, 0.9),
+			-1px 1px 0 rgba(60, 30, 10, 0.9),
+			0 0 10px rgba(255, 180, 90, 0.5),
+			0 0 22px rgba(255, 150, 60, 0.3);
 	}
 	45% {
-		box-shadow: 0 5px 11px -5px rgba(255, 160, 70, 0.12);
+		text-shadow:
+			1px 1px 0 rgba(20, 10, 4, 0.95),
+			-1px 1px 0 rgba(20, 10, 4, 0.95),
+			1px -1px 0 rgba(20, 10, 4, 0.95),
+			-1px -1px 0 rgba(20, 10, 4, 0.95),
+			0 0 8px rgba(255, 150, 60, 0.16),
+			0 0 18px rgba(0, 0, 0, 0.6);
 	}
 	100% {
-		box-shadow: 0 0 0 0 rgba(255, 255, 255, 0);
+		text-shadow:
+			1px 1px 0 rgba(0, 0, 0, 0.95),
+			-1px 1px 0 rgba(0, 0, 0, 0.95),
+			1px -1px 0 rgba(0, 0, 0, 0.95),
+			-1px -1px 0 rgba(0, 0, 0, 0.95),
+			0 0 6px rgba(0, 0, 0, 0.95),
+			0 0 16px rgba(0, 0, 0, 0.8);
 	}
 }
-
-/* the same burn-out, banded across the inside of that bottom edge */
-@keyframes story-underglow {
-	0% {
-		opacity: 1;
-	}
-	14% {
-		opacity: 0.5;
-	}
-	45% {
-		opacity: 0.14;
-	}
-	100% {
-		opacity: 0;
-	}
-}
-
-
 .story-overlay p {
 	margin: 0 0 8px;
-	/* Shrinks smoothly on narrow screens (down to 0.8rem) instead of
-	   staying a fixed 1.3em and eating into the limited vertical space
-	   there — caps back at the original 1.3rem on wide/desktop screens. */
-	font-size: 16px;
+	/* steps down on narrow screens, where vertical space is short */
+	font-size: 20px;
 	line-height: 1.7em;
-	background: rgba(0,0,0,0.8);
-	/* new text arrives on a burst of light along its bottom edge */
+	background: transparent;
+	/* a black outline on the words themselves, so they hold up over the
+	   room without a box behind them. the tight offsets draw the outline,
+	   the blurred pair pushes the scene back from it */
+	text-shadow:
+		1px 1px 0 rgba(0, 0, 0, 0.95),
+		-1px 1px 0 rgba(0, 0, 0, 0.95),
+		1px -1px 0 rgba(0, 0, 0, 0.95),
+		-1px -1px 0 rgba(0, 0, 0, 0.95),
+		0 0 6px rgba(0, 0, 0, 0.95),
+		0 0 16px rgba(0, 0, 0, 0.8);
+	/* new text arrives lit, then cools into that outline */
 	position: relative;
 	animation: story-flash 420ms linear;
 	padding: 3px;
 	margin-block-start: 1.2em;
-    margin-block-end: 1.2em;
-    margin-inline-start: 0px;
-    margin-inline-end: 0px;
+	margin-block-end: 1.2em;
+	margin-inline-start: 0px;
+	margin-inline-end: 0px;
 }
 @media (max-width: 1800px) {
 	.story-overlay p {
-		font-size: 18px;
+		font-size: 19px;
 	}
 }
 @media (max-width: 1200px) {
 	.story-overlay p {
-		font-size: 16px;
+		font-size: 17px;
 	}
 }
 @media (max-width: 800px) {
@@ -224,40 +224,16 @@ svg {
 }
 @media (max-width: 600px) {
 	.story-overlay p {
-		font-size: 16px;
+		font-size: 13.6px;
 	}
 }
-/* Links written as markdown in copy.json (see renderStoryText in
-   Main.lifedeath.svelte, which turns them into real anchors). Underlined
-   rather than color-only, since the story text already uses color to mean
-   something specific here — the belief/no_belief/unsure spans. */
-/* the lit band itself, hugging the bottom edge inside the box */
-.story-overlay p::after {
-	content: "";
-	position: absolute;
-	left: 0;
-	right: 0;
-	bottom: 0;
-	height: 45%;
-	pointer-events: none;
-	opacity: 0;
-	background: linear-gradient(
-		to top,
-		rgba(255, 224, 170, 0.95),
-		rgba(255, 184, 96, 0.28) 45%,
-		rgba(255, 160, 70, 0) 100%
-	);
-	animation: story-underglow 420ms linear;
-}
-
-/* the shared .hints rule pulls left by 3em to balance the icon each hint
-   carries; the audio row has no icon, so it would sit off centre */
+/* the audio row carries no icon, so it skips the shared left pull */
 .story-overlay p .hints.audio {
 	margin-left: 0;
 	padding-top: 0;
 }
 
-/* inline audio toggle, dropped into a beat with {{audio}} */
+/* inline audio and explore toggles, placed by {{audio}} and {{explore}} */
 .story-overlay p .story-audio {
 	display: inline-flex;
 	align-items: center;
@@ -266,7 +242,7 @@ svg {
 	margin: 0 0.15em;
 	padding: 0.15em 0.55em 0.2em;
 	font-family: inherit;
-	font-size: 0.85em;
+	font-size: 1.25em;
 	color: #ff8dce;
 	background: transparent;
 	border: 1px solid rgba(255, 141, 206, 0.55);
@@ -280,6 +256,8 @@ svg {
 	color: #fff;
 	border-color: #fff;
 }
+/* sized in em, so the icon tracks the label. the bare `svg` reset would
+   otherwise stretch it to the full column */
 .story-overlay p .story-audio svg {
 	width: 1em;
 	height: 1em;
@@ -302,7 +280,7 @@ svg {
 	color: #fff;
 }
 
-/* Base container styling */
+/* the hint rows under a story beat */
 .story-overlay p .hints {
     text-align: center;
     font-style: italic;
@@ -315,7 +293,7 @@ svg {
 	margin-left: -3em;
 }
 
-/* Shared ::before styling for all 3 icons */
+/* shared icon box for every hint */
 .story-overlay p .hints.click::before,
 .story-overlay p .hints.scroll::before,
 .story-overlay p .hints.pan::before {
@@ -334,33 +312,28 @@ svg {
     mask-repeat: no-repeat;
 }
 
-/* 1. Click: Hand Select Cursor (Static) — --click-cursor-url is set inline
-   on .lifedeath-room (see Main.lifedeath.svelte), not a literal url() here:
-   this app is deployed under a subpath that changes per target (GitHub
-   Pages vs. pudding.cool, see svelte.config.js's own paths.base), and a
-   plain CSS url() is static text with no way to pick that prefix up at
-   runtime the way asset() can from JS. */
+/* click: the hand cursor, whose url is set inline so it can carry the base path */
 .story-overlay p .hints.click::before {
     -webkit-mask-image: var(--click-cursor-url);
     mask-image: var(--click-cursor-url);
 }
-/* 2. Scroll: Down Arrow with downward animation */
+/* scroll: a down arrow that bobs */
 .story-overlay p .hints.scroll::before {
     -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M20 12l-1.41-1.41L13 16.17V4h-2v12.17l-5.58-5.59L4 12l8 8 8-8z'/%3E%3C/svg%3E");
     mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M20 12l-1.41-1.41L13 16.17V4h-2v12.17l-5.58-5.59L4 12l8 8 8-8z'/%3E%3C/svg%3E");
     animation: scrollSubtle 1.5s ease-in-out infinite;
 }
 
-/* 3. Pan: Side-to-side Arrow with horizontal animation */
+/* pan: a side-to-side arrow */
 .story-overlay p .hints.pan::before {
     -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M22 12l-4-4v3H6V8l-4 4 4 4v-3h12v3z'/%3E%3C/svg%3E");
     mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M22 12l-4-4v3H6V8l-4 4 4 4v-3h12v3z'/%3E%3C/svg%3E");
     animation: panSubtle 2s ease-in-out infinite;
 }
 
-/* --- Animations --- */
+/* hint icon animations */
 
-/* Bobs up and down subtly */
+/* bobs up and down */
 @keyframes scrollSubtle {
     0%, 100% {
         transform: translateY(-2px);
@@ -370,7 +343,7 @@ svg {
     }
 }
 
-/* Glides left and right subtly */
+/* glides left and right */
 @keyframes panSubtle {
     0%, 100% {
         transform: translateX(-3px);
@@ -378,6 +351,12 @@ svg {
     50% {
         transform: translateX(3px);
     }
+}
+/* the colored spans get a little breathing room inside their fill */
+.story-overlay p .unsure,
+.story-overlay p .no_belief,
+.story-overlay p .belief {
+	padding: 0 2px;
 }
 .story-overlay p .unsure {
 	background: var(--color-unsure);
@@ -389,3 +368,12 @@ svg {
 	background: var(--color-belief);
 }
 
+/* mobile: the story text alone steps down; the rest of the ui keeps its size */
+@media (max-width: 600px) {
+	.story-overlay p .hints {
+		font-size: 11.9px;
+	}
+	.story-overlay p .story-audio {
+		font-size: 1.05em;
+	}
+}

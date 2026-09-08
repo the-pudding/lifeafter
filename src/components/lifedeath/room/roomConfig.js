@@ -4,8 +4,8 @@ import noSvg from "$svg/no.svg?raw";
 import notSureSvg from "$svg/not-sure.svg?raw";
 import yesSvg from "$svg/yes.svg?raw";
 
-// bg for scene, minimap, topdown page
-export const BG_COLOR = 0x0f000d;
+// the one background: scene, fog, minimap, topdown and the load screen
+export const BG_COLOR = "#0d0815";
 
 export const BG_COLOR_CSS = `#${BG_COLOR.toString(16).padStart(6, "0")}`;
 
@@ -15,9 +15,7 @@ export const MUTED_COLOR = "#cccccc";
 // sign, door frames, lamps
 export const NEON_PINK = "#ff8dce";
 
-// floor tint over age spans with no story beat — lighter and pinker than
-// the floor's own near-black, so the quiet stretches read as different
-// ground. CHANGE THIS to retune those sections.
+// floor tint over age spans with no story beat
 export const STORY_GAP_FLOOR_COLOR = "#250819";
 
 // door fills, per zone
@@ -87,9 +85,7 @@ export const DOOR_LABEL_MAX_WIDTH = 1.6;
 
 export const DOOR_LABEL_MAX_HEIGHT = 1.0;
 
-// fit label, whichever dimension binds first. `scale` lets one door's
-// label run bigger than the shared box (the door itself is 2.4 wide, so
-// anything past ~1.5 starts overhanging the panel)
+// fits a label in the shared box; `scale` lets one door run bigger
 export function sizeDoorLabelSvg(svg, viewBoxWidth, viewBoxHeight, scale = 1) {
 	const aspect = viewBoxWidth / viewBoxHeight;
 	const maxWidth = DOOR_LABEL_MAX_WIDTH * scale;
@@ -99,10 +95,7 @@ export function sizeDoorLabelSvg(svg, viewBoxWidth, viewBoxHeight, scale = 1) {
 	return { svg, width: height * aspect, height };
 }
 
-// "not sure" stacks two lines in an 80x56 box, so each line's letters are
-// only ~28 of those units against no/yes's ~48 — it needs ~1.17x just to
-// match their letter size, and the scale below goes past that so this door
-// reads bigger, as intended.
+// "not sure" stacks two lines, so it needs a bigger scale to match the others
 export const DOOR_LABEL_ASSETS = {
 	No: sizeDoorLabelSvg(noSvg, 58, 48),
 	Unsure: sizeDoorLabelSvg(notSureSvg, 80, 56, 1.2),
@@ -146,30 +139,23 @@ export const ROOM_ENTRY_PITCH_TIME = 0.6; // seconds to close ~63% of that tilt
 
 export const WALK_SPEED = 0.02; // world units of target movement per unit of wheel delta
 
-// the ceiling on how far one input event can move the walker, and the top
-// of the response curve below
+// the furthest one input event can move the walker, and the curve's top
 export const MAX_WHEEL_STEP = 60; // clamps one wheel event so trackpad flings don't teleport
 
-// Scroll/swipe response curve. Mapping the delta straight through gives
-// one pace — gentle and hard scrolling differ only by the ratio of their
-// deltas, which is a narrow band in practice. Shaping it by a power curve
-// opens that up: a light scroll inches along where it used to walk, and a
-// firm one covers real ground, all against the same ceiling above.
-// Raise the exponent for finer low-end control, lower it toward 1 to go
-// back to a linear feel.
+// scroll response curve: raise the exponent for finer control, lower for linear
 export const WHEEL_FULL_SPEED_DELTA = 70; // delta that reaches the top of the curve
 
 export const WHEEL_RESPONSE_EXPONENT = 1.9;
 
-// scroll/swipe walking is scaled down on small screens. a trackpad or
-// touch swipe sends the same pixel deltas whatever the display, but a 13"
-// laptop shows less room per pixel, so the same gesture reads as a sprint.
-// keys and door auto-walk are rate-based and unaffected.
+// touch deltas are far smaller than wheel deltas, so they get their own reference
+export const TOUCH_FULL_SPEED_DELTA = 24;
+
+// scroll and swipe walking scale down on small screens
 export const SCROLL_WALK_NARROW_WIDTH = 1100; // at or below: slowest
 
 export const SCROLL_WALK_WIDE_WIDTH = 1700; // at or above: unchanged
 
-export const SCROLL_WALK_MIN_SCALE = 0.3;
+export const SCROLL_WALK_MIN_SCALE = 0.345;
 
 // arrow-key rate. x WALK_SPEED = ~5 units/sec
 export const KEY_MOVE_DELTA_PER_SECOND = 250;
@@ -180,11 +166,10 @@ export const FOLLOW_TIME = 0.1; // seconds to close ~63% of the remaining distan
 // door auto-walk. smoothDamp carries velocity across the x->z handoff
 export const DOOR_WALK_SPEED = 10; // world units/second, smoothDamp's speed cap
 
-// the cruise is capped by the speed above, so this mostly sets how long
-// the arrival takes to settle — the bigger it is, the softer the stop
+// how long the arrival takes to settle; bigger is a softer stop
 export const DOOR_WALK_SMOOTH_TIME = 0.85; // seconds to close most of the distance at full speed
 
-// below both of these the walk is done and normal steering resumes
+// below both of these the walk is done and steering resumes
 export const DOOR_WALK_SETTLE_DISTANCE = 0.03;
 
 export const DOOR_WALK_SETTLE_SPEED = 0.05;

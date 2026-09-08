@@ -1,6 +1,6 @@
 // per-person body height from country + gender, via height26.csv
 
-// country = prefix of SELFID1/SELFID2
+// the country is the prefix of selfid1 or selfid2
 function countryOf(person) {
 	for (const column of ["SELFID1", "SELFID2"]) {
 		const raw = person[column];
@@ -11,10 +11,10 @@ function countryOf(person) {
 	return null;
 }
 
-// CSV-vs-survey naming mismatches. missing countries fall through to the average
+// naming mismatches between the csv and the survey
 const HEIGHT_COUNTRY_ALIASES = { Türkiye: "Turkey" };
 
-// country -> { male, female } cm, plus fallback averages
+// country to male and female heights in cm, plus fallback averages
 export function buildHeightLookup(rows) {
 	const byCountry = new Map();
 	let maleSum = 0;
@@ -26,7 +26,7 @@ export function buildHeightLookup(rows) {
 		const female = Number(row.AverageHeightGirlsAge19_2019);
 		if (!country || !Number.isFinite(male) || !Number.isFinite(female))
 			continue;
-		// CSV's "Global Average" row is far below the real mean. skipped
+		// the csv's own global average row is far below the real mean
 		if (country === "Global Average") continue;
 		byCountry.set(country, { male, female });
 		maleSum += male;
@@ -40,27 +40,27 @@ export function buildHeightLookup(rows) {
 	return { byCountry, averages };
 }
 
-// individual spread around the country+gender mean. ~real (SD ~7cm)
+// spread around the country and gender mean
 const HEIGHT_INDIVIDUAL_SPREAD = 0.04;
-// target mean scale, so the average person renders unchanged
+// target mean, so the average person renders unchanged
 const HEIGHT_REFERENCE_SCALE = 1.05;
 
-// averaged uniforms ~ normal, so heights cluster near the mean
+// averaged uniforms approximate a normal, so heights cluster
 function bellRandom() {
 	return (Math.random() + Math.random() + Math.random()) / 3;
 }
 
-// -> per-person height-scale fn used by the crowd sim
+// builds the per-person height scale used by the crowd
 export function createHeightScaleFor(heightLookup) {
 	const { byCountry, averages } = heightLookup;
-	// divisor landing the crowd average on HEIGHT_REFERENCE_SCALE
+	// the divisor that lands the crowd average on the reference scale
 	const referenceCm = (averages.male + averages.female) / 2;
 	return (person) => {
 		const country = countryOf(person);
 		const entry =
 			(country && byCountry.get(HEIGHT_COUNTRY_ALIASES[country] ?? country)) ??
 			averages;
-		// not Male/Female -> midpoint
+		// anything but male or female takes the midpoint
 		const cm =
 			person.GENDER === "Male"
 				? entry.male

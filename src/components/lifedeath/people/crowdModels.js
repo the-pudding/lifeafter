@@ -2,7 +2,7 @@
 import * as THREE from "three";
 import { mergeVertices } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 
-// single-frame clip of the bind pose. fallback if a GLB has no "Idle"
+// a one-frame clip of the bind pose, used when a model has no idle
 function buildBindPoseClip(root, referenceClip) {
 	const tracks = referenceClip.tracks.map((track) => {
 		const dot = track.name.lastIndexOf(".");
@@ -15,7 +15,7 @@ function buildBindPoseClip(root, referenceClip) {
 	return new THREE.AnimationClip("BindPose", 1, tracks);
 }
 
-// vertical brightness ramp, dark at the feet. vertex colors, no shader
+// a vertical brightness ramp, dark at the feet, baked into vertex colours
 const LEG_SHADOW_MIN_BRIGHTNESS = 0;
 const LEG_SHADOW_TOP_FRACTION = 2;
 function bakeLegShadow(geometry) {
@@ -52,7 +52,7 @@ export function prepareModel(gltf) {
 	});
 	const walkClip =
 		gltf.animations.find((a) => a.name === "Walk") ?? gltf.animations[0];
-	// real clips ship with the bodies; bind pose is the fallback
+	// real clips ship with the bodies; the bind pose is the fallback
 	const idleClip =
 		gltf.animations.find((a) => a.name === "Idle") ??
 		(walkClip && buildBindPoseClip(gltf.scene, walkClip));
