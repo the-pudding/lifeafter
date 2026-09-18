@@ -50,9 +50,7 @@ export function createInputController({
 	function handleWheel(event) {
 		if (getMode() !== "walk") return;
 		event.preventDefault(); // don't also scroll the page
-		// the raw magnitude rides along: shaping saturates, and the walker's
-		// flick detector needs to see the true decay
-		walk(shapeWalkDelta(event.deltaY) * getScrollWalkScale(), Math.abs(event.deltaY));
+		walk(shapeWalkDelta(event.deltaY) * getScrollWalkScale());
 	}
 
 	// steers only while held
@@ -175,8 +173,7 @@ export function createInputController({
 						TOUCH_FULL_SPEED_DELTA
 					) *
 						getScrollWalkScale() *
-						TOUCH_WALK_BOOST,
-					Math.abs(dyNormalized * BASE_WALK_SPEED * fovScale)
+						TOUCH_WALK_BOOST
 				);
 			}
 		}

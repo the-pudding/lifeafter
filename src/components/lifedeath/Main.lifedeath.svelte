@@ -1609,72 +1609,10 @@
 				return SCROLL_WALK_MIN_SCALE + (1 - SCROLL_WALK_MIN_SCALE) * t;
 			}
 
-			// keys drive this directly: constant held-key deltas must never
-			// read as a trackpad tail
-			function keyWalk(rawDelta) {
-				moveDirection(Math.sin(targetCameraYaw), -Math.cos(targetCameraYaw), rawDelta);
-			}
-
-			// a released flick keeps sending wheel events with steadily
-			// shrinking deltas; that tail gets a hard budget of one year of
-			// movement, so momentum can't sail anyone through the room
-			const YEAR_Z = Math.abs(ageToZ(ageMin + 2) - ageToZ(ageMin + 1));
-			const TAIL_SHRINKS = 3;
-			const TAIL_GAP_MS = 300;
-			let wheelPrevAbs = 0;
-			let wheelPrevTime = 0;
-			let wheelPeakAbs = 0;
-			let wheelShrinks = 0;
-			let tailSpent = 0;
-
-			// positive walks forward (wheel and touch arrive here). rawAbs is
-			// the unshaped device magnitude: shaping saturates at the clamp,
-			// so only the raw values reveal a released flick's decay
-			function walk(rawDelta, rawAbs = Math.abs(rawDelta)) {
-				const now = performance.now();
-				const abs = rawAbs;
-				const inTail = wheelShrinks >= TAIL_SHRINKS;
-				if (now - wheelPrevTime > TAIL_GAP_MS) {
-					// a real pause: whatever comes next is a fresh gesture
-					wheelShrinks = 0;
-					tailSpent = 0;
-					wheelPeakAbs = abs;
-				} else if (inTail) {
-					// a released tail opens near the peak and browsers coalesce
-					// ticks into ~2x events; neither may re-arm the budget.
-					// only a push at least as hard as the flick itself exits
-					if (abs >= wheelPeakAbs) {
-						wheelShrinks = 0;
-						tailSpent = 0;
-						wheelPeakAbs = abs;
-					}
-				} else if (abs > wheelPrevAbs * 0.95) {
-					// holding steady or pushing harder: the hand is on it
-					wheelShrinks = 0;
-					tailSpent = 0;
-					wheelPeakAbs = Math.max(wheelPeakAbs, abs);
-				} else {
-					// genuinely decaying: another step toward reading as a tail
-					wheelShrinks++;
-				}
-				wheelPrevTime = now;
-				wheelPrevAbs = abs;
-				let delta = rawDelta;
-				if (wheelShrinks >= TAIL_SHRINKS) {
-					const budgetLeft = Math.max(0, YEAR_Z - tailSpent);
-					if (budgetLeft <= 0) return;
-					const stepDistance = Math.abs(delta) * WALK_SPEED;
-					if (stepDistance > budgetLeft) {
-						delta *= budgetLeft / stepDistance;
-					}
-					tailSpent += Math.min(stepDistance, budgetLeft);
-				} else if (wheelShrinks >= 1) {
-					// the shrinks before the tail is certain still spend the
-					// budget, so detection latency can't add free distance
-					tailSpent += Math.abs(delta) * WALK_SPEED;
-				}
+			// positive walks forward
+			function walk(rawDelta) {
 				// forward along the ground, for the current heading
-				moveDirection(Math.sin(targetCameraYaw), -Math.cos(targetCameraYaw), delta);
+				moveDirection(Math.sin(targetCameraYaw), -Math.cos(targetCameraYaw), rawDelta);
 			}
 
 			// positive strafes right
@@ -2412,8 +2350,8 @@
 				// held keys applied per frame rather than by key repeat
 				if (!flightActive) {
 					const keyMoveDelta = KEY_MOVE_DELTA_PER_SECOND * dt;
-					if (heldArrowKeys.has("ArrowUp")) keyWalk(keyMoveDelta);
-					if (heldArrowKeys.has("ArrowDown")) keyWalk(-keyMoveDelta);
+					if (heldArrowKeys.has("ArrowUp")) walk(keyMoveDelta);
+					if (heldArrowKeys.has("ArrowDown")) walk(-keyMoveDelta);
 					if (heldArrowKeys.has("ArrowRight")) strafe(keyMoveDelta);
 					if (heldArrowKeys.has("ArrowLeft")) strafe(-keyMoveDelta);
 				}
@@ -2474,8 +2412,7 @@
 						targetCameraYaw = cameraYaw;
 					}
 				} else {
-					// a short glide rounds each wheel step smooth; flick
-					// momentum is handled by the tail budget, not by drag here
+					// glides toward the target
 					const followFactor = 1 - Math.exp(-dt / FOLLOW_TIME);
 					renderWalkX += (targetWalkX - renderWalkX) * followFactor;
 					renderWalkZ += (targetWalkZ - renderWalkZ) * followFactor;
