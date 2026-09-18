@@ -20,7 +20,7 @@
 	--z-modal: 1000;
 
 	/* presets (used in reset.css) */
-	--font-body: var(--font-serif);
+	--font-body: var(--font-sans);
 	--font-form: var(--font-sans);
 
 	--radius-xs: 0.125rem;
@@ -45,11 +45,11 @@
 	--color-input-bg: var(--color-gray-50);
 	--color-input-fg: var(--color-gray-900);
 	--color-placeholder: var(--color-gray-500);
-	--color-light-purple: #b9a0b4;
-	--color-no-belief: #d6791c;
-	--color-unsure: #7a1ea8;
-	--color-belief: #e60b9a;
-	--bg-color: #0d0815;
+	--color-light-purple: #cba0c0;
+	--color-no-belief: #e60b9a;
+	--color-unsure: #a12cb5;
+	--color-belief: #db852f;
+	--bg-color: #110818;
 	/* "1" second duration */
 	--1s: 1ms;
 }
@@ -99,8 +99,24 @@ svg {
 main, .loading-screen {
 	background: var(--bg-color) !important;
 }
+/* trying the whole room in sans (was mono); the overhead person panels
+   draw their own canvas font and are deliberately left alone */
 .lifedeath-room {
-	font-family: var(--font-mono);
+	font-family: var(--font-sans);
+}
+
+/* every button reads as pressable: a hard pink shadow, no blur, that
+   collapses on press so the button sinks into place */
+.lifedeath-room button,
+.shelf .wave-toggle {
+	/* near-black violet, kin to the sconces' pale purple */
+	background-color: #1a0c2b;
+	box-shadow: 2px 2px 0 #cfa4ff;
+}
+.lifedeath-room button:active,
+.shelf .wave-toggle:active {
+	box-shadow: none;
+	transform: translate(2px, 2px);
 }
 
 /* nothing here is selectable: a drag is the camera */
@@ -115,7 +131,7 @@ main, .loading-screen {
 }
 
 .story-overlay {
-	font-family: var(--font-serif);
+	font-family: var(--font-sans);
 	font-weight: 100;
 	position: absolute;
 	bottom: 10px;
@@ -127,7 +143,7 @@ main, .loading-screen {
 	text-align: left;
 	/* pointer-events: none; */
 	color: #fff;
-	padding: 5px;
+	padding: 5px 5px 16px;
 }
 
 /* narrower, to leave the minimap's corner clear */
@@ -243,9 +259,9 @@ main, .loading-screen {
 	padding: 0.15em 0.55em 0.2em;
 	font-family: inherit;
 	font-size: 1.25em;
-	color: #ff8dce;
-	background: transparent;
-	border: 1px solid rgba(255, 141, 206, 0.55);
+	color: #cfa4ff;
+	background: #1a0c2b;
+	border: 1px solid rgba(207, 164, 255, 0.55);
 	border-radius: 0;
 	cursor: pointer;
 	transition:
@@ -272,12 +288,15 @@ main, .loading-screen {
 }
 
 .story-overlay p a {
-	color: #ff8dce;
+	color: #fff;
 	text-decoration: underline;
+	text-decoration-thickness: 1px;
+	text-decoration-color: rgba(255, 255, 255, 0.6);
 	text-underline-offset: 3px;
 }
 .story-overlay p a:hover {
 	color: #fff;
+	text-decoration-color: #fff;
 }
 
 /* the hint rows under a story beat */
@@ -290,6 +309,13 @@ main, .loading-screen {
 	font-size: 14px;
 	text-transform: uppercase;
 	padding: 10px 0;
+}
+
+/* the icon variants shift left to balance their leading icon box; a bare
+   .hints (like the closing "keep walking" line) stays truly centered */
+.story-overlay p .hints.click,
+.story-overlay p .hints.scroll,
+.story-overlay p .hints.pan {
 	margin-left: -3em;
 }
 
@@ -303,7 +329,8 @@ main, .loading-screen {
     height: 2em;
     margin-right: 1em;
 	margin-bottom: -7px;
-    background-color: #df5fff; 
+    background-color: #fff;
+    filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.9));
     -webkit-mask-size: contain;
     mask-size: contain;
     -webkit-mask-position: center;

@@ -1,38 +1,137 @@
-// display config for every GFS variable: one entry per base name, with the
-// _Y1/_Y2 suffix stripped and `columns` listing the real people.json columns
-//
-//   categorical -> categories: [{ key, label, color, values }]
-//     `values` lists the raw strings folded into that bucket
-//   numeric -> valueMap turns worded answers into numbers, ranges bucket them
-//
-// PALETTE tells categories apart; GRADIENT_PALETTE below is the ordered ramp.
-// no-answer buckets keep a fixed grey, does-not-apply a muted plum.
+// display config for every GFS variable: categorical buckets and numeric ranges
 
 export const PALETTE = [
-  "#ffb200", // 0 — warm amber/orange
-  "#ff6a5c", // 1 — coral
-  "#9b4dff", // 2 — vivid purple
-  "#b7227e", // 3 — magenta
+  "#ffbe2e", // 0 — warm amber/orange
+  "#ff7f72", // 1 — coral
+  "#c964ff", // 2 — vivid purple
+  "#c42f8a", // 3 — magenta
   "#ff00aa"  // 4 — bright pink
 ];
 
+// religion sits right after the basics: it's the story's spine
 export const PARENT_ORDER = [
 	"Demographics & Background",
+	"Religion & Spirituality",
 	"Well-Being & Life Satisfaction",
 	"Mental & Physical Health",
 	"Mental Health & Stress",
 	"Financial & Material Stability",
-	"Character & Virtue",
 	"Close Social Relationships",
-	"Religion & Spirituality",
+	"Character & Virtue",
 	"Childhood & Family Background",
 	"Personality Traits",
 	"Civic & Political Views",
 	"Health & Habits"
 ];
 
-const NO_ANSWER_COLOR = "#55505f";
-const NOT_APPLICABLE_COLOR = "#4a4550";
+// per-section dropdown order; unlisted variables keep file order
+export const SECTION_VARIABLE_ORDER = {
+	"Demographics & Background": [
+		"GENDER",
+		"REGION",
+		"BORN_COUNTRY",
+		"URBAN_RURAL",
+		"MARITAL_STATUS",
+		"NUM_CHILDREN",
+		"NUM_HOUSEHOLD",
+		"EDUCATION_3",
+		"EMPLOYMENT",
+		"INCOME_FEELINGS"
+	],
+	"Religion & Spirituality": [
+		"AFTER_DEATH",
+		"CHANGE_ANSWER",
+		"RELIGIOUS_AFFILIATION",
+		"REL2",
+		"REL1",
+		"REL3",
+		"BELIEVE_GOD_BROAD",
+		"BELIEVE_GOD",
+		"REL7",
+		"REL8",
+		"REL_IMPORTANT",
+		"ATTEND_SVCS",
+		"PRAY_MEDITATE",
+		"SACRED_TEXTS",
+		"GROUP_NOT_REL",
+		"LIFE_APPROACH",
+		"COMFORT_REL",
+		"CONNECTED_REL",
+		"LOVED_BY_GOD",
+		"GOD_PUNISH",
+		"CRITICAL",
+		"TELL_BELIEFS",
+		"REL_EXPERIENC"
+	],
+	"Well-Being & Life Satisfaction": [
+		"LIFE_SAT",
+		"HAPPY",
+		"WB_TODAY",
+		"WB_FIVEYRS",
+		"LIFE_PURPOSE",
+		"WORTHWHILE",
+		"PEACE",
+		"HOPE_FUTURE",
+		"EXPECT_GOOD",
+		"CAPABLE",
+		"FREEDOM",
+		"CONTENT"
+	],
+	"Mental & Physical Health": [
+		"MENTAL_HEALTH",
+		"PHYSICAL_HLTH",
+		"HEALTH_PROB",
+		"BODILY_PAIN",
+		"SUFFERING",
+		"COVID_DEATH"
+	],
+	"Mental Health & Stress": [
+		"DEPRESSED",
+		"FEEL_ANXIOUS",
+		"CONTROL_WORRY",
+		"LONELY",
+		"THREAT_LIFE"
+	],
+	"Close Social Relationships": [
+		"CLOSE_TO",
+		"SAT_RELATNSHP",
+		"SHOW_LOVE",
+		"PEOPLE_HELP",
+		"TRUST_PEOPLE",
+		"BELONGING"
+	],
+	"Character & Virtue": [
+		"GRATEFUL",
+		"FORGIVE",
+		"PROMOTE_GOOD",
+		"GIVE_UP",
+		"HELP_STRANGER",
+		"DONATED",
+		"VOLUNTEERED"
+	],
+	"Childhood & Family Background": [
+		"HEALTH_GROWUP",
+		"INCOME_12YRS",
+		"MOTHER_LOVED",
+		"FATHER_LOVED",
+		"MOTHER_RELATN",
+		"FATHER_RELATN",
+		"OUTSIDER",
+		"SVCS_12YRS",
+		"SVCS_MOTHER",
+		"SVCS_FATHER"
+	],
+	"Civic & Political Views": [
+		"SAY_IN_GOVT",
+		"INCOME_DIFF",
+		"OBEY_LAW",
+		"DISCRIMINATED"
+	],
+	"Health & Habits": ["DAYS_EXERCISE", "CIGARETTES", "DRINKS"]
+};
+
+const NO_ANSWER_COLOR = "#443254";
+const NOT_APPLICABLE_COLOR = "#4d4451";
 
 export const variableConfig =
 {
@@ -114,6 +213,64 @@ export const variableConfig =
   //     "AGE_Y2"
   //   ]
   // },
+  // derived from COUNTRY at export; colors pinned, regions have no order
+  "REGION": {
+    "label": "World Region",
+    "parent": "Demographics & Background",
+    "type": "categorical",
+    "categories": [
+      {
+        "key": "us",
+        "label": "United States",
+        "color": "#4da3ff",
+        "keepColor": true,
+        "values": ["United States"]
+      },
+      {
+        "key": "europe",
+        "label": "Europe",
+        "color": "#ff7f72",
+        "keepColor": true,
+        "values": ["Europe"]
+      },
+      {
+        "key": "east_asia",
+        "label": "East Asia",
+        "color": "#3ddc97",
+        "keepColor": true,
+        "values": ["East Asia"]
+      },
+      {
+        "key": "s_se_asia",
+        "label": "South & SE Asia",
+        "color": "#ffbe2e",
+        "keepColor": true,
+        "values": ["South & SE Asia"]
+      },
+      {
+        "key": "africa",
+        "label": "Sub-Saharan Africa",
+        "color": "#c964ff",
+        "keepColor": true,
+        "values": ["Sub-Saharan Africa"]
+      },
+      {
+        "key": "latam",
+        "label": "Latin America",
+        "color": "#ff00aa",
+        "keepColor": true,
+        "values": ["Latin America"]
+      },
+      {
+        "key": "mena_au",
+        "label": "Mid. East & Australia",
+        "color": "#c9c9c9",
+        "keepColor": true,
+        "values": ["Middle East & Australia"]
+      }
+    ],
+    "columns": ["REGION"]
+  },
   "MARITAL_STATUS": {
     "label": "Marital Status",
     "parent": "Demographics & Background",
@@ -148,7 +305,9 @@ export const variableConfig =
       {
         "key": "widowed",
         "label": "Widowed",
-        "color": PALETTE[0],
+        // the spotlight group's pinned cool hue
+        "color": "#00e5cc",
+        "keepColor": true,
         "values": [
           "Widowed"
         ]
@@ -173,10 +332,11 @@ export const variableConfig =
     "label": "Education Level",
     "parent": "Demographics & Background",
     "type": "categorical",
+    "keepCategories": true,
     "categories": [
       {
         "key": "elementary_or_less",
-        "label": "K8 or less",
+        "label": "Elementary or less",
         "color": PALETTE[1],
         "values": [
           "Completed elementary education or less (up to 8 years of basic education)"
@@ -184,7 +344,7 @@ export const variableConfig =
       },
       {
         "key": "secondary_some_post_secondary",
-        "label": "Some HS or college",
+        "label": "Secondary / some college",
         "color": PALETTE[2],
         "values": [
           "Some secondary education, completed secondary education, or some post-secondary"
@@ -587,7 +747,7 @@ export const variableConfig =
     ]
   },
   "INCOME_DIFF": {
-    "label": "Govt. Should Reduce Income Differences",
+    "label": "The Government Should Reduce Income Differences",
     "parent": "Civic & Political Views",
     "type": "categorical",
     "categories": [
@@ -724,7 +884,7 @@ export const variableConfig =
     ]
   },
   "DISCRIMINATED": {
-    "label": "Feel Discriminated Against",
+    "label": "How Often You Feel Discriminated Against",
     "parent": "Civic & Political Views",
     "type": "categorical",
     "categories": [
@@ -763,14 +923,14 @@ export const variableConfig =
     ]
   },
   "AFTER_DEATH": {
-    "label": "Believe in Life After Death",
+    "label": "Belief in Life After Death",
     "parent": "Religion & Spirituality",
     "type": "categorical",
     "categories": [
        {
         "key": "no",
         "label": "No",
-        "color": PALETTE[0],
+        "color": PALETTE[4],
         "values": [
           "No"
         ]
@@ -786,7 +946,7 @@ export const variableConfig =
        {
         "key": "yes",
         "label": "Yes",
-        "color": PALETTE[4],
+        "color": PALETTE[0],
         "values": [
           "Yes"
         ]
@@ -807,6 +967,36 @@ export const variableConfig =
     "columns": [
       "AFTER_DEATH_Y1",
       "AFTER_DEATH_Y2"
+    ]
+  },
+  // derived at export: whether AFTER_DEATH differed between waves
+  "CHANGE_ANSWER": {
+    "label": "Changed Their Afterlife Answer",
+    "parent": "Religion & Spirituality",
+    "type": "categorical",
+    "categories": [
+      {
+        "key": "changed",
+        "label": "Changed answer",
+        // pinned so the recolor pass can't repaint the movers' purple
+        "color": "#c964ff",
+        "keepColor": true,
+        "values": [
+          "Changed"
+        ]
+      },
+      {
+        "key": "same",
+        "label": "Same answer",
+        "color": "#55505f",
+        "keepColor": true,
+        "values": [
+          "Same"
+        ]
+      }
+    ],
+    "columns": [
+      "CHANGE_ANSWER"
     ]
   },
   "ATTEND_SVCS": {
@@ -857,7 +1047,7 @@ export const variableConfig =
     ]
   },
    "BELIEVE_GOD_BROAD": {
-    "label": "Belief in god(s)?",
+    "label": "Belief in God(s)",
     "parent": "Religion & Spirituality",
     "type": "categorical",
     "categories": [
@@ -888,7 +1078,7 @@ export const variableConfig =
       },
       {
         "key": "none_of_these",
-        "label": "No/No answer",
+        "label": "None / No Answer",
         "color": PALETTE[3],
         "values": [
           "None of these",
@@ -904,7 +1094,7 @@ export const variableConfig =
     ]
   },
   "BELIEVE_GOD": {
-    "label": "Specific belief about god(s)",
+    "label": "Specific Belief About God(s)",
     "parent": "Religion & Spirituality",
     "type": "categorical",
     "categories": [
@@ -966,7 +1156,7 @@ export const variableConfig =
   },
  
   "COMFORT_REL": {
-    "label": "Find Comfort in Religion/Spirituality",
+    "label": "You Find Comfort in Religion or Spirituality",
     "parent": "Religion & Spirituality",
     "type": "categorical",
     "categories": [
@@ -1019,7 +1209,7 @@ export const variableConfig =
     ]
   },
   "CONNECTED_REL": {
-    "label": "Feel Connected to Religion/Spirituality",
+    "label": "How Often You Feel Connected to Religion or Spirituality",
     "parent": "Religion & Spirituality",
     "type": "categorical",
     "categories": [
@@ -1058,7 +1248,7 @@ export const variableConfig =
     ]
   },
   "CRITICAL": {
-    "label": "Religious Community is Critical of You",
+    "label": "Your Religious Community Is Critical of You",
     "parent": "Religion & Spirituality",
     "type": "categorical",
     "categories": [
@@ -1111,7 +1301,7 @@ export const variableConfig =
     ]
   },
   "GOD_PUNISH": {
-    "label": "Feel God/Spiritual Force is Punishing You",
+    "label": "You Feel Punished by God or a Spiritual Force",
     "parent": "Religion & Spirituality",
     "type": "categorical",
     "categories": [
@@ -1164,7 +1354,7 @@ export const variableConfig =
     ]
   },
   "GROUP_NOT_REL": {
-    "label": "Participate in Non-Religious Groups",
+    "label": "How Often You Take Part in Non-Religious Groups",
     "parent": "Religion & Spirituality",
     "type": "categorical",
     "categories": [
@@ -1211,7 +1401,7 @@ export const variableConfig =
     ]
   },
   "LIFE_APPROACH": {
-    "label": "Religion Lies Behind Your Approach to Life",
+    "label": "Religion Is Behind Your Whole Approach to Life",
     "parent": "Religion & Spirituality",
     "type": "categorical",
     "categories": [
@@ -1264,7 +1454,7 @@ export const variableConfig =
     ]
   },
   "LOVED_BY_GOD": {
-    "label": "Feel Loved by God/Spiritual Force",
+    "label": "You Feel Loved by God or a Spiritual Force",
     "parent": "Religion & Spirituality",
     "type": "categorical",
     "categories": [
@@ -1356,7 +1546,7 @@ export const variableConfig =
     ]
   },
   "REL_EXPERIENC": {
-    "label": "Had a Profound Religious/Spiritual Experience",
+    "label": "Had a Profound Religious or Spiritual Experience",
     "parent": "Religion & Spirituality",
     "type": "categorical",
     "categories": [
@@ -1393,7 +1583,7 @@ export const variableConfig =
     ]
   },
   "REL_IMPORTANT": {
-    "label": "Religion is Important in Your Daily Life",
+    "label": "Religion Is Important in Your Daily Life",
     "parent": "Religion & Spirituality",
     "type": "categorical",
     "categories": [
@@ -1429,14 +1619,15 @@ export const variableConfig =
     ]
   },
   "REL1": {
-    "label": "Religion at Age Twelve",
+    "label": "Your Religion at Age Twelve",
     "parent": "Religion & Spirituality",
     "type": "categorical",
     "categories": [
       {
         "key": "christianity",
         "label": "Christianity",
-        "color": PALETTE[2],
+        "color": "#ff00aa",
+        "keepColor": true,
         "values": [
           "Christianity"
         ]
@@ -1444,7 +1635,8 @@ export const variableConfig =
       {
         "key": "islam",
         "label": "Islam",
-        "color": PALETTE[4],
+        "color": "#3ddc97",
+        "keepColor": true,
         "values": [
           "Islam"
         ]
@@ -1452,7 +1644,8 @@ export const variableConfig =
       {
         "key": "hinduism",
         "label": "Hinduism",
-        "color": PALETTE[0],
+        "color": "#ffae57",
+        "keepColor": true,
         "values": [
           "Hinduism"
         ]
@@ -1460,7 +1653,8 @@ export const variableConfig =
       {
         "key": "buddhism",
         "label": "Buddhism",
-        "color": PALETTE[1],
+        "color": "#ff7f72",
+        "keepColor": true,
         "values": [
           "Buddhism"
         ]
@@ -1468,7 +1662,8 @@ export const variableConfig =
       {
         "key": "judaism",
         "label": "Judaism",
-        "color": PALETTE[3],
+        "color": "#4da3ff",
+        "keepColor": true,
         "values": [
           "Judaism"
         ]
@@ -1476,7 +1671,8 @@ export const variableConfig =
       {
         "key": "none",
         "label": "No Religion / Atheist / Agnostic",
-        "color": PALETTE[0],
+        "color": "#c9c9c9",
+        "keepColor": true,
         "values": [
           "No religion/Atheist/Agnostic"
         ]
@@ -1484,7 +1680,8 @@ export const variableConfig =
       {
         "key": "other",
         "label": "Other Religion",
-        "color": PALETTE[2],
+        "color": "#c964ff",
+        "keepColor": true,
         "values": [
           "Some other religion",
           "Primal, Animist, or Folk religion",
@@ -1520,7 +1717,8 @@ export const variableConfig =
       {
         "key": "christianity",
         "label": "Christianity",
-        "color": PALETTE[2],
+        "color": "#ff00aa",
+        "keepColor": true,
         "values": [
           "Christianity"
         ]
@@ -1528,7 +1726,8 @@ export const variableConfig =
       {
         "key": "islam",
         "label": "Islam",
-        "color": PALETTE[4],
+        "color": "#3ddc97",
+        "keepColor": true,
         "values": [
           "Islam"
         ]
@@ -1536,7 +1735,8 @@ export const variableConfig =
       {
         "key": "hinduism",
         "label": "Hinduism",
-        "color": PALETTE[0],
+        "color": "#ffae57",
+        "keepColor": true,
         "values": [
           "Hinduism"
         ]
@@ -1544,7 +1744,8 @@ export const variableConfig =
       {
         "key": "buddhism",
         "label": "Buddhism",
-        "color": PALETTE[1],
+        "color": "#ff7f72",
+        "keepColor": true,
         "values": [
           "Buddhism"
         ]
@@ -1552,7 +1753,8 @@ export const variableConfig =
       {
         "key": "judaism",
         "label": "Judaism",
-        "color": PALETTE[3],
+        "color": "#4da3ff",
+        "keepColor": true,
         "values": [
           "Judaism"
         ]
@@ -1560,7 +1762,8 @@ export const variableConfig =
       {
         "key": "none",
         "label": "No Religion / Atheist / Agnostic",
-        "color": PALETTE[0],
+        "color": "#c9c9c9",
+        "keepColor": true,
         "values": [
           "No religion/Atheist/Agnostic"
         ]
@@ -1568,7 +1771,8 @@ export const variableConfig =
       {
         "key": "other",
         "label": "Other Religion",
-        "color": PALETTE[2],
+        "color": "#c964ff",
+        "keepColor": true,
         "values": [
           "Some other religion",
           "Primal, Animist, or Folk religion",
@@ -1598,7 +1802,7 @@ export const variableConfig =
     ]
   },
   "RELIGIOUS_AFFILIATION": {
-    "label": "Religiously Affiliated vs. Unaffiliated",
+    "label": "Religious Affiliation",
     "parent": "Religion & Spirituality",
     "type": "categorical",
     "categories": [
@@ -1651,8 +1855,6 @@ export const variableConfig =
     "label": "Christian Denomination",
     "parent": "Religion & Spirituality",
     "type": "categorical",
-    "needsManualGrouping": true,
-    "note": "17 denominations (Catholic, Lutheran, Baptist, Pentecostal, etc). Only asked of Christians (REL2). Consider grouping into Catholic / Mainline Protestant / Evangelical-Pentecostal / Orthodox / Other.",
     "categories": [
       {
         "key": "catholic",
@@ -1660,6 +1862,42 @@ export const variableConfig =
         "color": PALETTE[2],
         "values": [
           "Catholic"
+        ]
+      },
+      {
+        "key": "protestant",
+        "label": "Protestant",
+        "color": PALETTE[3],
+        "values": [
+          "No denomination in particular (just Christian/just Protestant)",
+          "Pentecostal/Charismatic denominations, such as [insert country specific examples",
+          "Lutheran",
+          "Baptist, such as [insert country specific examples]",
+          "Anglican/Episcopal",
+          "Presbyterian/Reformed, such as [insert country specific examples]",
+          "Independent Church, Holiness, or Evangelical, such as [insert country specific e",
+          "Methodist",
+          "Seventh Day Adventist"
+        ]
+      },
+      {
+        "key": "other_christian",
+        "label": "Orthodox / Other Christian",
+        "color": PALETTE[4],
+        "values": [
+          "Orthodox",
+          "Church of Jesus Christ of Latter-Day Saints/Other Mormon tradition",
+          "Jehovah’s Witness",
+          "Prophetic, Ethiopian, or Zionist (AIC; African Initiated Church)",
+          "Some other denomination"
+        ]
+      },
+      {
+        "key": "not_christian",
+        "label": "Not Christian",
+        "color": NOT_APPLICABLE_COLOR,
+        "values": [
+          "None"
         ]
       },
       {
@@ -1775,7 +2013,7 @@ export const variableConfig =
     ]
   },
   "SACRED_TEXTS": {
-    "label": "Read or Listen to Sacred Texts",
+    "label": "How Often You Read or Listen to Sacred Texts",
     "parent": "Religion & Spirituality",
     "type": "categorical",
     "categories": [
@@ -1814,7 +2052,7 @@ export const variableConfig =
     ]
   },
   "TELL_BELIEFS": {
-    "label": "Tell Others About Your Religion/Spirituality",
+    "label": "You Tell Others About Your Religion or Spirituality",
     "parent": "Religion & Spirituality",
     "type": "categorical",
     "categories": [
@@ -2184,7 +2422,7 @@ export const variableConfig =
     ]
   },
   "WB_TODAY": {
-    "label": "Life Evaluation: Today",
+    "label": "Rating of Your Life Today",
     "parent": "Well-Being & Life Satisfaction",
     "type": "numeric",
     "valueMap": {
@@ -2220,7 +2458,7 @@ export const variableConfig =
     ]
   },
   "WB_FIVEYRS": {
-    "label": "Life Evaluation: Five Years From Now",
+    "label": "Rating of Your Life in Five Years",
     "parent": "Well-Being & Life Satisfaction",
     "type": "numeric",
     "valueMap": {
@@ -2256,7 +2494,7 @@ export const variableConfig =
     ]
   },
   "CONTENT": {
-    "label": "Content With Friendships and Relationships",
+    "label": "Contentment With Your Friendships and Relationships",
     "parent": "Well-Being & Life Satisfaction",
     "type": "numeric",
     "valueMap": {
@@ -2292,7 +2530,7 @@ export const variableConfig =
     ]
   },
   "LIFE_PURPOSE": {
-    "label": "Understand Your Purpose in Life",
+    "label": "You Understand Your Purpose in Life",
     "parent": "Well-Being & Life Satisfaction",
     "type": "numeric",
     "valueMap": {
@@ -2328,7 +2566,7 @@ export const variableConfig =
     ]
   },
   "WORTHWHILE": {
-    "label": "Things You Do Are Worthwhile",
+    "label": "The Things You Do Are Worthwhile",
     "parent": "Well-Being & Life Satisfaction",
     "type": "numeric",
     "valueMap": {
@@ -2364,7 +2602,7 @@ export const variableConfig =
     ]
   },
   "PEACE": {
-    "label": "At Peace With Your Thoughts and Feelings",
+    "label": "How Often You Feel at Peace With Your Thoughts",
     "parent": "Well-Being & Life Satisfaction",
     "type": "categorical",
     "categories": [
@@ -2403,7 +2641,7 @@ export const variableConfig =
     ]
   },
   "HOPE_FUTURE": {
-    "label": "Always Remain Hopeful About the Future",
+    "label": "You Remain Hopeful About the Future",
     "parent": "Well-Being & Life Satisfaction",
     "type": "numeric",
     "valueMap": {
@@ -2439,7 +2677,7 @@ export const variableConfig =
     ]
   },
   "EXPECT_GOOD": {
-    "label": "Expect More Good Things Than Bad",
+    "label": "You Expect More Good Things Than Bad",
     "parent": "Well-Being & Life Satisfaction",
     "type": "numeric",
     "valueMap": {
@@ -2475,7 +2713,7 @@ export const variableConfig =
     ]
   },
   "CAPABLE": {
-    "label": "Feel Very Capable in Most Things You Do",
+    "label": "How Often You Feel Capable in What You Do",
     "parent": "Well-Being & Life Satisfaction",
     "type": "categorical",
     "categories": [
@@ -2514,7 +2752,7 @@ export const variableConfig =
     ]
   },
   "FORGIVE": {
-    "label": "How Often You Have Forgiven Those Who Hurt You",
+    "label": "How Often You Forgive Those Who Hurt You",
     "parent": "Character & Virtue",
     "type": "categorical",
     "categories": [
@@ -2553,7 +2791,7 @@ export const variableConfig =
     ]
   },
   "GIVE_UP": {
-    "label": "Give Up Happiness Now for Greater Happiness Later",
+    "label": "Would Give Up Happiness Now for More Later",
     "parent": "Character & Virtue",
     "type": "numeric",
     "valueMap": {
@@ -2589,7 +2827,7 @@ export const variableConfig =
     ]
   },
   "GRATEFUL": {
-    "label": "Long List of Things You Feel Grateful For",
+    "label": "You Have a Long List of Things to Be Grateful For",
     "parent": "Character & Virtue",
     "type": "numeric",
     "valueMap": {
@@ -2625,7 +2863,7 @@ export const variableConfig =
     ]
   },
   "PROMOTE_GOOD": {
-    "label": "Always Act to Promote Good",
+    "label": "You Always Act to Promote Good",
     "parent": "Character & Virtue",
     "type": "numeric",
     "valueMap": {
@@ -2698,7 +2936,7 @@ export const variableConfig =
     ]
   },
   "DONATED": {
-    "label": "Donated Money to Charity in Past Month",
+    "label": "Donated to Charity in the Past Month",
     "parent": "Character & Virtue",
     "type": "categorical",
     "categories": [
@@ -2735,7 +2973,7 @@ export const variableConfig =
     ]
   },
   "VOLUNTEERED": {
-    "label": "Volunteered Time in Past Month",
+    "label": "Volunteered in the Past Month",
     "parent": "Character & Virtue",
     "type": "categorical",
     "categories": [
@@ -2844,7 +3082,7 @@ export const variableConfig =
     ]
   },
   "HEALTH_PROB": {
-    "label": "Health Problems Limit Daily Activities",
+    "label": "Health Problems Limit Your Daily Activities",
     "parent": "Mental & Physical Health",
     "type": "categorical",
     "categories": [
@@ -2881,7 +3119,7 @@ export const variableConfig =
     ]
   },
   "BODILY_PAIN": {
-    "label": "Bodily Pain in Past 4 Weeks",
+    "label": "Bodily Pain in the Past Four Weeks",
     "parent": "Mental & Physical Health",
     "type": "categorical",
     "categories": [
@@ -2920,7 +3158,7 @@ export const variableConfig =
     ]
   },
   "SUFFERING": {
-    "label": "The Extent to Which You Are Suffering",
+    "label": "How Much You Are Suffering",
     "parent": "Mental & Physical Health",
     "type": "categorical",
     "categories": [
@@ -2959,7 +3197,7 @@ export const variableConfig =
     ]
   },
   "COVID_DEATH": {
-    "label": "Family/Friend Died From COVID-19",
+    "label": "Lost Family or a Friend to COVID-19",
     "parent": "Mental & Physical Health",
     "type": "categorical",
     "categories": [
@@ -2995,7 +3233,7 @@ export const variableConfig =
     ]
   },
   "DEPRESSED": {
-    "label": "Feeling Down, Depressed, or Hopeless",
+    "label": "How Often You Felt Down, Depressed, or Hopeless",
     "parent": "Mental Health & Stress",
     "type": "categorical",
     "categories": [
@@ -3034,7 +3272,7 @@ export const variableConfig =
     ]
   },
   "FEEL_ANXIOUS": {
-    "label": "Feeling Nervous, Anxious, or on Edge",
+    "label": "How Often You Felt Nervous, Anxious, or on Edge",
     "parent": "Mental Health & Stress",
     "type": "categorical",
     "categories": [
@@ -3073,7 +3311,7 @@ export const variableConfig =
     ]
   },
   "CONTROL_WORRY": {
-    "label": "Not Able to Stop or Control Worrying",
+    "label": "How Often You Could Not Stop Worrying",
     "parent": "Mental Health & Stress",
     "type": "categorical",
     "categories": [
@@ -3148,7 +3386,7 @@ export const variableConfig =
     ]
   },
   "THREAT_LIFE": {
-    "label": "Bothered by Biggest Threat to Life Witnessed",
+    "label": "Bothered by the Biggest Threat to Your Life",
     "parent": "Mental Health & Stress",
     "type": "categorical",
     "categories": [
@@ -3187,7 +3425,7 @@ export const variableConfig =
     ]
   },
   "EXPENSES": {
-    "label": "Worry About Meeting Monthly Expenses",
+    "label": "How Much You Worry About Monthly Expenses",
     "parent": "Financial & Material Stability",
     "type": "numeric",
     "valueMap": {
@@ -3223,7 +3461,7 @@ export const variableConfig =
     ]
   },
   "WORRY_SAFETY": {
-    "label": "Worry About Safety, Food, or Housing",
+    "label": "How Much You Worry About Safety, Food, or Housing",
     "parent": "Financial & Material Stability",
     "type": "numeric",
     "valueMap": {
@@ -3259,7 +3497,7 @@ export const variableConfig =
     ]
   },
   "CIGARETTES": {
-    "label": "Cigarettes Smoked Per Day",
+    "label": "Cigarettes You Smoke Per Day",
     "parent": "Health & Habits",
     "type": "numeric",
     "valueMap": {
@@ -3294,7 +3532,7 @@ export const variableConfig =
     ]
   },
   "DRINKS": {
-    "label": "Alcoholic Drinks in Past 7 Days",
+    "label": "Alcoholic Drinks in the Past Week",
     "parent": "Health & Habits",
     "type": "numeric",
     "valueMap": {
@@ -3330,7 +3568,7 @@ export const variableConfig =
     ]
   },
   "DAYS_EXERCISE": {
-    "label": "Days Exercised in Past Week",
+    "label": "Days You Exercised in the Past Week",
     "parent": "Health & Habits",
     "type": "numeric",
     "valueMap": {
@@ -3372,7 +3610,7 @@ export const variableConfig =
     ]
   },
   "CLOSE_TO": {
-    "label": "Know One Special Person You Feel Close To",
+    "label": "Have Someone Special You Feel Close To",
     "parent": "Close Social Relationships",
     "type": "categorical",
     "categories": [
@@ -3409,7 +3647,7 @@ export const variableConfig =
     ]
   },
   "SAT_RELATNSHP": {
-    "label": "Relationships Are as Satisfying as You Want",
+    "label": "Your Relationships Are as Satisfying as You Want",
     "parent": "Close Social Relationships",
     "type": "numeric",
     "valueMap": {
@@ -3445,7 +3683,7 @@ export const variableConfig =
     ]
   },
   "SHOW_LOVE": {
-    "label": "Show Someone You Love or Care for Them",
+    "label": "You Show Others Love and Care",
     "parent": "Close Social Relationships",
     "type": "numeric",
     "valueMap": {
@@ -3481,7 +3719,7 @@ export const variableConfig =
     ]
   },
   "PEOPLE_HELP": {
-    "label": "Could Count on People to Help if in Trouble",
+    "label": "You Could Count on People to Help You in Trouble",
     "parent": "Close Social Relationships",
     "type": "numeric",
     "valueMap": {
@@ -3517,7 +3755,7 @@ export const variableConfig =
     ]
   },
   "BELONGING": {
-    "label": "Sense of Belonging in Your Country",
+    "label": "Your Sense of Belonging in Your Country",
     "parent": "Close Social Relationships",
     "type": "numeric",
     "valueMap": {
@@ -3780,7 +4018,7 @@ export const variableConfig =
     ]
   },
   "HEALTH_GROWUP": {
-    "label": "Your Health When Growing Up",
+    "label": "Your Health Growing Up",
     "parent": "Childhood & Family Background",
     "type": "categorical",
     "categories": [
@@ -3908,7 +4146,7 @@ export const variableConfig =
     ]
   },
   "SVCS_12YRS": {
-    "label": "Religious Attendance at Age Twelve",
+    "label": "How Often You Attended Services at Age Twelve",
     "parent": "Childhood & Family Background",
     "type": "categorical",
     "categories": [
@@ -3953,7 +4191,7 @@ export const variableConfig =
     ]
   },
   "SVCS_FATHER": {
-    "label": "Father's Religious Attendance When You Were 12",
+    "label": "Your Father's Attendance When You Were Twelve",
     "parent": "Childhood & Family Background",
     "type": "categorical",
     "categories": [
@@ -4006,7 +4244,7 @@ export const variableConfig =
     ]
   },
   "SVCS_MOTHER": {
-    "label": "Mother's Religious Attendance When You Were 12",
+    "label": "Your Mother's Attendance When You Were Twelve",
     "parent": "Childhood & Family Background",
     "type": "categorical",
     "categories": [
@@ -4059,7 +4297,7 @@ export const variableConfig =
     ]
   },
   "TRAITS1": {
-    "label": "Trait Pair: Extroverted, Enthusiastic",
+    "label": "You See Yourself As: Extroverted, Enthusiastic",
     "parent": "Personality Traits",
     "type": "categorical",
     "categories": [
@@ -4107,7 +4345,7 @@ export const variableConfig =
     ]
   },
   "TRAITS2": {
-    "label": "Trait Pair: Critical, Quarrelsome",
+    "label": "You See Yourself As: Critical, Quarrelsome",
     "parent": "Personality Traits",
     "type": "categorical",
     "categories": [
@@ -4155,7 +4393,7 @@ export const variableConfig =
     ]
   },
   "TRAITS3": {
-    "label": "Trait Pair: Dependable, Self-Disciplined",
+    "label": "You See Yourself As: Dependable, Self-Disciplined",
     "parent": "Personality Traits",
     "type": "categorical",
     "categories": [
@@ -4203,7 +4441,7 @@ export const variableConfig =
     ]
   },
   "TRAITS4": {
-    "label": "Trait Pair: Anxious, Easily Upset",
+    "label": "You See Yourself As: Anxious, Easily Upset",
     "parent": "Personality Traits",
     "type": "categorical",
     "categories": [
@@ -4251,7 +4489,7 @@ export const variableConfig =
     ]
   },
   "TRAITS5": {
-    "label": "Trait Pair: Open to New Experiences, Complex",
+    "label": "You See Yourself As: Open to New Experiences, Complex",
     "parent": "Personality Traits",
     "type": "categorical",
     "categories": [
@@ -4299,7 +4537,7 @@ export const variableConfig =
     ]
   },
   "TRAITS6": {
-    "label": "Trait Pair: Reserved, Quiet",
+    "label": "You See Yourself As: Reserved, Quiet",
     "parent": "Personality Traits",
     "type": "categorical",
     "categories": [
@@ -4347,7 +4585,7 @@ export const variableConfig =
     ]
   },
   "TRAITS7": {
-    "label": "Trait Pair: Sympathetic, Warm",
+    "label": "You See Yourself As: Sympathetic, Warm",
     "parent": "Personality Traits",
     "type": "categorical",
     "categories": [
@@ -4395,7 +4633,7 @@ export const variableConfig =
     ]
   },
   "TRAITS8": {
-    "label": "Trait Pair: Disorganized, Careless",
+    "label": "You See Yourself As: Disorganized, Careless",
     "parent": "Personality Traits",
     "type": "categorical",
     "categories": [
@@ -4443,7 +4681,7 @@ export const variableConfig =
     ]
   },
   "TRAITS9": {
-    "label": "Trait Pair: Calm, Emotionally Stable",
+    "label": "You See Yourself As: Calm, Emotionally Stable",
     "parent": "Personality Traits",
     "type": "categorical",
     "categories": [
@@ -4491,7 +4729,7 @@ export const variableConfig =
     ]
   },
   "TRAITS10": {
-    "label": "Trait Pair: Conventional, Uncreative",
+    "label": "You See Yourself As: Conventional, Uncreative",
     "parent": "Personality Traits",
     "type": "categorical",
     "categories": [
@@ -4539,7 +4777,7 @@ export const variableConfig =
     ]
   },
   "FREEDOM": {
-    "label": "Freedom to Pursue What's Important to You",
+    "label": "Freedom to Pursue What Matters to You",
     "parent": "Well-Being & Life Satisfaction",
     "type": "numeric",
     "valueMap": {
@@ -4577,13 +4815,13 @@ export const variableConfig =
 }
 ;
 
-// the ordered ramp, dark purple to bright pink, sampled evenly per scale
+// the ordered ramp: purple through pink to orange, lightness rising
 export const GRADIENT_PALETTE = [
-	"#3a0a6b", // deep saturated purple
-	"#6b12a3",
-	"#a318b0",
-	"#e015b4",
-	"#ff2ec4" // bright pink
+	"#7d2ed9", // deep pink-leaning purple (low end)
+	"#b342e0", // violet-magenta
+	"#ef5abc", // pink
+	"#ff7d7a", // pink-coral
+	"#ffae57" // bright orange (high end)
 ];
 
 // blends two hex colours
@@ -4619,6 +4857,8 @@ export function gradientScale(count) {
 // variables with no inherent order, which keep the distinct palette
 const QUALITATIVE_VARS = new Set([
 	"GENDER",
+	"REGION",
+	"CHANGE_ANSWER",
 	"MARITAL_STATUS",
 	"EMPLOYMENT",
 	"SELFID1",
@@ -4631,8 +4871,7 @@ const QUALITATIVE_VARS = new Set([
 	"BELIEVE_GOD",
 	"BELIEVE_GOD_BROAD",
 	"POLITICAL_ID",
-	// the room is built around this one: the doors, legend and story copy
-	// all key off amber/purple/pink, so it is skipped entirely above
+	// AFTER_DEATH keeps its hand-set door colors
 	"AFTER_DEATH"
 ]);
 
@@ -4707,12 +4946,12 @@ for (const [baseVar, config] of Object.entries(variableConfig)) {
 	if (baseVar === "AFTER_DEATH") continue;
 	if (config.type !== "categorical" || !config.categories) continue;
 	if (QUALITATIVE_VARS.has(baseVar)) continue;
-	// a deliberate grouping stays exactly as written
+	// deliberate groupings stay as written (detected, or keepCategories)
+	if (config.keepCategories) continue;
 	if (scaleIntent.get(baseVar)?.handGrouped) continue;
 
 	const adminBuckets = config.categories.filter(isAdminBucket);
-	// flattened in the order the config lists them, which is the scale's
-	// own low -> high order
+	// answers flattened in the config's low -> high order
 	const answers = [];
 	for (const bucket of config.categories) {
 		if (isAdminBucket(bucket)) continue;
@@ -4763,13 +5002,11 @@ for (const [baseVar, config] of Object.entries(variableConfig)) {
 		if (scaleIntent.get(baseVar)?.brightFirst) colors.reverse();
 	}
 	scaleBuckets.forEach((bucket, i) => {
-		bucket.color = colors[i];
+		// keepColor buckets sit out the rotation
+		if (!bucket.keepColor) bucket.color = colors[i];
 	});
 
-	// every no-answer bucket reads as missing data, in the same gray —
-	// including ones the entries above had given a palette color.
-	// "(Does not apply)" keeps its own muted plum, which is a different
-	// statement from "they didn't answer"
+	// no-answer buckets share one gray; does-not-apply keeps its plum
 	for (const bucket of buckets) {
 		if (!isAdminBucket(bucket)) continue;
 		if (bucket.color === NOT_APPLICABLE_COLOR) continue;
@@ -4787,8 +5024,7 @@ export function numericScale(baseVar) {
 	const last = sorted[sorted.length - 1];
 	const secondLast = sorted[sorted.length - 2];
 	let max = last.max;
-	// an open-ended top bucket ("3+") stands in for everything above it, so the
-	// ramp stops at its floor and the legend keeps the plus
+	// an open-ended top bucket ("3+") caps the ramp at its floor
 	let maxOpen = /\+/.test(last.label ?? "");
 	if (secondLast) {
 		const lastSpan = last.max - last.min;
@@ -4864,9 +5100,13 @@ export function colorFor(baseVar, rawValue) {
 export const MAX_COLORABLE_CATEGORIES = 4;
 
 // whether a variable can colour the crowd
-export function isColorable(baseVar) {
+export // hand-built variables whose many categories are deliberate
+const COLORABLE_EXEMPT = new Set(["REGION", "REL1", "REL2"]);
+
+function isColorable(baseVar) {
 	const config = variableConfig[baseVar];
 	if (!config) return false;
+	if (COLORABLE_EXEMPT.has(baseVar)) return true;
 	// numerics are a continuous ramp; bucket counts don't apply
 	if (config.type === "numeric") return numericScale(baseVar) !== null;
 	const scale = (config.categories ?? []).filter(
@@ -4879,11 +5119,58 @@ export function isColorable(baseVar) {
 export function groupedVariableOptions({ colorableOnly = false } = {}) {
 	const byParent = new Map(PARENT_ORDER.map((parent) => [parent, []]));
 	for (const [key, config] of Object.entries(variableConfig)) {
+		// skip country-specific lists that never got a cross-country grouping
+		if (config.needsManualGrouping) continue;
 		if (colorableOnly && !isColorable(key)) continue;
 		if (!byParent.has(config.parent)) byParent.set(config.parent, []);
 		byParent.get(config.parent).push({ key, label: config.label });
+	}
+	// each section lists in its declared order; stragglers keep file order
+	for (const [parent, options] of byParent) {
+		const order = SECTION_VARIABLE_ORDER[parent];
+		if (!order) continue;
+		options.sort((a, b) => {
+			const ia = order.indexOf(a.key);
+			const ib = order.indexOf(b.key);
+			return (ia === -1 ? order.length : ia) - (ib === -1 ? order.length : ib);
+		});
 	}
 	return PARENT_ORDER.map((parent) => ({ parent, options: byParent.get(parent) ?? [] })).filter(
 		(group) => group.options.length > 0
 	);
 }
+
+// hl-* highlight classes from the final colors; dark ones render as chips
+function hexLuma(hex) {
+	if (typeof hex !== "string" || !hex.startsWith("#") || hex.length !== 7) return 1;
+	const r = parseInt(hex.slice(1, 3), 16) / 255;
+	const g = parseInt(hex.slice(3, 5), 16) / 255;
+	const b = parseInt(hex.slice(5, 7), 16) / 255;
+	return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+function hlRule(cls, color) {
+	return `.${cls} { background: linear-gradient(rgba(8, 4, 14, 0.25), rgba(8, 4, 14, 0.25)), ${color}; color: #fff; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8); font-weight: inherit; padding: 0 0.25em; border-radius: 2px; -webkit-box-decoration-break: clone; box-decoration-break: clone; }`;
+}
+
+export const highlightClasses = [];
+export const highlightCSS = (() => {
+	const rules = [];
+	const shortTaken = new Map();
+	for (const [baseVar, config] of Object.entries(variableConfig)) {
+		const buckets = config.type === "numeric" ? config.ranges : config.categories;
+		if (!buckets) continue;
+		for (const bucket of buckets) {
+			if (!bucket.key || typeof bucket.color !== "string") continue;
+			const long = `hl-${baseVar.toLowerCase()}-${bucket.key}`;
+			rules.push(hlRule(long, bucket.color));
+			highlightClasses.push({ cls: long, variable: baseVar, label: bucket.label, color: bucket.color });
+			if (!shortTaken.has(bucket.key)) {
+				shortTaken.set(bucket.key, bucket.color);
+				rules.push(hlRule(`hl-${bucket.key}`, bucket.color));
+				highlightClasses.push({ cls: `hl-${bucket.key}`, variable: baseVar, label: bucket.label, color: bucket.color });
+			}
+		}
+	}
+	return rules.join("\n");
+})();

@@ -2,6 +2,7 @@ import { wrapAngle } from "../room/roomMath.js";
 import {
 	MAX_WHEEL_STEP,
 	TOUCH_FULL_SPEED_DELTA,
+	TOUCH_WALK_BOOST,
 	WHEEL_FULL_SPEED_DELTA,
 	WHEEL_RESPONSE_EXPONENT
 } from "../room/roomConfig.js";
@@ -49,7 +50,9 @@ export function createInputController({
 	function handleWheel(event) {
 		if (getMode() !== "walk") return;
 		event.preventDefault(); // don't also scroll the page
-		walk(shapeWalkDelta(event.deltaY) * getScrollWalkScale());
+		// the raw magnitude rides along: shaping saturates, and the walker's
+		// flick detector needs to see the true decay
+		walk(shapeWalkDelta(event.deltaY) * getScrollWalkScale(), Math.abs(event.deltaY));
 	}
 
 	// steers only while held
@@ -170,7 +173,10 @@ export function createInputController({
 					shapeWalkDelta(
 						dyNormalized * BASE_WALK_SPEED * fovScale,
 						TOUCH_FULL_SPEED_DELTA
-					) * getScrollWalkScale()
+					) *
+						getScrollWalkScale() *
+						TOUCH_WALK_BOOST,
+					Math.abs(dyNormalized * BASE_WALK_SPEED * fovScale)
 				);
 			}
 		}

@@ -1,3 +1,4 @@
+import * as THREE from "three";
 import { smoothstep, shortestAngleDelta, pickLodBand, directionToYaw } from "../room/roomMath.js";
 
 // below this, a person has caught up with the shared wave target
@@ -32,8 +33,8 @@ export function computeLayout(respondents, getZone, getAge, config) {
 		return true;
 	}
 
-	// placed across the full zone width, less a small wall margin
-	const WALL_MARGIN = 1.5;
+	// placed across the full zone width, clear of the wall pillars
+	const WALL_MARGIN = 2.6;
 	const HALF_ZONE = zoneWidth / 2;
 
 	// the zone is -1, 0 or 1; the margin shrinks on each retry
@@ -222,8 +223,10 @@ export function createCrowdAnimator({
 	hoveredPersonBrightness,
 	lodFreezeDistance
 }) {
-	// a spatial grid of who's where, rebuilt each frame and reused
+	// a spatial grid of who's where, rebuilt each frame and reused;
+	// integer keys, since string keys cost allocations in the hot loop
 	const personGrid = new Map();
+	const gridKey = (cx, cz) => cx * 100000 + cz;
 
 	// advances one person's idle and shuffle, returning their offset
 	function updateWander(person, elapsedSeconds) {
@@ -258,6 +261,13 @@ export function createCrowdAnimator({
 		}
 		return [person.__wanderX, person.__wanderZ];
 	}
+
+	// the shade tint per person, recomputed only when their color changes:
+	// the hsl round trip for everyone every frame was measurable
+	const shadeColor = new THREE.Color();
+	const shadeHSL = { h: 0, s: 0, l: 0 };
+	const shadeCache = new Float32Array(respondents.length * 3);
+	const shadeCacheKey = new Int32Array(respondents.length).fill(-1);
 
 	function update(dt, elapsedSeconds) {
 		const renderWalkX = getRenderWalkX();
@@ -351,18 +361,20 @@ export function createCrowdAnimator({
 			person.__voluntaryMoveDz = moveDz;
 			person.__walkAmount += ((isMoving ? 1 : 0) - person.__walkAmount) * walkAmountFactor;
 			// their smoothed ground speed, which keeps the clip's rate in step
-			const currentSpeed = dt > 0 ? Math.hypot(moveDx, moveDz) / dt : 0;
+			const currentSpeed =
+				dt > 0 ? Math.sqrt(moveDx * moveDx + moveDz * moveDz) / dt : 0;
 			person.__walkSpeed += (currentSpeed - person.__walkSpeed) * walkSpeedFactor;
 
 			const x = person.__x + person.__wanderX + person.__offsetX;
 			const z = person.__z + person.__wanderZ + person.__offsetZ;
-			const key = `${Math.floor(x / personCellSize)},${Math.floor(z / personCellSize)}`;
+			const key = gridKey(Math.floor(x / personCellSize), Math.floor(z / personCellSize));
 			let bucket = personGrid.get(key);
 			if (!bucket) personGrid.set(key, (bucket = []));
 			bucket.push(i);
 		}
 
 		// second pass: collisions, then the final transforms
+		const cullSq = renderCullDistance * renderCullDistance;
 		for (let i = 0; i < respondents.length; i++) {
 			const person = respondents[i];
 			const wanderX = person.__wanderX;
@@ -372,8 +384,23 @@ export function createCrowdAnimator({
 			const currentZ = person.__z + wanderZ + person.__offsetZ;
 			const dx = currentX - renderWalkX;
 			const dz = currentZ - renderWalkZ;
-			const dist = Math.hypot(dx, dz);
+			const walkerDistSq = dx * dx + dz * dz;
 
+			// past the cull the fog has them anyway: skip collisions,
+			// materials, animation and transforms until they come back
+			if (walkerDistSq > cullSq) {
+				personRoots[i].visible = false;
+				placementHelper.quaternion.copy(flatRotation);
+				placementHelper.position.set(currentX, 0.015, currentZ);
+				placementHelper.scale.setScalar(0);
+				placementHelper.updateMatrix();
+				shadows.setMatrixAt(i, placementHelper.matrix);
+				minimapX[i] = currentX;
+				minimapZ[i] = currentZ;
+				continue;
+			}
+
+			const dist = Math.sqrt(walkerDistSq);
 			if (dist > 0 && dist < collisionRadius) {
 				const push = ((collisionRadius - dist) / collisionRadius) * pushStrength * dt;
 				person.__offsetX += (dx / dist) * push;
@@ -384,7 +411,7 @@ export function createCrowdAnimator({
 			const cz = Math.floor(currentZ / personCellSize);
 			for (let gx = -1; gx <= 1; gx++) {
 				for (let gz = -1; gz <= 1; gz++) {
-					const bucket = personGrid.get(`${cx + gx},${cz + gz}`);
+					const bucket = personGrid.get(gridKey(cx + gx, cz + gz));
 					if (!bucket) continue;
 					for (const j of bucket) {
 						if (j === i) continue;
@@ -393,7 +420,7 @@ export function createCrowdAnimator({
 						const oz = other.__z + other.__wanderZ + other.__offsetZ;
 						const pdx = currentX - ox;
 						const pdz = currentZ - oz;
-						const pdist = Math.hypot(pdx, pdz);
+						const pdist = Math.sqrt(pdx * pdx + pdz * pdz);
 						if (pdist > 0 && pdist < personCollisionRadius) {
 							const push =
 								((personCollisionRadius - pdist) / personCollisionRadius) *
@@ -406,7 +433,9 @@ export function createCrowdAnimator({
 				}
 			}
 
-			const offsetLength = Math.hypot(person.__offsetX, person.__offsetZ);
+			const offsetLength = Math.sqrt(
+				person.__offsetX * person.__offsetX + person.__offsetZ * person.__offsetZ
+			);
 			if (offsetLength > maxOffset) {
 				const scale = maxOffset / offsetLength;
 				person.__offsetX *= scale;
@@ -464,7 +493,23 @@ export function createCrowdAnimator({
 					: i === hoveredPersonIndex
 						? hoveredPersonBrightness
 						: band.brightness;
-			bodyMaterial.color.copy(personBaseColors[i]).multiplyScalar(brightness);
+			const baseColor = personBaseColors[i];
+			bodyMaterial.color.copy(baseColor).multiplyScalar(brightness);
+			// shaded side: a darker, desaturated cast of their own color
+			const shadeKey =
+				((baseColor.r * 255) << 16) ^ ((baseColor.g * 255) << 8) ^ ((baseColor.b * 255) | 0);
+			if (shadeCacheKey[i] !== shadeKey) {
+				shadeCacheKey[i] = shadeKey;
+				shadeColor.copy(baseColor);
+				shadeColor.getHSL(shadeHSL);
+				shadeColor.setHSL(shadeHSL.h, shadeHSL.s * 0.5, shadeHSL.l * 0.2);
+				shadeCache[i * 3] = shadeColor.r;
+				shadeCache[i * 3 + 1] = shadeColor.g;
+				shadeCache[i * 3 + 2] = shadeColor.b;
+			}
+			bodyMaterial.emissive
+				.setRGB(shadeCache[i * 3], shadeCache[i * 3 + 1], shadeCache[i * 3 + 2])
+				.multiplyScalar(brightness);
 			bodyMaterial.userData.outlineParameters.thickness = band.outlineThickness;
 			skinMaterial.userData.outlineParameters.thickness = band.outlineThickness;
 
@@ -534,7 +579,8 @@ export function createCrowdAnimator({
 			// the shadow disc, sized to their footprint and scaled away when far
 			placementHelper.quaternion.copy(flatRotation);
 			placementHelper.position.set(finalX, 0.015, finalZ);
-			placementHelper.scale.setScalar(isFrozen ? 0 : widthScale);
+			// discs stay on for everyone drawn; only culled people lose theirs
+			placementHelper.scale.setScalar(distToWalker <= renderCullDistance ? widthScale : 0);
 			placementHelper.updateMatrix();
 			shadows.setMatrixAt(i, placementHelper.matrix);
 
@@ -546,5 +592,11 @@ export function createCrowdAnimator({
 		shadows.instanceMatrix.needsUpdate = true;
 	}
 
-	return { update };
+	return {
+		update,
+		// the topdown flight shrinks this so bodies fade before the aerial frame
+		setRenderCullDistance(value) {
+			renderCullDistance = value;
+		}
+	};
 }

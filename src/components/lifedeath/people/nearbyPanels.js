@@ -42,8 +42,11 @@ export function createNearbyPanels({
 	getPositionMode,
 	getSelectedVariable,
 	getHasStoryText,
-	// whoever the pointer is over, who gets a panel whatever the selection
-	// rules say — it's a deliberate ask, not a proximity guess
+	// how many ambient panels may show; the story trims this to one
+	getMaxPanels = () => NEARBY_PEOPLE_MAX,
+	// during a story beat, a hovered person takes over the panel slot
+	getInStoryBeat = () => false,
+	// the hovered person always gets a panel
 	getHoveredPersonIndex = () => null
 }) {
 	// max anisotropy, read once
@@ -242,13 +245,19 @@ export function createNearbyPanels({
 				? hovered
 				: null;
 
-		// story text owns the screen: fade out and pick nobody new, except
-		// whoever they're pointing at
+		// while story text is up, fade out and only track the hovered person
 		if (getHasStoryText()) {
 			for (const index of nearbySelected) {
 				if (index !== hoveredIndex) dropNearbyPanel(index);
 			}
 			nearbySelected = hoveredIndex === null ? [] : [hoveredIndex];
+			nearbySelectionTimer = NEARBY_SELECTION_REFRESH_INTERVAL;
+		} else if (getInStoryBeat() && hoveredIndex !== null) {
+			// a beat's own panel yields: hide it and show the hovered person
+			for (const index of nearbySelected) {
+				if (index !== hoveredIndex) dropNearbyPanel(index);
+			}
+			nearbySelected = [hoveredIndex];
 			nearbySelectionTimer = NEARBY_SELECTION_REFRESH_INTERVAL;
 		} else {
 			// structure blocks line of sight, people don't
@@ -312,7 +321,7 @@ export function createNearbyPanels({
 				nearbyCandidates.sort((a, b) => a.rank - b.rank);
 
 				const winners = nearbyCandidates
-					.slice(0, NEARBY_PEOPLE_MAX)
+					.slice(0, getMaxPanels())
 					.map((candidate) => candidate.index);
 				if (hoveredIndex !== null && !winners.includes(hoveredIndex)) {
 					winners.push(hoveredIndex);
@@ -326,8 +335,7 @@ export function createNearbyPanels({
 
 		}
 
-		// build whatever the selection settled on, story text or not, so a
-		// hovered person still gets their panel. only if missing or stale
+		// build panels for the settled selection when missing or stale
 		for (const index of nearbySelected) {
 			let record = nearbyPanels.get(index);
 			if (

@@ -40,13 +40,15 @@ export function createAgeZMapping({ ageMin, ageMax, halfDepth, roomDepth }) {
 		const t = (age - ageMin) / (ageMax - ageMin || 1);
 		return halfDepth - t * roomDepth;
 	}
-	function zToAge(z) {
+	// unrounded, for anything that tracks the walk continuously
+	function zToAgeExact(z) {
 		const t = (halfDepth - z) / roomDepth;
-		return Math.round(
-			ageMin + Math.min(1, Math.max(0, t)) * (ageMax - ageMin)
-		);
+		return ageMin + Math.min(1, Math.max(0, t)) * (ageMax - ageMin);
 	}
-	return { ageToZ, zToAge };
+	function zToAge(z) {
+		return Math.round(zToAgeExact(z));
+	}
+	return { ageToZ, zToAge, zToAgeExact };
 }
 
 // pushes back to their side of the door plane, unless that door is open

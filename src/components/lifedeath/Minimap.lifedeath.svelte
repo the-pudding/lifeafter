@@ -12,7 +12,8 @@
 		bounce = false,
 		onAcknowledge,
 		onClickSound,
-		onPersonClick
+		onPersonClick,
+		onEnterTopdown
 	} = $props();
 
 	let minimapCanvas;
@@ -31,12 +32,44 @@
 			minimapFontStack =
 				(typeof window !== "undefined" &&
 					getComputedStyle(document.documentElement)
-						.getPropertyValue("--font-serif")
+						.getPropertyValue("--font-sans")
 						.trim()) ||
 				'"Iowan Old Style", "Tiempos Text", "Times New Roman", Times, serif';
 		}
 		return `${weight}${weight ? " " : ""}${size}px ${minimapFontStack}`;
 	}
+
+	// pre-rendered dot sprites keyed by color, quantized to 4 bits per channel
+	// (invisible at this dot size); drawImage beats per-dot arc+fill by a lot
+	const DOT_SPRITE_PX = 16;
+	const dotSpriteCache = new Map();
+	function dotSprite(cssColor) {
+		// "#rrggbb" -> "rgb" high nibbles; anything else keys as itself
+		const key =
+			cssColor[0] === "#" && cssColor.length === 7
+				? cssColor[1] + cssColor[3] + cssColor[5]
+				: cssColor;
+		let sprite = dotSpriteCache.get(key);
+		if (!sprite) {
+			sprite = document.createElement("canvas");
+			sprite.width = DOT_SPRITE_PX;
+			sprite.height = DOT_SPRITE_PX;
+			const sctx = sprite.getContext("2d");
+			sctx.fillStyle = cssColor;
+			sctx.beginPath();
+			sctx.arc(DOT_SPRITE_PX / 2, DOT_SPRITE_PX / 2, DOT_SPRITE_PX / 2, 0, Math.PI * 2);
+			sctx.fill();
+			dotSpriteCache.set(key, sprite);
+		}
+		return sprite;
+	}
+
+	// the answer columns, left to right; "Maybe" is the shown wording for Unsure
+	const GROUP_LABELS = [
+		{ text: "No", zone: -1 },
+		{ text: "Maybe", zone: 0 },
+		{ text: "Yes", zone: 1 }
+	];
 
 	const MINIMAP_OUTER_PADDING = 3;
 	// room below the map for the button
@@ -50,12 +83,12 @@
 	// the static grid, subtler than the tracking line
 	const MINIMAP_AXIS_LINE_COLOR = "rgba(255, 255, 255, 0.3)";
 	// fallback tracking-line width in walk mode
-	const MINIMAP_TRACKING_LINE_WIDTH = 2;
-	// margin for the axis labels; zero in the corner box
+	const MINIMAP_TRACKING_LINE_WIDTH = 1;
+	// label margins; the corner box only reserves the top strip
 	function axisMargins(mode) {
 		return mode === "topdown"
 			? { left: 22, top: 16 }
-			: { left: 0, top: 0 };
+			: { left: 0, top: 14 };
 	}
 
 	// set once by init(), so plain closure state
@@ -100,7 +133,7 @@
 		const { zoneWidth, ageMin, ageMax, ageToZ } = roomConfig;
 		const ctx = minimapCanvas.getContext("2d");
 		const isTopdown = mode === "topdown";
-		// label margins in topdown only
+		// the strip the age numbers and column labels sit in
 		const { left: axisLeftMargin, top: axisTopMargin } = axisMargins(mode);
 		// mirrored on the right, or the plot sits off-centre
 		const logicalWidth =
@@ -114,8 +147,7 @@
 		);
 		const offsetX = (minimapCanvas.width - logicalWidth * scale) / 2;
 		const offsetY = (minimapCanvas.height - logicalHeight * scale) / 2;
-		// clears to transparent, letterbox bands included, so the element's css
-		// background shows through and the map can't paint a near-match of it
+		// clear to transparent so the css background shows through
 		ctx.setTransform(1, 0, 0, 1, 0, 0);
 		ctx.clearRect(0, 0, minimapCanvas.width, minimapCanvas.height);
 		ctx.setTransform(scale, 0, 0, scale, offsetX, offsetY);
@@ -157,37 +189,27 @@
 			}
 		}
 
-		// the three answers over their columns, in topdown only
-		if (isTopdown) {
-			ctx.textAlign = "center";
-			ctx.textBaseline = "alphabetic";
-			ctx.fillStyle = "rgba(255, 255, 255, 0.85)";
-			let groupFontPx = axisFontLogicalPx * 1.3;
+		// the three answers over their columns, in both modes
+		ctx.textAlign = "center";
+		ctx.textBaseline = "alphabetic";
+		ctx.fillStyle = "rgba(255, 255, 255, 0.85)";
+		let groupFontPx = axisFontLogicalPx * (isTopdown ? 1.3 : 1);
+		ctx.font = serifFont(groupFontPx);
+		// shrunk to fit its column; the corner box is tight, so it gets more of it
+		const zoneColumnWidth = minimapScaleX * zoneWidth;
+		const groupLabelFitWidth = zoneColumnWidth * (isTopdown ? 0.85 : 0.95);
+		const widestGroupLabelWidth = Math.max(
+			...GROUP_LABELS.map(({ text }) => ctx.measureText(text).width)
+		);
+		if (widestGroupLabelWidth > groupLabelFitWidth) {
+			groupFontPx *= groupLabelFitWidth / widestGroupLabelWidth;
 			ctx.font = serifFont(groupFontPx);
-			const zoneColumnWidth = minimapScaleX * zoneWidth;
-			const widestGroupLabelWidth = Math.max(
-				ctx.measureText("No").width,
-				ctx.measureText("Unsure").width,
-				ctx.measureText("Yes").width
-			);
-			if (widestGroupLabelWidth > zoneColumnWidth * 0.85) {
-				groupFontPx *= (zoneColumnWidth * 0.85) / widestGroupLabelWidth;
-				ctx.font = serifFont(groupFontPx);
-			}
-			const groupLabelY = axisTopMargin - 3;
+		}
+		const groupLabelY = axisTopMargin - 3;
+		for (const { text, zone } of GROUP_LABELS) {
 			ctx.fillText(
-				"No",
-				axisLeftMargin + worldXToMinimapPx(-zoneWidth),
-				groupLabelY
-			);
-			ctx.fillText(
-				"Unsure",
-				axisLeftMargin + worldXToMinimapPx(0),
-				groupLabelY
-			);
-			ctx.fillText(
-				"Yes",
-				axisLeftMargin + worldXToMinimapPx(zoneWidth),
+				text,
+				axisLeftMargin + worldXToMinimapPx(zone * zoneWidth),
 				groupLabelY
 			);
 		}
@@ -208,13 +230,16 @@
 			);
 		}
 
+		// stamped sprites: ~2000 arc+fill calls a frame was the map's whole cost
+		const dotSize = PERSON_DOT_RADIUS * 2;
 		for (let i = 0; i < respondentCount; i++) {
-			const px = worldXToMinimapPx(minimapX[i]);
-			const py = worldZToMinimapPx(minimapZ[i]);
-			ctx.fillStyle = personColorCSS[i];
-			ctx.beginPath();
-			ctx.arc(px, py, PERSON_DOT_RADIUS, 0, Math.PI * 2);
-			ctx.fill();
+			ctx.drawImage(
+				dotSprite(personColorCSS[i]),
+				worldXToMinimapPx(minimapX[i]) - PERSON_DOT_RADIUS,
+				worldZToMinimapPx(minimapZ[i]) - PERSON_DOT_RADIUS,
+				dotSize,
+				dotSize
+			);
 		}
 
 		// the hovered dot: bigger, with a white halo
@@ -255,14 +280,9 @@
 		// the walker, with a heading cone fading out like a flashlight
 		const walkerCanvasX = worldXToMinimapPx(walkerX);
 		if (walkerYaw !== undefined) {
-			// converted into map space and re-normalised, or the angle is wrong
-			const forwardX = Math.sin(walkerYaw);
-			const forwardZ = -Math.cos(walkerYaw);
-			let dx = forwardX * minimapScaleX;
-			let dy = forwardZ * minimapScaleZ;
-			const len = Math.hypot(dx, dy) || 1;
-			dx /= len;
-			dy /= len;
+			// raw yaw, so small turns aren't warped by the squashed scales
+			const dx = Math.sin(walkerYaw);
+			const dy = -Math.cos(walkerYaw);
 			const coneLength = 38;
 			const coneHalfWidth = 16;
 			const farX = walkerCanvasX + dx * coneLength;
@@ -360,6 +380,40 @@
 		minimapCanvas.style.width = `${width}px`;
 	}
 
+	// where the topdown plot lands in css px, for the camera flight
+	export function getTopdownPlotRect() {
+		if (!container) return null;
+		const { left: axisLeftMargin, top: axisTopMargin } = axisMargins("topdown");
+		const logicalWidth =
+			MINIMAP_WIDTH_PX + axisLeftMargin * 2 + MINIMAP_OUTER_PADDING;
+		const logicalHeight =
+			MINIMAP_HEIGHT_PX + axisTopMargin + MINIMAP_OUTER_PADDING + MINIMAP_BOTTOM_PADDING;
+		const contentAspect = logicalWidth / logicalHeight;
+		const topClear = panelClear + TOPDOWN_PANEL_GAP;
+		const availW = container.clientWidth;
+		const availH = Math.max(
+			0,
+			container.clientHeight - topClear - TOPDOWN_BOTTOM_CLEAR - bottomClear
+		);
+		let width = availH * contentAspect;
+		let height = availH;
+		if (width > availW) {
+			width = availW;
+			height = availW / contentAspect;
+		}
+		if (width <= 0 || height <= 0) return null;
+		// the box keeps the content's aspect, so the logical space fills it
+		const cssScale = width / logicalWidth;
+		return {
+			left:
+				(availW - width) / 2 +
+				(MINIMAP_OUTER_PADDING + axisLeftMargin) * cssScale,
+			top: topClear + (MINIMAP_OUTER_PADDING + axisTopMargin) * cssScale,
+			width: MINIMAP_WIDTH_PX * cssScale,
+			height: MINIMAP_HEIGHT_PX * cssScale
+		};
+	}
+
 	$effect(() => {
 		mode;
 		panelClear;
@@ -444,7 +498,9 @@
 		onAcknowledge?.();
 		onClickSound?.();
 		if (mode !== "topdown") {
-			mode = "topdown";
+			// main flies the camera up before flipping the mode, when it can
+			if (onEnterTopdown) onEnterTopdown();
+			else mode = "topdown";
 			return;
 		}
 		const index = hitTestPerson(event.clientX, event.clientY);
@@ -457,22 +513,24 @@
 
 
 <style>
-	/* a corner box in walk mode, the main view in topdown */
+	/* a corner box in walk mode, the main view in topdown; the pink
+	   outline and hard shadow mark it as a button, pressed flat on click */
 	.minimap-canvas {
 		position: absolute;
 		right: 10px;
 		bottom: 50px;
 		width: 124px;
 		height: 244px;
-		border: 1px solid rgba(255, 255, 255, 0.2);
+		border: 1px solid rgba(207, 164, 255, 0.55);
+		box-shadow: 2px 2px 0 #cfa4ff;
 		border-radius: 0rem;
 		/* both modes need real pointer events: one switches view, one opens a modal */
 		pointer-events: auto;
 		z-index: 5;
 		touch-action: none;
 		cursor: pointer;
-		/* matches what draw() fills, so the box and the plot are one colour */
-		background: var(--bg-color, #0d0815);
+		/* the buttons' shared plum, so the corner box reads as one of them */
+		background: #1a0c2b;
 	}
 	/* fades rather than cuts, and can't be clicked once faded */
 	.minimap-canvas {
@@ -482,6 +540,10 @@
 		opacity: 0;
 		pointer-events: none;
 	}
+	.minimap-canvas:not(.topdown-active):active {
+		box-shadow: none;
+		transform: translate(2px, 2px);
+	}
 	/* an hl_minimap beat breathes the plot's own background, since the canvas
 	   draws on transparency and this shows through behind the dots */
 	.minimap-canvas.is-pulsing {
@@ -490,7 +552,7 @@
 	@keyframes minimap-bg-pulse {
 		0%,
 		100% {
-			background-color: var(--bg-color, #0d0815);
+			background-color: #1a0c2b;
 		}
 		50% {
 			background-color: #3d1240;
@@ -511,7 +573,9 @@
 		z-index: 11;
 		/* size and position come from layoutMinimapBox, so nothing is set here */
 		border: none;
-		background: var(--bg-color, #0d0815);
+		/* the main view here, not a button */
+		box-shadow: none;
+		background: var(--bg-color, #110818);
 	}
 
 	/* roomier screens get a bigger corner box, in the same proportion */

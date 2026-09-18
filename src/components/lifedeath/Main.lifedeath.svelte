@@ -14,6 +14,8 @@
 	} from "./room/facade.js";
 	import { buildDoors, DOOR_LABEL_DIM_BRIGHTNESS } from "./room/doors.js";
 	import { createInputController } from "./utilities/inputController.js";
+	import { createSoundFx } from "./utilities/soundFx.js";
+	import { createDust } from "./room/dust.js";
 	import { spawnCrowd } from "./people/crowd.js";
 	import { makeLabelPanel } from "./utilities/textPanel.js";
 	import { formatNearbyPersonLines } from "./people/personSummary.js";
@@ -46,7 +48,8 @@
 		getCategoryFor,
 		gradientColorForValue,
 		numericScale,
-		GRADIENT_PALETTE
+		GRADIENT_PALETTE,
+		highlightCSS
 	} from "$data/variable_config.js";
 	// story text: "all" shows anywhere, the rest only in their zone
 	import copy from "$data/copy.json";
@@ -55,6 +58,8 @@
 	import ControlPanel from "./ControlPanel.svelte";
 	import Modal from "./Modal.lifedeath.svelte";
 	import Minimap from "./Minimap.lifedeath.svelte";
+	import StoryChart from "./story/StoryChart.svelte";
+	import InfoModal from "./InfoModal.lifedeath.svelte";
 	import {
 		wrapAngle,
 		shortestAngleDelta,
@@ -185,7 +190,36 @@
 	} from "./people/peopleConfig.js";
 	// which view is large, what colours the crowd, and which wave it stands in
 	let mode = $state("walk"); // "walk" | "topdown"
+	// true through the camera flight between the two modes
+	let flightActive = $state(false);
+	// hides the minimap while a flight crossfades it in or out
+	let mapVeiled = $state(false);
+	// the flight flips mode itself mid-sequence, so those flips skip the veil
+	let suppressModeVeil = false;
+	// set by buildScene; the markup routes mode changes through it when it can
+	let requestModeImpl = null;
+	// the flight and the map proper read as one view to the overlays
+	const mapView = $derived(mode === "topdown" || flightActive);
+
+	// injects the hl-* highlight styles (a literal tag here breaks the preprocessor)
+	$effect(() => {
+		const styleEl = document.createElement("style");
+		styleEl.textContent = highlightCSS;
+		document.head.appendChild(styleEl);
+		return () => styleEl.remove();
+	});
+	// the between-beats nudge: an arrow spun toward the light each frame
+	let walkHintOn = $state(false);
+	// a beat's optional inline chart: { name, caption } (see StoryChart.svelte)
+	let storyChart = $state(null);
+	// the walker's unrounded age, for the chart's position marker
+	let walkAgeExact = $state(null);
+	// the beat the walker is in; its floor span stays lit
+	let lastFlashedBeatAge = null;
+	let beatFloorFlashImpl = null;
+	let walkHintAngle = $state(0);
 	let selectedVariable = $state(debugVariableParam ?? "AFTER_DEATH");
+	// the room opens on wave 1; beats without a wave still default to Y2
 	let positionMode = $state("Y1"); // "Y1" | "Y2"
 
 	// debug: mirrors the variable and age into the url
@@ -248,6 +282,8 @@
 	let hideYear = $state(false);
 	// whether any beat is active here at all
 	let storyHasBeat = $state(false);
+	// overhead panels show only where the doc's show_panels flag allows
+	let storyShowPanels = $state(false);
 	// the active beat's id; {id}.mp3 narrates it
 	let narrationId = $state(null);
 	// the load screen's fade out, slow on purpose
@@ -258,8 +294,7 @@
 	const LOADING_UNMOUNT_BUFFER_MS = 160;
 	// one full cycle of the wavy line, which nothing waits on
 	const LOADING_LINE_MS = 5400;
-	// the line is already drawing in #preboot, so this one picks it up at the
-	// same point in the cycle rather than snapping back to undrawn
+	// picks up the #preboot line mid-cycle
 	const loadingLinePhaseMs =
 		typeof performance === "undefined" ? 0 : Math.round(performance.now());
 
@@ -278,26 +313,47 @@
 	const EXPLORE_MIN_AGE = 18;
 	// how long a crowd recolour takes to settle
 	const CROWD_RECOLOR_TIME = 0.35;
-	// how far past the back wall the walker can press into the light
-	const LIGHT_NUDGE_DEPTH = 2.2;
+	// how far past the walk limit the walker can press into the light
+	const LIGHT_NUDGE_DEPTH = 2.8;
+	// where the walker can stand still inside the light
+	const LIGHT_REST_DEPTH = 1.6;
 	// how quickly that overshoot eases back; lower is springier
 	const LIGHT_PUSHBACK_TIME = 0.22;
-	// how close to the wall the message appears
+	// how close to the wall the light counts as entered
 	const LIGHT_MESSAGE_MARGIN = 0.9;
+	// how far past the walk limit counts as having stepped inside
+	const LIGHT_ENTER_DEPTH = 0.6;
+	// how far off the light's direction the view can be, message-wise
+	const LIGHT_FACING_CONE = 0.9;
 	// true while pressed into the light
 	let inLight = $state(false);
-	// explore mode: no story text, no beat overrides, free movement
-	// asked for by the reader, rather than fallen into by walking past the
-	// end of the script
+	// true only once they've stepped in and are looking into it
+	let lightMessageOn = $state(false);
+	// explore mode asked for explicitly by the reader
 	let exploreExplicit = $state(false);
 	// where the script runs out
 	const STORY_END_AGE = storyEndAge(copy);
 	const pastStoryEnd = $derived(
 		STORY_END_AGE !== null && currentAge !== null && currentAge > STORY_END_AGE
 	);
-	// explore is on when they ask for it, or once they walk past the last
-	// beat — walking back before it hands the story over again
-	const exploreMode = $derived(exploreExplicit || pastStoryEnd);
+	// the last text beat's span: the corner explore button hides from its
+	// start, and past its end the closing hint takes over
+	const finalBeatSpan = (() => {
+		const entries = Object.values(copy)
+			.filter(Array.isArray)
+			.flat()
+			.filter((entry) => entry.text?.trim());
+		const starts = entries.map((e) => Number(e.age)).filter(Number.isFinite);
+		const ends = entries.map((e) => Number(e.age_end)).filter(Number.isFinite);
+		return {
+			start: starts.length ? Math.max(...starts) : null,
+			end: ends.length ? Math.max(...ends) : null
+		};
+	})();
+	// past the last beat the closing hint offers explore; nothing auto-flips
+	const exploreMode = $derived(exploreExplicit);
+	// the closing variant of the walk hint, with its own explore button
+	let walkHintFinal = $state(false);
 	// a live inside check, which flips back on leaving
 	let insideRoom = $state(false);
 	// the debug hud's snapshot
@@ -338,7 +394,7 @@
 	let storyOverlayHeight = $state(0);
 	// no text reserves nothing
 	const storyClearPx = $derived(
-		storyTexts.length > 0 && mode !== "topdown" ? storyOverlayHeight : 0
+		storyTexts.length > 0 && !mapView ? storyOverlayHeight : 0
 	);
 	// the first hover or click of the minimap stops the glow, for good
 	let minimapAcknowledged = $state(false);
@@ -387,6 +443,27 @@
 		);
 	}
 
+	// mutes when the window loses focus, eases back in on return
+	let windowFocused = true;
+	let focusFade = 1;
+	const FOCUS_FADE_IN_MS = 1200;
+	const FOCUS_FADE_OUT_MS = 250;
+	function advanceFocusFade(dt) {
+		const target = windowFocused ? 1 : 0;
+		const step =
+			(dt * 1000) / (windowFocused ? FOCUS_FADE_IN_MS : FOCUS_FADE_OUT_MS);
+		focusFade = approach(focusFade, target, step);
+		applyNarrationFocus();
+	}
+	// fades the narration through its gain node
+	function applyNarrationFocus() {
+		if (narrationGainNode) {
+			narrationGainNode.gain.value = NARRATION_GAIN * focusFade;
+		} else if (narrationEl) {
+			narrationEl.muted = focusFade <= 0.001;
+		}
+	}
+
 	// background music, off until asked for
 	let audioOn = $state(false);
 	let sundayEl;
@@ -398,8 +475,19 @@
 	// a dip either side of the loop point, so the repeat has a seam
 	const MUSIC_LOOP_FADE_SECONDS = 2.5;
 	const MUSIC_LOOP_FADE_FLOOR = 0.3;
-	// monday scores what the reader drives, sunday the narrated beats
-	const musicTrack = $derived(exploreMode || !storyHasBeat ? "monday" : "sunday");
+	// a beat's recording turned out not to exist, so it has no voiceover
+	let narrationMissing = $state(false);
+	// sunday: before 20 and under narrated beats; monday: the rest and 80+
+	const musicTrack = $derived(
+		currentAge !== null && currentAge < 20
+			? "sunday"
+			: exploreMode ||
+				  narrationId === null ||
+				  narrationMissing ||
+				  (currentAge !== null && currentAge >= 80)
+				? "monday"
+				: "sunday"
+	);
 	// the incoming and outgoing tracks for a given state
 	function trackPair(track) {
 		return track === "monday" ? [mondayEl, sundayEl] : [sundayEl, mondayEl];
@@ -416,13 +504,11 @@
 		if (current < target) return Math.min(target, current + step);
 		return Math.max(target, current - step);
 	}
-	// what the mix wants each track at, before the loop fade below. kept
-	// apart from element.volume, or the two would overwrite each other
+	// each track's target level, kept apart from element.volume
 	const musicLevels = new Map();
 	const levelOf = (el) => musicLevels.get(el) ?? 0;
 
-	// a track loops seamlessly, which lands the same bar twice with no seam.
-	// dipping either side of the wrap gives it an ending and a beginning
+	// dips volume around a track's loop point
 	function loopFade(el) {
 		if (!el || !Number.isFinite(el.duration) || el.duration <= 0) return 1;
 		const fromEdge = Math.min(el.currentTime, el.duration - el.currentTime);
@@ -447,21 +533,26 @@
 		}
 		if (musicFade) {
 			const { incoming, outgoing } = musicFade;
-			if (incoming && incoming.paused) musicLevels.set(incoming, target);
+			// the incoming side ramps in the active-track block above, and
+			// only once it is actually playing — never snapped to full
 			if (outgoing) {
 				musicLevels.set(outgoing, Math.max(0, levelOf(outgoing) - crossStep));
+				if (levelOf(outgoing) <= 0) outgoing.pause();
 			}
 			const incomingDone =
-				!incoming || Math.abs(levelOf(incoming) - target) < 0.01;
+				!incoming ||
+				(!incoming.paused && Math.abs(levelOf(incoming) - target) < 0.01);
 			if (incomingDone && (!outgoing || levelOf(outgoing) <= 0)) {
-				outgoing?.pause();
 				musicFade = null;
 			}
 		}
-		// the mix, dipped around each track's own loop point
+		// applies the mix, loop dips and focus mute included
 		for (const el of [sundayEl, mondayEl]) {
 			if (!el) continue;
-			el.volume = Math.min(1, Math.max(0, levelOf(el) * loopFade(el)));
+			el.volume = Math.min(
+				1,
+				Math.max(0, levelOf(el) * loopFade(el) * focusFade)
+			);
 		}
 	}
 
@@ -495,10 +586,12 @@
 	let narrationFadingOut = false;
 	// built once: the element can only be routed into the graph a single time
 	let narrationSource = null;
+	// the focus fade scales this node, when web audio built one
+	let narrationGainNode = null;
 	function ensureNarrationGain() {
 		if (!narrationEl || narrationSource) return;
 		try {
-			audioContext ??= new (window.AudioContext || window.webkitAudioContext)();
+			const audioContext = soundFx.ensureContext();
 			narrationSource = audioContext.createMediaElementSource(narrationEl);
 			// compressed first, or this much gain just clips
 			const compressor = audioContext.createDynamicsCompressor();
@@ -509,6 +602,7 @@
 			compressor.release.value = 0.22;
 			const gain = audioContext.createGain();
 			gain.gain.value = NARRATION_GAIN;
+			narrationGainNode = gain;
 			narrationSource
 				.connect(compressor)
 				.connect(gain)
@@ -552,86 +646,26 @@
 			return;
 		}
 		narrationFadingOut = false;
+		narrationMissing = false;
 		ensureNarrationGain();
-		if (audioContext?.state === "suspended") audioContext.resume();
+		if (soundFx.context()?.state === "suspended") soundFx.context().resume();
 		narrationEl.src = asset(`/assets/app/${id}.mp3`);
 		narrationEl.volume = NARRATION_VOLUME;
 		narrationEl.currentTime = 0;
 		narrationPlaying = true;
-		// a beat with no recording just stays quiet
+		// a beat with no recording stays quiet, and scores as monday
 		narrationEl.play().catch(() => {
 			narrationPlaying = false;
+			narrationMissing = true;
 		});
 	});
 
-	// a door's thunk: a low sine for the body, filtered noise for the knock
-	function playDoorSound() {
-		if (!audioOn) return;
-		try {
-			audioContext ??= new (window.AudioContext || window.webkitAudioContext)();
-			if (audioContext.state === "suspended") audioContext.resume();
-			const start = audioContext.currentTime;
-
-			const body = audioContext.createOscillator();
-			const bodyGain = audioContext.createGain();
-			body.type = "sine";
-			body.frequency.setValueAtTime(190, start);
-			body.frequency.exponentialRampToValueAtTime(70, start + 0.16);
-			bodyGain.gain.setValueAtTime(0.0001, start);
-			bodyGain.gain.exponentialRampToValueAtTime(0.22, start + 0.008);
-			bodyGain.gain.exponentialRampToValueAtTime(0.0001, start + 0.28);
-			body.connect(bodyGain).connect(audioContext.destination);
-			body.start(start);
-			body.stop(start + 0.3);
-
-			// a short noise burst, rolled off so it thuds rather than hisses
-			const frames = Math.floor(audioContext.sampleRate * 0.06);
-			const buffer = audioContext.createBuffer(1, frames, audioContext.sampleRate);
-			const samples = buffer.getChannelData(0);
-			for (let i = 0; i < frames; i++) {
-				samples[i] = (Math.random() * 2 - 1) * (1 - i / frames);
-			}
-			const knock = audioContext.createBufferSource();
-			knock.buffer = buffer;
-			const filter = audioContext.createBiquadFilter();
-			filter.type = "lowpass";
-			filter.frequency.value = 900;
-			const knockGain = audioContext.createGain();
-			knockGain.gain.setValueAtTime(0.14, start);
-			knockGain.gain.exponentialRampToValueAtTime(0.0001, start + 0.09);
-			knock.connect(filter).connect(knockGain).connect(audioContext.destination);
-			knock.start(start);
-		} catch {
-			// no audio available, so the door opens quietly
-		}
-	}
-
-	// a synthesised blip for clicks, on the same switch as the music
-	const CLICK_VOLUME = 0.09;
-	let audioContext = null;
-	function playClick() {
-		if (!audioOn) return;
-		try {
-			audioContext ??= new (window.AudioContext || window.webkitAudioContext)();
-			if (audioContext.state === "suspended") audioContext.resume();
-			const start = audioContext.currentTime;
-			const osc = audioContext.createOscillator();
-			const gain = audioContext.createGain();
-			// a quick drop in pitch reads as a tap, not a beep
-			osc.type = "sine";
-			osc.frequency.setValueAtTime(1500, start);
-			osc.frequency.exponentialRampToValueAtTime(620, start + 0.035);
-			// ramped, since an instant cut is a pop
-			gain.gain.setValueAtTime(0.0001, start);
-			gain.gain.exponentialRampToValueAtTime(CLICK_VOLUME, start + 0.005);
-			gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.07);
-			osc.connect(gain).connect(audioContext.destination);
-			osc.start(start);
-			osc.stop(start + 0.08);
-		} catch {
-			// no audio available, so the click stays silent
-		}
-	}
+	// the synthesized fx (door chord, click, person tones, wind), extracted
+	const soundFx = createSoundFx({
+		getAudioOn: () => audioOn,
+		getFocusFade: () => focusFade
+	});
+	const { playDoorSound, playClick, playPersonTone } = soundFx;
 
 	// every button clicks; people and the minimap fire at their own call sites
 	$effect(() => {
@@ -645,8 +679,7 @@
 	// pulls both tracks down once the scene is up, so a mode change can't stall
 	function preloadMusic() {
 		for (const el of [sundayEl, mondayEl]) {
-			// load() rewinds and re-buffers, which would cut a track that the
-			// reader has already started
+			// no load(): it would cut a track already playing
 			if (!el || !el.paused) continue;
 			el.preload = "auto";
 			el.load();
@@ -718,12 +751,13 @@
 
 	// the clicked person, or null when the modal is closed
 	let clickedPerson = $state(null);
+	// the right-side info shelf; it and the person modal displace each other
+	let infoOpen = $state(false);
 	// their index, read each frame to light them
 	let clickedPersonIndex = $state(null);
 	// a stable ref read at click time, so the minimap's callback stays one closure
 	let selectPersonImpl = null;
-	// leaving explore re-arms the beats, so the one they walk back into
-	// applies again — however they left, by button or by walking
+	// leaving explore re-arms the beats
 	let wasExploring = false;
 	$effect(() => {
 		const exploring = exploreMode;
@@ -750,6 +784,12 @@
 	$effect(() => {
 		const currentMode = mode;
 		if (currentMode === lastVeiledMode) return;
+		if (suppressModeVeil) {
+			// the flight already covered this swap with its own crossfade
+			suppressModeVeil = false;
+			lastVeiledMode = currentMode;
+			return;
+		}
 		lastVeiledMode = currentMode;
 		modeVeilVisible = true;
 		clearTimeout(modeVeilTimeout);
@@ -759,6 +799,8 @@
 
 	// the canvas host, as state so the minimap's prop updates on bind
 	let container = $state();
+	// the corner speed-mark overlay, drawn by the render loop
+	let speedCanvas;
 	// bound, so onMount can call into it
 	let minimapComponent;
 
@@ -817,8 +859,7 @@
 				sceneCleanup();
 				disposeRoot();
 			};
-			// the first frames pay for shader compiles and texture uploads, which
-			// would stutter the fade. they run under the opaque overlay instead
+			// warmup frames run under the overlay, absorbing shader compiles
 			await waitForFrames(LOADING_WARMUP_FRAMES);
 			if (disposed) return;
 			// fades rather than cuts, unmounting once it's done
@@ -827,8 +868,7 @@
 				loadingMessage = "";
 				loadingFading = false;
 			}, LOADING_FADE_MS + LOADING_UNMOUNT_BUFFER_MS);
-			// the warmup frames above already cover the fade's worst moment, so
-			// the tracks can start pulling down now
+			// audio can start now that warmup is done
 			preloadMusic();
 		})();
 
@@ -870,7 +910,7 @@
 			const ageMax = Math.max(...allAges);
 
 			// young at the front, old at the back
-			const { ageToZ, zToAge } = createAgeZMapping({
+			const { ageToZ, zToAge, zToAgeExact } = createAgeZMapping({
 				ageMin,
 				ageMax,
 				halfDepth: HALF_DEPTH,
@@ -880,7 +920,8 @@
 			// the story layer, reading and writing the state above
 			const storyBeats = createStoryBeats({
 				copy,
-				getCurrentAge: () => currentAge,
+				// exact age, so a beat starts at its line, not half a year early
+				getCurrentAge: () => walkAgeExact,
 				getRenderWalkX: () => renderWalkX,
 				getSelectedVariable: () => selectedVariable,
 				setSelectedVariable: (value) => (selectedVariable = value),
@@ -893,7 +934,17 @@
 					highlightMap = result.highlightMap;
 					hideYear = result.hideYear;
 					storyHasBeat = result.hasBeat;
+					storyShowPanels = result.showPanels;
 					narrationId = result.narrationId;
+					storyChart = result.chart;
+					if (result.beatAge !== lastFlashedBeatAge) {
+						lastFlashedBeatAge = result.beatAge;
+						if (result.beatAge !== null) {
+							beatFloorFlashImpl?.set(result.beatAge, result.beatAgeEnd);
+						} else {
+							beatFloorFlashImpl?.clear();
+						}
+					}
 				}
 			});
 			storyBeatsImpl = storyBeats;
@@ -920,6 +971,10 @@
 				(p) => p.AGE_Y2,
 				layoutConfig
 			);
+			// the wave swap moves only the people who changed their answer
+			respondents.forEach((person, i) => {
+				if (person.CHANGE_ANSWER === "Same") y2Layout[i] = y1Layout[i];
+			});
 			// everyone starts in the default wave's layout
 			initializeCrowdState(respondents, y1Layout, y2Layout, positionMode === "Y2" ? 1 : 0, {
 				heightScaleFor
@@ -939,6 +994,9 @@
 			const walkFog = new THREE.Fog(BG_COLOR, FOG_NEAR, FOG_FAR);
 			scene.fog = walkFog;
 
+			// dust motes drifting through a wrapped volume around the walker
+			const dust = createDust(scene, { ageToZ, zToAgeExact, ageMin, ageMax });
+
 			// groups the inner wall and the crowd
 			const innerRoomGroup = new THREE.Group();
 			scene.add(innerRoomGroup);
@@ -956,6 +1014,8 @@
 			// the box is css-driven, so inline sizes would fight it
 			renderer.setSize(width, height, false);
 			renderer.domElement.classList.add("webgl-canvas");
+			// settled topdown clears to this instead of rendering the room
+			renderer.setClearColor(BG_COLOR);
 			renderer.shadowMap.enabled = true;
 			renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 			container.appendChild(renderer.domElement);
@@ -985,25 +1045,28 @@
 			});
 
 			// directional only, so the toon facets stay hard-edged
-			const AMBIENT_LIGHT_INTENSITY = 1.5;
+			const AMBIENT_LIGHT_INTENSITY = 1.8;
 			const ambientLight = new THREE.AmbientLight(0xffffff, AMBIENT_LIGHT_INTENSITY);
 			scene.add(ambientLight);
 
-			const keyLight = new THREE.DirectionalLight("#f5b0db", 10.8);
-			keyLight.position.set(0, 1, -1); // from the doorway end, angled down
+			// pale candle purple: the room reads as lit from the pillar flames
+			const keyLight = new THREE.DirectionalLight("#dfc8f7", 10.8);
+			keyLight.position.set(0.35, 1, -0.2); // from high on the colonnade
 			scene.add(keyLight);
 			scene.add(keyLight.target);
 
 			// the only shadow caster, its frustum recentred each frame
 			keyLight.castShadow = true;
 			// big enough for the frustum it covers; the radius softens the rest
-			keyLight.shadow.mapSize.set(4096, 4096);
+			// 2048 is enough under the soft radius, at a quarter the gpu cost
+			keyLight.shadow.mapSize.set(2048, 2048);
 			keyLight.shadow.radius = 3;
 			keyLight.shadow.bias = -0.0015;
 			// clears acne on the brick relief that depth bias alone missed
 			keyLight.shadow.normalBias = 0.02;
-			const KEY_LIGHT_SHADOW_DISTANCE = 60; // how far back along its fixed direction the light itself sits from its target — shadow-camera-only; doesn't change the lighting angle
-			const keyLightDir = new THREE.Vector3(0, 1, -1).normalize();
+			// shadow-camera-only distance; it doesn't change the lighting angle
+			const KEY_LIGHT_SHADOW_DISTANCE = 60;
+			const keyLightDir = new THREE.Vector3(0.35, 1, -0.2).normalize();
 			const shadowCam = keyLight.shadow.camera;
 			shadowCam.left = -(HALF_WIDTH + 5);
 			shadowCam.right = HALF_WIDTH + 5;
@@ -1036,15 +1099,14 @@
 			toonGradientMap.magFilter = THREE.NearestFilter;
 			toonGradientMap.generateMipmaps = false;
 
-			// a vertical gradient for walls and doors
-			function createVerticalGradientTexture(topRGB, bottomRGB) {
+			// a vertical gradient for walls and doors; stops run top to bottom
+			function createVerticalGradientTexture(stops) {
 				const canvas = document.createElement("canvas");
 				canvas.width = 1;
 				canvas.height = 128;
 				const ctx = canvas.getContext("2d");
 				const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-				gradient.addColorStop(0, topRGB);
-				gradient.addColorStop(1, bottomRGB);
+				for (const [offset, color] of stops) gradient.addColorStop(offset, color);
 				ctx.fillStyle = gradient;
 				ctx.fillRect(0, 0, canvas.width, canvas.height);
 				const texture = new THREE.CanvasTexture(canvas);
@@ -1057,14 +1119,16 @@
 				texture.magFilter = THREE.LinearFilter;
 				return texture;
 			}
-			const wallGradientMap = createVerticalGradientTexture(
-				"rgb(255, 255, 255)",
-				"rgb(110, 110, 110)"
-			);
-			const doorGradientMap = createVerticalGradientTexture(
-				"rgb(255, 255, 255)",
-				"rgb(150, 150, 150)"
-			);
+			// the walls dissolve into blackness toward the ceiling
+			const wallGradientMap = createVerticalGradientTexture([
+				[0, "rgb(0, 0, 0)"],
+				[0.45, "rgb(255, 255, 255)"],
+				[1, "rgb(110, 110, 110)"]
+			]);
+			const doorGradientMap = createVerticalGradientTexture([
+				[0, "rgb(255, 255, 255)"],
+				[1, "rgb(150, 150, 150)"]
+			]);
 
 			// the x of each zone, shared by the shell and door builders
 			const ZONE_XS = DOORS.map((door) => door.x);
@@ -1075,7 +1139,16 @@
 			scene.add(exteriorGroup);
 
 			// the facade first: the doors' lamps are placed off its brick face
-			const { backWall, leftWall, rightWall, innerWallMeshes } = buildRoomShell(
+			const {
+				backWall,
+				leftWall,
+				rightWall,
+				innerWallMeshes,
+				beatFloorFlash,
+				candleGlowX,
+				candleGlowY,
+				setColonnadeFade
+			} = buildRoomShell(
 				scene,
 				innerRoomGroup,
 				{
@@ -1098,14 +1171,10 @@
 					ageMin,
 					ageMax,
 					ageToZ,
-					// the script's quiet stretches, as depth spans
-					storyGapZRanges: storyGapAgeRanges(copy, ageMin, ageMax).map(
-						([start, end]) => [ageToZ(start), ageToZ(end)]
-					),
-					storyGapFloorColor: STORY_GAP_FLOOR_COLOR,
 					exteriorGroup
 				}
 			);
+			beatFloorFlashImpl = beatFloorFlash;
 			const { brickFrontLocalZ, wordmarkLogo, byline, signGroup, layoutSign, signZ } =
 				buildFacade(scene, {
 				toonGradientMap,
@@ -1212,6 +1281,8 @@
 				personWalkActions,
 				personRestActions,
 				shadows,
+				crowdGroup,
+				topdownDots,
 				placementHelper,
 				flatRotation: FLAT_ROTATION
 			} = spawnCrowd(innerRoomGroup, respondents, {
@@ -1328,17 +1399,32 @@
 					}
 					if (!hasAppliedColorVariable) personBaseColors[i].copy(personTargetColors[i]);
 				}
-				// the first pass lands on its colours outright; later ones ease,
-				// and the minimap is refreshed for as long as that runs
-				if (hasAppliedColorVariable) recolorRampSeconds = CROWD_RECOLOR_TIME * 5;
+				// first recolor snaps, later ones ease
+				if (hasAppliedColorVariable) {
+					recolorRampSeconds = CROWD_RECOLOR_TIME * 5;
+					// ~8 time constants, then the lerp snaps and stops running
+					colorEaseSecondsLeft = CROWD_RECOLOR_TIME * 8;
+				}
 				hasAppliedColorVariable = true;
 			}
 
 			// how much longer the minimap's colours are worth rewriting
 			let recolorRampSeconds = 0;
+			// how much longer the bodies are still easing; 0 means settled
+			let colorEaseSecondsLeft = 0;
 
-			// eases every body toward its target colour
+			// eases every body toward its target colour, then goes idle
 			function advanceCrowdColors(dt) {
+				if (colorEaseSecondsLeft <= 0) return;
+				colorEaseSecondsLeft -= dt;
+				if (colorEaseSecondsLeft <= 0) {
+					// settled: land exactly on the targets so the loop can stop
+					for (let i = 0; i < personBaseColors.length; i++) {
+						personBaseColors[i].copy(personTargetColors[i]);
+						personColorCSS[i] = `#${personTargetColors[i].getHexString()}`;
+					}
+					return;
+				}
 				const factor = 1 - Math.exp(-dt / CROWD_RECOLOR_TIME);
 				for (let i = 0; i < personBaseColors.length; i++) {
 					personBaseColors[i].lerp(personTargetColors[i], factor);
@@ -1356,6 +1442,99 @@
 			$effect(() => {
 				applyColorVariable(selectedVariable);
 			});
+
+			// speed marks: white corner streaks that grow with the walk speed
+			// and travel outward moving forward, inward moving backward
+			const SPEED_LINES_PER_SIDE = 10;
+			const SPEED_FULL = 18; // world units/sec, matching the wind's full gust
+			const speedLineAngles = [];
+			const speedLineSeeds = [];
+			// clustered on the left and right edges, fanning a little up and down
+			for (const side of [0, Math.PI]) {
+				for (let i = 0; i < SPEED_LINES_PER_SIDE; i++) {
+					speedLineAngles.push(side + (Math.random() - 0.5) * 1.15);
+					speedLineSeeds.push(Math.random());
+				}
+			}
+			let speedLevel = 0;
+			let speedFlow = 0;
+			let speedTravel = 0;
+			let speedPrevX = null;
+			let speedPrevZ = null;
+			let speedCanvasClear = true;
+			function drawSpeedLines(dt) {
+				if (!speedCanvas) return;
+				const sdx = speedPrevX === null ? 0 : renderWalkX - speedPrevX;
+				const sdz = speedPrevZ === null ? 0 : renderWalkZ - speedPrevZ;
+				speedPrevX = renderWalkX;
+				speedPrevZ = renderWalkZ;
+				const speed = dt > 0 ? Math.sqrt(sdx * sdx + sdz * sdz) / dt : 0;
+				// signed forwardness along the facing, for the travel direction
+				const fwd =
+					dt > 0
+						? (sdx * Math.sin(cameraYaw) - sdz * Math.cos(cameraYaw)) / dt
+						: 0;
+				speedFlow +=
+					(Math.max(-1, Math.min(1, fwd / SPEED_FULL)) - speedFlow) *
+					Math.min(1, dt * 6);
+				const shown = mode === "walk" && !flightActive ? 1 : 0;
+				const target = Math.min(1, speed / SPEED_FULL) * shown;
+				// quick to appear, a touch slower to settle, like the wind
+				const ease = target > speedLevel ? dt * 7 : dt * 3.5;
+				speedLevel += (target - speedLevel) * Math.min(1, ease);
+				// the streaks slide along their band, faster at speed
+				speedTravel +=
+					dt * (0.12 + 1.1 * speedLevel * speedLevel) * (speedFlow >= 0 ? 1 : -1);
+				const dpr = Math.min(window.devicePixelRatio, 2);
+				const w = Math.round(speedCanvas.clientWidth * dpr);
+				const h = Math.round(speedCanvas.clientHeight * dpr);
+				if (w === 0 || h === 0) return;
+				if (speedCanvas.width !== w || speedCanvas.height !== h) {
+					speedCanvas.width = w;
+					speedCanvas.height = h;
+				}
+				const marksCtx = speedCanvas.getContext("2d");
+				// idle: clear once, then stop touching the canvas
+				if (speedLevel < 0.04) {
+					if (!speedCanvasClear) {
+						marksCtx.clearRect(0, 0, w, h);
+						speedCanvasClear = true;
+					}
+					return;
+				}
+				speedCanvasClear = false;
+				marksCtx.clearRect(0, 0, w, h);
+				marksCtx.lineCap = "round";
+				const cx = w / 2;
+				const cy = h / 2;
+				const BAND_LO = 0.55;
+				const BAND_HI = 0.98;
+				for (let i = 0; i < speedLineAngles.length; i++) {
+					const cos = Math.cos(speedLineAngles[i]);
+					const sin = Math.sin(speedLineAngles[i]);
+					// distance from center to the screen edge along this angle
+					const edgeR = Math.min(Math.abs(cx / cos), Math.abs(cy / sin));
+					// where this streak sits along its band right now
+					let t =
+						(speedTravel * (0.7 + speedLineSeeds[i] * 0.6) +
+							speedLineSeeds[i]) %
+						1;
+					if (t < 0) t += 1;
+					// fades in and out at the band's ends, so the wrap is quiet
+					const envelope = Math.sin(t * Math.PI);
+					const outer = edgeR * (BAND_LO + (BAND_HI - BAND_LO) * t);
+					const len =
+						edgeR * (0.05 + 0.18 * speedLevel) * (0.7 + 0.3 * envelope);
+					marksCtx.strokeStyle = `rgba(255, 255, 255, ${
+						speedLevel * envelope * 0.55
+					})`;
+					marksCtx.lineWidth = dpr * (1 + speedLevel);
+					marksCtx.beginPath();
+					marksCtx.moveTo(cx + cos * outer, cy + sin * outer);
+					marksCtx.lineTo(cx + cos * (outer - len), cy + sin * (outer - len));
+					marksCtx.stroke();
+				}
+			}
 
 			// walk controls: drag steers, scroll walks, height is fixed
 
@@ -1430,10 +1609,72 @@
 				return SCROLL_WALK_MIN_SCALE + (1 - SCROLL_WALK_MIN_SCALE) * t;
 			}
 
-			// positive walks forward
-			function walk(rawDelta) {
-				// forward along the ground, for the current heading
+			// keys drive this directly: constant held-key deltas must never
+			// read as a trackpad tail
+			function keyWalk(rawDelta) {
 				moveDirection(Math.sin(targetCameraYaw), -Math.cos(targetCameraYaw), rawDelta);
+			}
+
+			// a released flick keeps sending wheel events with steadily
+			// shrinking deltas; that tail gets a hard budget of one year of
+			// movement, so momentum can't sail anyone through the room
+			const YEAR_Z = Math.abs(ageToZ(ageMin + 2) - ageToZ(ageMin + 1));
+			const TAIL_SHRINKS = 3;
+			const TAIL_GAP_MS = 300;
+			let wheelPrevAbs = 0;
+			let wheelPrevTime = 0;
+			let wheelPeakAbs = 0;
+			let wheelShrinks = 0;
+			let tailSpent = 0;
+
+			// positive walks forward (wheel and touch arrive here). rawAbs is
+			// the unshaped device magnitude: shaping saturates at the clamp,
+			// so only the raw values reveal a released flick's decay
+			function walk(rawDelta, rawAbs = Math.abs(rawDelta)) {
+				const now = performance.now();
+				const abs = rawAbs;
+				const inTail = wheelShrinks >= TAIL_SHRINKS;
+				if (now - wheelPrevTime > TAIL_GAP_MS) {
+					// a real pause: whatever comes next is a fresh gesture
+					wheelShrinks = 0;
+					tailSpent = 0;
+					wheelPeakAbs = abs;
+				} else if (inTail) {
+					// a released tail opens near the peak and browsers coalesce
+					// ticks into ~2x events; neither may re-arm the budget.
+					// only a push at least as hard as the flick itself exits
+					if (abs >= wheelPeakAbs) {
+						wheelShrinks = 0;
+						tailSpent = 0;
+						wheelPeakAbs = abs;
+					}
+				} else if (abs > wheelPrevAbs * 0.95) {
+					// holding steady or pushing harder: the hand is on it
+					wheelShrinks = 0;
+					tailSpent = 0;
+					wheelPeakAbs = Math.max(wheelPeakAbs, abs);
+				} else {
+					// genuinely decaying: another step toward reading as a tail
+					wheelShrinks++;
+				}
+				wheelPrevTime = now;
+				wheelPrevAbs = abs;
+				let delta = rawDelta;
+				if (wheelShrinks >= TAIL_SHRINKS) {
+					const budgetLeft = Math.max(0, YEAR_Z - tailSpent);
+					if (budgetLeft <= 0) return;
+					const stepDistance = Math.abs(delta) * WALK_SPEED;
+					if (stepDistance > budgetLeft) {
+						delta *= budgetLeft / stepDistance;
+					}
+					tailSpent += Math.min(stepDistance, budgetLeft);
+				} else if (wheelShrinks >= 1) {
+					// the shrinks before the tail is certain still spend the
+					// budget, so detection latency can't add free distance
+					tailSpent += Math.abs(delta) * WALK_SPEED;
+				}
+				// forward along the ground, for the current heading
+				moveDirection(Math.sin(targetCameraYaw), -Math.cos(targetCameraYaw), delta);
 			}
 
 			// positive strafes right
@@ -1471,7 +1712,12 @@
 				getMode: () => mode,
 				getPositionMode: () => positionMode,
 				getSelectedVariable: () => selectedVariable,
-				getHasStoryText: () => storyTexts.length > 0,
+				getHasStoryText: () => !exploreMode && !storyShowPanels,
+				// during a beat, a hovered person's panel replaces the beat's own
+				getInStoryBeat: () => !exploreMode && storyHasBeat,
+				// beats keep focus tight: one panel, or a few under a chart stretch
+				getMaxPanels: () =>
+					exploreMode ? NEARBY_PEOPLE_MAX : storyChart !== null ? 3 : 1,
 				getHoveredPersonIndex: () => hoveredPersonIndex
 			});
 
@@ -1493,6 +1739,7 @@
 			}
 
 			function handleDoorClick(event) {
+				if (flightActive) return;
 				// the live position, so click-to-enter always works
 				if (insideRoom || mode !== "walk") return;
 				if (inputController.hasDragged || isPointerOverMinimap(event)) return;
@@ -1515,18 +1762,21 @@
 
 			// opens the modal for a person and lights them
 			function selectPerson(index) {
-				playClick();
+				playPersonTone(index);
+				infoOpen = false;
 				clickedPerson = respondents[index];
 				clickedPersonIndex = index;
 			}
 			function closeModal() {
 				clickedPerson = null;
 				clickedPersonIndex = null;
+				infoOpen = false;
 			}
 			selectPersonImpl = selectPerson;
 
 			// opens the modal on a click, raycasting only visible people
 			function handlePersonClick(event) {
+				if (flightActive) return;
 				if (mode !== "walk") return;
 				// only from inside; outside, the doors are the interaction
 				if (!insideRoom) return;
@@ -1568,6 +1818,7 @@
 			}
 
 			function handleFacadeLinkClick(event) {
+				if (flightActive) return;
 				if (mode !== "walk") return;
 				if (inputController.hasDragged || isPointerOverMinimap(event)) return;
 				const target = raycastFacadeLink(event);
@@ -1582,18 +1833,11 @@
 				}
 			}
 
-			// clicking the topdown preview returns to walk mode
+			// clicking the aerial view outside the map returns to walk mode
 			function handleWebglPreviewClick(event) {
-				if (mode !== "topdown") return;
-				const rect = renderer.domElement.getBoundingClientRect();
-				if (
-					event.clientX >= rect.left &&
-					event.clientX <= rect.right &&
-					event.clientY >= rect.top &&
-					event.clientY <= rect.bottom
-				) {
-					mode = "walk";
-				}
+				if (mode !== "topdown" || flightActive) return;
+				if (event.target !== renderer.domElement) return;
+				requestModeChange("walk");
 			}
 
 			// full brightness and a pointer on hover
@@ -1626,8 +1870,14 @@
 			// the lod pass reads this and applies it each frame
 			let hoveredPersonIndex = null;
 
-			// one pass over everything hoverable, skipped while a button is held
+			// raycasts are dear, so pointer moves queue and resolve once a frame
+			let pendingHoverEvent = null;
 			function handlePointerHover(event) {
+				pendingHoverEvent = event;
+			}
+
+			// one pass over everything hoverable, skipped while a button is held
+			function processPointerHover(event) {
 				// moving the pointer takes hover back from keyboard focus
 				exteriorFocusIndex = -1;
 				if (mode !== "walk" || event.buttons !== 0 || isPointerOverMinimap(event)) {
@@ -1746,7 +1996,7 @@
 					event.preventDefault();
 					// ignores auto-repeat, so it doesn't rapid-fire
 					if (event.repeat) return;
-					mode = mode === "walk" ? "topdown" : "walk";
+					requestModeChange(mode === "walk" ? "topdown" : "walk");
 				}
 			}
 			function handleKeyUp(event) {
@@ -1754,12 +2004,29 @@
 			}
 			function handleWindowBlur() {
 				heldArrowKeys.clear();
+				windowFocused = false;
+			}
+			function handleWindowFocus() {
+				windowFocused = true;
+			}
+			function handleVisibilityChange() {
+				if (document.hidden) {
+					windowFocused = false;
+					// no frames while hidden, so the mute can't ease: snap it
+					focusFade = 0;
+					for (const el of [sundayEl, mondayEl]) {
+						if (el) el.volume = 0;
+					}
+					applyNarrationFocus();
+				} else {
+					windowFocused = document.hasFocus();
+				}
 			}
 
 			// the gesture controller, driving the targets through these accessors
 			const inputController = createInputController({
 				container,
-				getMode: () => mode,
+				getMode: () => (flightActive ? "topdown" : mode),
 				getTargetCameraYaw: () => targetCameraYaw,
 				setTargetCameraYaw: (v) => {
 					targetCameraYaw = v;
@@ -1784,6 +2051,11 @@
 			window.addEventListener("keyup", handleKeyUp);
 			// no keyup fires if focus leaves mid-press
 			window.addEventListener("blur", handleWindowBlur);
+			window.addEventListener("focus", handleWindowFocus);
+			document.addEventListener("visibilitychange", handleVisibilityChange);
+			// a load in a background tab starts muted
+			windowFocused = document.hasFocus();
+			focusFade = windowFocused ? 1 : 0;
 
 			// one camera pose; the topdown toggle swaps canvases, not cameras
 
@@ -1821,11 +2093,280 @@
 					.add(keyLight.target.position);
 
 				const pose = computeWalkPose();
-				camera.position.copy(pose.position);
-				camera.quaternion.copy(pose.quaternion);
+				if (topdownBlend > 0) {
+					// narrowing the fov flattens the view as it climbs
+					const overhead = computeOverheadPose();
+					const fovNow =
+						flightStartFov + (TOPDOWN_FOV - flightStartFov) * topdownBlend;
+					if (camera.fov !== fovNow) {
+						camera.fov = fovNow;
+						camera.updateProjectionMatrix();
+					}
+					camera.position.lerpVectors(
+						pose.position,
+						overhead.position,
+						topdownBlend
+					);
+					camera.quaternion.slerpQuaternions(
+						pose.quaternion,
+						overhead.quaternion,
+						topdownBlend
+					);
+				} else {
+					camera.position.copy(pose.position);
+					camera.quaternion.copy(pose.quaternion);
+				}
 
 				// keeps the fill light on the walker
 				cameraLight.position.copy(camera.position);
+			}
+
+			// ——— the topdown flight: lift, fog out the bodies, land on the map ———
+			const TOPDOWN_FOV = 40;
+			const FLIGHT_UP_SECONDS = 1.6;
+			const FLIGHT_DOWN_SECONDS = 1.3;
+			// matches the minimap's own 320ms opacity transition
+			const MAP_FADE_SECONDS = 0.34;
+			// dot sizes in world units, matching the 2d map's logical pixels
+			const TOPDOWN_DOT_RADIUS = (0.85 * HALF_WIDTH * 2) / 120;
+			const WALKER_MARKER_RADIUS = (4.5 * HALF_WIDTH * 2) / 120;
+			const DOT_LAYER_Y = 0.08;
+			// the map's depth axis runs the room plus the entrance plaza
+			const TOPDOWN_Z_CENTER = EXTERIOR_DEPTH / 2;
+			const TOPDOWN_Z_RANGE = HALF_DEPTH * 2 + EXTERIOR_DEPTH;
+
+			let flightPhase = "idle"; // idle | up | fadeMap | down
+			let flightT = 0;
+			let topdownBlend = 0;
+			let flightStartFov = camera.fov;
+			let lastOverheadHeight = 60;
+			const clamp01 = (t) => Math.min(1, Math.max(0, t));
+			const easeInOutCubic = (t) =>
+				t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+			const smooth01 = (t) => {
+				const c = clamp01(t);
+				return c * c * (3 - 2 * c);
+			};
+			const reducedMotionQuery = window.matchMedia(
+				"(prefers-reduced-motion: reduce)"
+			);
+
+			// the walker's own dot, the white one the 2d map draws
+			const walkerMarkerMaterial = new THREE.MeshBasicMaterial({
+				color: 0xfefdfe,
+				transparent: true,
+				opacity: 0,
+				depthWrite: false,
+				fog: false
+			});
+			walkerMarkerMaterial.userData.outlineParameters = { visible: false };
+			const walkerMarker = new THREE.Mesh(
+				new THREE.CircleGeometry(WALKER_MARKER_RADIUS, 24),
+				walkerMarkerMaterial
+			);
+			walkerMarker.rotation.x = -Math.PI / 2;
+			walkerMarker.renderOrder = 11;
+			walkerMarker.visible = false;
+			scene.add(walkerMarker);
+
+			// ——— the corner preview: a scissored second render of the walk view ———
+			const PREVIEW_WIDTH = 200;
+			const PREVIEW_HEIGHT = 150;
+			const PREVIEW_RIGHT = 10;
+			const PREVIEW_BOTTOM = 50;
+			const previewCamera = new THREE.PerspectiveCamera(
+				camera.fov,
+				PREVIEW_WIDTH / PREVIEW_HEIGHT,
+				0.1,
+				800
+			);
+			previewCamera.layers.enable(FACADE_LIGHT_LAYER);
+			// mirrors the css that hides the preview button on small screens
+			const previewHiddenQuery = window.matchMedia("(max-width: 900px)");
+
+			function renderPreviewInset() {
+				if (previewHiddenQuery.matches) return;
+				const w = renderer.domElement.clientWidth;
+				const h = renderer.domElement.clientHeight;
+				if (
+					w < PREVIEW_WIDTH + PREVIEW_RIGHT ||
+					h < PREVIEW_HEIGHT + PREVIEW_BOTTOM
+				) {
+					return;
+				}
+				const pose = computeWalkPose();
+				previewCamera.position.copy(pose.position);
+				previewCamera.quaternion.copy(pose.quaternion);
+				previewCamera.fov = flightStartFov;
+				previewCamera.updateProjectionMatrix();
+				// renders a true walk-view picture, then restores the main camera
+				const aerialFogNear = walkFog.near;
+				const aerialFogFar = walkFog.far;
+				walkFog.near = FOG_NEAR;
+				walkFog.far = FOG_FAR;
+				cameraLight.position.copy(previewCamera.position);
+				topdownDots.visible = false;
+				walkerMarker.visible = false;
+				// the corner preview is a walk view, so the colonnade returns
+				setColonnadeFade(1);
+				renderer.setScissorTest(true);
+				renderer.setViewport(
+					w - PREVIEW_WIDTH - PREVIEW_RIGHT,
+					PREVIEW_BOTTOM,
+					PREVIEW_WIDTH,
+					PREVIEW_HEIGHT
+				);
+				renderer.setScissor(
+					w - PREVIEW_WIDTH - PREVIEW_RIGHT,
+					PREVIEW_BOTTOM,
+					PREVIEW_WIDTH,
+					PREVIEW_HEIGHT
+				);
+				renderer.render(scene, previewCamera);
+				renderer.setScissorTest(false);
+				renderer.setViewport(0, 0, w, h);
+				walkFog.near = aerialFogNear;
+				walkFog.far = aerialFogFar;
+				topdownDots.visible = true;
+				walkerMarker.visible = true;
+				setColonnadeFade(0);
+			}
+
+			// frames the straight-down view onto the 2d map's plot rectangle
+			function computeOverheadPose() {
+				const rect = minimapComponent.getTopdownPlotRect();
+				if (!rect) return computeWalkPose();
+				const w = container.clientWidth;
+				const h = container.clientHeight;
+				// css px per world unit across the room's width
+				const s = rect.width / (HALF_WIDTH * 2);
+				const f = 1 / Math.tan((TOPDOWN_FOV * Math.PI) / 360);
+				const camHeight = (f * h) / (2 * s);
+				lastOverheadHeight = camHeight;
+				const cx = -(rect.left + rect.width / 2 - w / 2) / s;
+				const cz = TOPDOWN_Z_CENTER - (rect.top + rect.height / 2 - h / 2) / s;
+				poseHelper.position.set(cx, camHeight, cz);
+				poseHelper.up.set(0, 0, -1);
+				poseHelper.lookAt(cx, 0, cz);
+				poseHelper.up.set(0, 1, 0);
+				return {
+					position: poseHelper.position.clone(),
+					quaternion: poseHelper.quaternion.clone()
+				};
+			}
+
+			function requestModeChange(target) {
+				if (target === mode || flightPhase !== "idle") return;
+				// no destination or reduced motion: veiled snap instead
+				if (
+					reducedMotionQuery.matches ||
+					!minimapComponent?.getTopdownPlotRect()
+				) {
+					// the veiled snap still lands on the aerial view
+					if (target === "topdown") {
+						flightStartFov = camera.fov;
+						topdownBlend = 1;
+					} else {
+						topdownBlend = 0;
+						camera.fov = flightStartFov;
+						camera.updateProjectionMatrix();
+					}
+					mode = target;
+					return;
+				}
+				// the ascent captures the walk fov, the descent restores it
+				if (target === "topdown") flightStartFov = camera.fov;
+				flightActive = true;
+				mapVeiled = true;
+				flightT = 0;
+				if (target === "topdown") {
+					flightPhase = "up";
+				} else {
+					// map fades out first, then the descent
+					flightPhase = "fadeMap";
+					topdownBlend = 1;
+				}
+			}
+			requestModeImpl = requestModeChange;
+
+			function endFlight() {
+				flightPhase = "idle";
+				flightT = 0;
+				topdownBlend = 0;
+				flightActive = false;
+				camera.fov = flightStartFov;
+				camera.updateProjectionMatrix();
+			}
+
+			function advanceFlight(dt) {
+				if (flightPhase === "idle") return;
+				if (flightPhase === "up") {
+					flightT += dt / FLIGHT_UP_SECONDS;
+					topdownBlend = easeInOutCubic(clamp01(flightT));
+					if (flightT >= 1) {
+						// arrived: the 2d map fades in over the matching aerial view
+						topdownBlend = 1;
+						suppressModeVeil = true;
+						mode = "topdown";
+						mapVeiled = false;
+						flightPhase = "idle";
+						flightT = 0;
+						flightActive = false;
+					}
+				} else if (flightPhase === "fadeMap") {
+					flightT += dt / MAP_FADE_SECONDS;
+					if (flightT >= 1) {
+						flightPhase = "down";
+						flightT = 0;
+					}
+				} else if (flightPhase === "down") {
+					flightT += dt / FLIGHT_DOWN_SECONDS;
+					topdownBlend = easeInOutCubic(clamp01(1 - flightT));
+					if (flightT >= 1) {
+						suppressModeVeil = true;
+						mode = "walk";
+						mapVeiled = false;
+						endFlight();
+					}
+				}
+			}
+
+			// places every dot at its person's map position
+			function updateTopdownDots() {
+				const active = topdownBlend > 0.001;
+				topdownDots.visible = active;
+				walkerMarker.visible = active;
+				if (!active) return;
+				const rect = minimapComponent.getTopdownPlotRect();
+				if (!rect) return;
+				// how much the 2d map compresses depth relative to width
+				const zSquash =
+					(rect.height / rect.width) * ((HALF_WIDTH * 2) / TOPDOWN_Z_RANGE);
+				// dots surface as the bodies fog out, then gather into map space
+				const fade = smooth01((topdownBlend - 0.18) / 0.32);
+				topdownDots.material.opacity = fade;
+				walkerMarkerMaterial.opacity = fade;
+				const gather = smooth01((topdownBlend - 0.35) / 0.65);
+				const k = 1 + (zSquash - 1) * gather;
+				for (let i = 0; i < respondents.length; i++) {
+					placementHelper.quaternion.copy(FLAT_ROTATION);
+					placementHelper.position.set(
+						minimapX[i],
+						DOT_LAYER_Y,
+						TOPDOWN_Z_CENTER + (minimapZ[i] - TOPDOWN_Z_CENTER) * k
+					);
+					placementHelper.scale.setScalar(TOPDOWN_DOT_RADIUS);
+					placementHelper.updateMatrix();
+					topdownDots.setMatrixAt(i, placementHelper.matrix);
+					topdownDots.setColorAt(i, personBaseColors[i]);
+				}
+				topdownDots.instanceMatrix.needsUpdate = true;
+				topdownDots.instanceColor.needsUpdate = true;
+				walkerMarker.position.set(
+					renderWalkX,
+					DOT_LAYER_Y + 0.02,
+					TOPDOWN_Z_CENTER + (renderWalkZ - TOPDOWN_Z_CENTER) * k
+				);
 			}
 
 			// the wave target, 0 to 1; each person eases at their own pace
@@ -1837,8 +2378,8 @@
 				const h = renderer.domElement.clientHeight;
 				if (w === 0 || h === 0) return;
 				camera.aspect = w / h;
-				// the fov too, but only outside in walk mode
-				if (mode === "walk" && !hasEnteredRoom) {
+				// the fov too, but only outside in walk mode, and never mid-flight
+				if (mode === "walk" && !hasEnteredRoom && topdownBlend === 0) {
 					camera.fov = computeDoorVisibleFovDegrees(w / h);
 					updateTextFovScale();
 				}
@@ -1866,12 +2407,16 @@
 				lastFrameTime = now;
 				simulatedElapsed += dt;
 
+				advanceFlight(dt);
+
 				// held keys applied per frame rather than by key repeat
-				const keyMoveDelta = KEY_MOVE_DELTA_PER_SECOND * dt;
-				if (heldArrowKeys.has("ArrowUp")) walk(keyMoveDelta);
-				if (heldArrowKeys.has("ArrowDown")) walk(-keyMoveDelta);
-				if (heldArrowKeys.has("ArrowRight")) strafe(keyMoveDelta);
-				if (heldArrowKeys.has("ArrowLeft")) strafe(-keyMoveDelta);
+				if (!flightActive) {
+					const keyMoveDelta = KEY_MOVE_DELTA_PER_SECOND * dt;
+					if (heldArrowKeys.has("ArrowUp")) keyWalk(keyMoveDelta);
+					if (heldArrowKeys.has("ArrowDown")) keyWalk(-keyMoveDelta);
+					if (heldArrowKeys.has("ArrowRight")) strafe(keyMoveDelta);
+					if (heldArrowKeys.has("ArrowLeft")) strafe(-keyMoveDelta);
+				}
 
 				// once lined up, release the queued depth and face forward
 				if (
@@ -1929,7 +2474,8 @@
 						targetCameraYaw = cameraYaw;
 					}
 				} else {
-					// glides toward the target
+					// a short glide rounds each wheel step smooth; flick
+					// momentum is handled by the tail budget, not by drag here
 					const followFactor = 1 - Math.exp(-dt / FOLLOW_TIME);
 					renderWalkX += (targetWalkX - renderWalkX) * followFactor;
 					renderWalkZ += (targetWalkZ - renderWalkZ) * followFactor;
@@ -1945,13 +2491,46 @@
 				cameraPitch = targetCameraPitch + roomEntryPitchOffset;
 
 				updateEnteredRoom();
+				advanceFocusFade(dt);
 				advanceMusicFade(dt);
+				soundFx.updateWind(dt, renderWalkX, renderWalkZ);
+				dust.update(dt, renderWalkX, renderWalkZ, candleGlowX, candleGlowY);
+				drawSpeedLines(dt);
 				advanceNarrationFade(dt);
 				advanceCrowdColors(dt);
+				// mid-flight the fog swallows bodies early; at rest it holds
+				crowdAnimator.setRenderCullDistance(
+					flightPhase === "idle"
+						? RENDER_CULL_DISTANCE
+						: RENDER_CULL_DISTANCE * Math.max(0, 1 - topdownBlend / 0.55)
+				);
+				// the pillars and sconces fade out on the way up, like the bodies
+				setColonnadeFade(Math.max(0, 1 - topdownBlend / 0.55));
+				if (topdownBlend > 0) {
+					// fog far stays below the camera, drowning all but the dots
+					const aerialFar = Math.max(
+						FOG_FAR * 1.05,
+						Math.min(FOG_FAR + 140, lastOverheadHeight * 0.85)
+					);
+					walkFog.far = FOG_FAR + (aerialFar - FOG_FAR) * topdownBlend;
+					walkFog.near =
+						FOG_NEAR + (walkFog.far * 0.4 - FOG_NEAR) * topdownBlend;
+				} else if (walkFog.far !== FOG_FAR) {
+					walkFog.near = FOG_NEAR;
+					walkFog.far = FOG_FAR;
+				}
 				crowdAnimator.update(dt, simulatedElapsed);
 				updateCamera();
+				updateTopdownDots();
 				updateDoors(dt);
 				currentAge = zToAge(renderWalkZ);
+				walkAgeExact = zToAgeExact(renderWalkZ);
+				// inside, the strip before the first age line counts as 18
+				if (renderWalkZ < HALF_DEPTH) {
+					const firstAge = ageMin + 1;
+					if (currentAge < firstAge) currentAge = firstAge;
+					if (walkAgeExact < firstAge) walkAgeExact = firstAge;
+				}
 				// stepping inside drops exterior focus, so nothing stays lit
 				if (!insideRoom && renderWalkZ <= HALF_DEPTH && exteriorFocusIndex !== -1) {
 					exteriorFocusIndex = -1;
@@ -1959,15 +2538,25 @@
 				}
 				insideRoom = renderWalkZ <= HALF_DEPTH;
 
-				// past the wall the target eases home, harder the deeper they press
-				if (targetWalkZ < MIN_WALK_Z) {
-					const overshoot = MIN_WALK_Z - targetWalkZ;
+				// the spring reclaims only the depth past the light's resting point
+				const lightRestZ = MIN_WALK_Z - LIGHT_REST_DEPTH;
+				if (targetWalkZ < lightRestZ) {
+					const overshoot = lightRestZ - targetWalkZ;
 					const pull = 1 - Math.exp(-dt / LIGHT_PUSHBACK_TIME);
 					targetWalkZ += overshoot * pull;
-					if (MIN_WALK_Z - targetWalkZ < 0.01) targetWalkZ = MIN_WALK_Z;
+					if (lightRestZ - targetWalkZ < 0.01) targetWalkZ = lightRestZ;
 				}
-				// shown once they're actually pressing into it
+				// entered once they're actually pressing into it
 				inLight = renderWalkZ < MIN_WALK_Z + LIGHT_MESSAGE_MARGIN;
+				// the message needs them inside the light and facing it
+				const lightBearing = Math.atan2(
+					0 - renderWalkX,
+					-(MIN_WALK_Z - 4 - renderWalkZ)
+				);
+				lightMessageOn =
+					renderWalkZ < MIN_WALK_Z - LIGHT_ENTER_DEPTH &&
+					Math.abs(wrapAngle(lightBearing - cameraYaw)) < LIGHT_FACING_CONE;
+
 				if (debugMode) {
 					debugStats = {
 						x: renderWalkX,
@@ -1987,6 +2576,7 @@
 					// story off, so clear what it left on screen
 					narrationId = null;
 					storyTexts = [];
+					storyShowPanels = true;
 					hidePanel = false;
 					hideMap = false;
 					highlightMap = false;
@@ -1995,11 +2585,48 @@
 				} else {
 					storyBeats.update();
 				}
+				if (pendingHoverEvent) {
+					processPointerHover(pendingHoverEvent);
+					pendingHoverEvent = null;
+				}
 				nearbyPanels.update(dt);
+				beatFloorFlashImpl?.update(dt);
 
-				// the outline pass draws everyone twice, so it waits out the door walk
-				if (autoWalking) {
-					renderer.render(scene, camera);
+				// between beats, the hint arrow points at the light
+				const hintOn =
+					!exploreMode &&
+					mode === "walk" &&
+					!flightActive &&
+					hasEnteredRoom &&
+					!autoWalking &&
+					!inLight &&
+					storyTexts.length === 0;
+				if (hintOn) {
+					// world bearing of the light from here, relative to the view
+					const bearing = Math.atan2(
+						0 - renderWalkX,
+						-(MIN_WALK_Z - renderWalkZ)
+					);
+					walkHintAngle = wrapAngle(bearing - cameraYaw);
+				}
+				walkHintOn = hintOn;
+				// small epsilon: the debug spawn can land a float hair short
+				walkHintFinal =
+					hintOn &&
+					finalBeatSpan.end !== null &&
+					walkAgeExact >= finalBeatSpan.end - 0.01;
+
+				// the outline pass waits out the door walk and the flight
+				const steadyTopdown = mode === "topdown" && flightPhase === "idle";
+				if (autoWalking || topdownBlend > 0) {
+					if (steadyTopdown) {
+						// settled topdown: a solid backdrop, so the map sits on
+						// flat purple; only the corner inset renders the room
+						renderer.clear();
+						renderPreviewInset();
+					} else {
+						renderer.render(scene, camera);
+					}
 				} else {
 					effect.render(scene, camera);
 				}
@@ -2078,6 +2705,11 @@
 				window.removeEventListener("keydown", handleKeyDown);
 				window.removeEventListener("keyup", handleKeyUp);
 				window.removeEventListener("blur", handleWindowBlur);
+				window.removeEventListener("focus", handleWindowFocus);
+				document.removeEventListener(
+					"visibilitychange",
+					handleVisibilityChange
+				);
 				renderer.dispose();
 				scene.traverse((obj) => {
 					// material arrays have no dispose of their own
@@ -2126,8 +2758,7 @@
 				</div>
 			{/if}
 			<div class="loading-label" class:loading-hide={loadingFading}>loading…</div>
-			<!-- the line is static; two wipes in the page colour draw and rub it
-			     out, since only transforms keep running when the thread blocks -->
+			<!-- two compositor-driven wipes draw and rub out the static line -->
 			<div
 				class="loading-line"
 				class:loading-hide={loadingFading}
@@ -2164,7 +2795,7 @@
 		{exploreMode}
 		bind:panelHeight={controlPanelHeight}
 	/>
-	{#if storyTexts.length > 0 && mode !== "topdown"}
+	{#if storyTexts.length > 0 && !mapView}
 		<div
 			class="story-overlay"
 			class:no_map={shouldHideMap}
@@ -2180,20 +2811,47 @@
 				{#each storyTexts as text}
 					<p>{@html renderStoryText(text, audioOn)}</p>
 				{/each}
+				{#if storyChart}
+					<StoryChart name={storyChart.name} caption={storyChart.caption} age={walkAgeExact} />
+				{/if}
 			{/key}
 		</div>
 	{/if}
+	{#if walkHintOn}
+		<!-- between beats: the way onward, spun toward the light -->
+		<div class="walk-hint" transition:fade>
+			<svg
+				viewBox="0 0 24 24"
+				style="transform: rotate({walkHintAngle}rad)"
+				aria-hidden="true"
+			>
+				<path d="M12 20 L12 5 M12 5 L6.5 10.5 M12 5 L17.5 10.5" />
+			</svg>
+			{#if walkHintFinal}
+				<div>Keep walking, or turn around and explore</div>
+				<button class="walk-hint-explore" onclick={() => (exploreExplicit = true)}>
+					Explore
+				</button>
+			{:else}
+				<div>Explore and keep walking</div>
+			{/if}
+		</div>
+	{/if}
+	<!-- corner speed marks, painted by the render loop -->
+	<canvas class="speed-lines" bind:this={speedCanvas}></canvas>
 	<Minimap
 		bind:this={minimapComponent}
 		bind:mode
 		{container}
-		hidden={shouldHideMap}
+		hidden={shouldHideMap || mapVeiled}
 		panelClear={panelClearPx}
 		bottomClear={storyClearPx}
 		bounce={shouldBounceMap}
 		onAcknowledge={() => (minimapAcknowledged = true)}
 		onClickSound={playClick}
 		onPersonClick={(index) => selectPersonImpl?.(index)}
+		onEnterTopdown={() =>
+			requestModeImpl ? requestModeImpl("topdown") : (mode = "topdown")}
 	/>
 	<!-- covers the walk and topdown swap, over everything else -->
 	<div
@@ -2202,7 +2860,7 @@
 		style="--mode-fade-ms: {MODE_FADE_MS}ms"
 	></div>
 	<!-- shown while pressing into the light at the back wall -->
-	<div class="light-message" class:light-message--on={inLight}>
+	<div class="light-message" class:light-message--on={lightMessageOn}>
 		Hi, it's good to see you. But you can't go in here right now.
 	</div>
 	<!-- background music, off by default -->
@@ -2218,7 +2876,10 @@
 		bind:this={narrationEl}
 		preload="none"
 		onended={() => (narrationPlaying = false)}
-		onerror={() => (narrationPlaying = false)}
+		onerror={() => {
+			narrationPlaying = false;
+			narrationMissing = true;
+		}}
 	></audio>
 	<audio
 		bind:this={mondayEl}
@@ -2243,12 +2904,42 @@
 			{/if}
 		</svg>
 	</button>
+	<button
+		class="audio-toggle info-toggle"
+		aria-pressed={infoOpen}
+		aria-label="About this piece"
+		title="About this piece"
+		onclick={() => {
+			infoOpen = !infoOpen;
+			if (infoOpen) {
+				clickedPerson = null;
+				clickedPersonIndex = null;
+			}
+			playClick();
+		}}
+	>
+		<svg viewBox="0 0 24 24" aria-hidden="true">
+			<circle cx="12" cy="12" r="8.6" fill="none" stroke="currentColor" stroke-width="1.6" />
+			<rect x="11.1" y="10.4" width="1.8" height="6" rx="0.9" />
+			<circle cx="12" cy="7.6" r="1.15" />
+		</svg>
+	</button>
 	<!-- leaves the story for free roaming, or returns to it -->
+	{#if mode === "topdown" && !flightActive}
+		<!-- frames the scissored corner preview; clicking returns to walk -->
+		<button
+			class="walk-preview"
+			aria-label="Return to walk mode"
+			onclick={() =>
+				requestModeImpl ? requestModeImpl("walk") : (mode = "walk")}
+		></button>
+	{/if}
 	{#if mode === "topdown"}
 		<!-- the map is the whole view here, so this offers only the way back -->
 		<button
 			class="explore-toggle explore-toggle--wide"
-			onclick={() => (mode = "walk")}
+			onclick={() =>
+				requestModeImpl ? requestModeImpl("walk") : (mode = "walk")}
 		>
 			Return to walk mode
 		</button>
@@ -2257,7 +2948,10 @@
 			class="explore-toggle"
 			class:explore-toggle--hidden={inLight ||
 				currentAge < EXPLORE_MIN_AGE ||
-				pastStoryEnd}
+				pastStoryEnd ||
+				(finalBeatSpan.start !== null &&
+					walkAgeExact !== null &&
+					walkAgeExact >= finalBeatSpan.start - 0.01)}
 			onclick={() => (exploreExplicit = !exploreExplicit)}
 		>
 			{exploreMode ? "Return to story" : "Skip to explore"}
@@ -2276,6 +2970,8 @@
 		</div>
 	{/if}
 </div>
+
+<InfoModal open={infoOpen} text={copy.info} onclose={() => (infoOpen = false)} />
 
 <Modal
 	person={clickedPerson}
@@ -2309,7 +3005,40 @@
 		touch-action: none;
 	}
 
-	/* full-bleed, or the corner box in topdown, below every overlay */
+	/* frames the corner preview; size mirrors the PREVIEW_* constants */
+	.walk-preview {
+		position: absolute;
+		right: 10px;
+		bottom: 50px;
+		width: 200px;
+		height: 150px;
+		padding: 0;
+		background: transparent;
+		border: 1px solid rgba(255, 255, 255, 0.2);
+		border-radius: 0;
+		z-index: 6;
+		cursor: pointer;
+		/* veils its corner at arrival, then fades to reveal the inset */
+		animation: walk-preview-fade 480ms ease-out both;
+	}
+	@keyframes walk-preview-fade {
+		from {
+			background-color: var(--bg-color, #0d0815);
+			border-color: transparent;
+		}
+		to {
+			background-color: transparent;
+			border-color: rgba(255, 255, 255, 0.2);
+		}
+	}
+	/* below this there's no room for the preview beside the map */
+	@media (max-width: 900px) {
+		.walk-preview {
+			display: none;
+		}
+	}
+
+	/* full-bleed in both modes; in topdown it holds the aerial view */
 	.lifedeath-room :global(canvas.webgl-canvas) {
 		position: absolute;
 		top: 0;
@@ -2317,27 +3046,6 @@
 		width: 100%;
 		height: 100%;
 		z-index: 0;
-	}
-	.lifedeath-room.topdown-active :global(canvas.webgl-canvas) {
-		top: auto;
-		left: auto;
-		/* shares a right edge and width with the button below it */
-		right: 10px;
-		bottom: 50px;
-		width: 200px;
-		height: 150px;
-		border: 1px solid rgba(255, 255, 255, 0.2);
-		z-index: 6;
-		/* clicking it returns to walk mode */
-		cursor: pointer;
-	}
-
-	/* below this there's no room for the preview beside the map */
-	@media (max-width: 900px) {
-		.lifedeath-room.topdown-active :global(canvas.webgl-canvas) {
-			/* important, since three sets display inline */
-			display: none !important;
-		}
 	}
 
 	/* the same background as the topdown view, so the fade resolves into it */
@@ -2354,6 +3062,70 @@
 	.mode-veil--opaque {
 		opacity: 1;
 		transition: none;
+	}
+
+	/* speed marks: above the scene, below every control */
+	.speed-lines {
+		position: absolute;
+		inset: 0;
+		width: 100%;
+		height: 100%;
+		pointer-events: none;
+		z-index: 4;
+	}
+
+	/* the between-beats nudge, sitting where the story text would */
+	.walk-hint {
+		position: absolute;
+		bottom: 42px;
+		left: 50%;
+		transform: translateX(-50%);
+		z-index: 10;
+		pointer-events: none;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 6px;
+		color: rgba(255, 255, 255, 0.85);
+		font-family: var(--font-sans);
+		font-size: 14px;
+		font-style: italic;
+		text-transform: uppercase;
+		letter-spacing: 0.06em;
+	}
+	.walk-hint svg {
+		width: 34px;
+		height: 34px;
+		fill: none;
+		stroke: rgba(255, 255, 255, 0.9);
+		stroke-width: 2;
+		stroke-linecap: round;
+		stroke-linejoin: round;
+		/* the loop re-aims it every frame; a short chase smooths the spin */
+		transition: transform 120ms linear;
+	}
+	/* the closing hint's own way into explore; the hint box ignores clicks */
+	.walk-hint .walk-hint-explore {
+		pointer-events: auto;
+		margin-top: 4px;
+		font-family: inherit;
+		font-size: 13px;
+		font-style: normal;
+		text-transform: uppercase;
+		letter-spacing: 0.06em;
+		color: #cfa4ff;
+		background: #1a0c2b;
+		border: 1px solid rgba(207, 164, 255, 0.55);
+		border-radius: 0;
+		padding: 0.35rem 1.1rem;
+		cursor: pointer;
+		transition:
+			color 150ms ease-out,
+			border-color 150ms ease-out;
+	}
+	.walk-hint .walk-hint-explore:hover {
+		color: #fff;
+		border-color: #fff;
 	}
 
 	/* the minimap styles itself */
@@ -2405,8 +3177,7 @@
 		transform: translate(-50%, -50%);
 		/* unlit, so the overlay fading out reads as the neon coming on */
 		filter: none;
-		/* it sits exactly over the real sign, so it dissolves at the veil's own
-		   pace: the tubing lights up in place rather than blinking out first */
+		/* sits over the real sign, so the tubing lights up in place */
 		transition: opacity var(--loading-fade-ms) ease-out;
 		will-change: opacity;
 	}
@@ -2417,10 +3188,10 @@
 	}
 	/* unlit pink tubing; the outline is a stroked rect, so it needs its own rule */
 	.loading-sign :global(path) {
-		fill: #6b3350;
+		fill: #4d3a6e;
 	}
 	.loading-sign :global(rect) {
-		stroke: #6b3350;
+		stroke: #4d3a6e;
 	}
 
 	/* sits just above the line, on the same axis */
@@ -2430,7 +3201,7 @@
 		top: 50%;
 		transform: translateX(-50%);
 		margin-top: -38px;
-		font-family: var(--font-serif);
+		font-family: var(--font-sans);
 		font-size: 0.85rem;
 		letter-spacing: 0.06em;
 		color: rgba(255, 255, 255, 0.65);
@@ -2458,7 +3229,7 @@
 	.loading-line-art path {
 		fill: none;
 		/* the room's neon pink */
-		stroke: #ff36a8;
+		stroke: #c47aff;
 		stroke-width: 1.6;
 		stroke-linecap: round;
 		stroke-linejoin: round;
@@ -2468,8 +3239,7 @@
 		position: absolute;
 		inset: 0;
 		background: var(--bg-color);
-		/* its own layer: transforms then run on the compositor, which keeps
-		   going while the main thread is busy loading */
+		/* its own layer, so the wipes keep running while the thread loads */
 		will-change: transform;
 	}
 	/* slides off to the right, uncovering the line left to right */
@@ -2512,8 +3282,7 @@
 		}
 	}
 
-	/* the sign cross-fades with the veil; the label and line have nothing
-	   behind them, so they clear early and quickly */
+	/* the label and line have nothing behind them, so they clear early */
 	.loading-hide {
 		opacity: 0;
 	}
@@ -2534,14 +3303,18 @@
 		display: grid;
 		place-items: center;
 		padding: 0;
-		background: rgba(10, 5, 16, 0.85);
-		border: 1px solid rgba(255, 255, 255, 0.3);
+		background: #1a0c2b;
+		/* same pink as the story text's audio button */
+		border: 1px solid rgba(207, 164, 255, 0.55);
 		border-radius: 0;
-		color: rgba(255, 255, 255, 0.75);
+		color: #cfa4ff;
 		cursor: pointer;
 		transition:
 			color 150ms ease-out,
 			border-color 150ms ease-out;
+	}
+	.info-toggle {
+		top: 52px;
 	}
 	.audio-toggle:hover {
 		color: #fff;
@@ -2570,11 +3343,13 @@
 		text-align: center;
 		transition: opacity 320ms ease-out;
 		z-index: 30;
-		font-family: var(--font-serif);
-		font-size: 0.95rem;
-		color: rgba(255, 255, 255, 0.75);
-		background: rgba(10, 5, 16, 0.85);
-		border: 1px solid rgba(255, 255, 255, 0.3);
+		font-family: var(--font-sans);
+		/* sans runs wider than the old serif; sized to stay inside 124px */
+		font-size: 0.82rem;
+		/* the same pink as the story and audio buttons */
+		color: #cfa4ff;
+		background: #1a0c2b;
+		border: 1px solid rgba(207, 164, 255, 0.55);
 		border-radius: 0;
 		padding: 0.4rem 0.5rem;
 		cursor: pointer;

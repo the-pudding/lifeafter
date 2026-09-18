@@ -1,9 +1,16 @@
 import * as THREE from "three";
 import { clone as cloneSkinned } from "three/examples/jsm/utils/SkeletonUtils.js";
 
+// the thin black hand-drawn contour around each figure
+const FIGURE_OUTLINES = true;
+
 // one body per respondent, plus the shared shadow mesh
 export function spawnCrowd(innerRoomGroup, respondents, config) {
 	const { toonGradientMap, outlineDefaultThickness, shadowRadius, pickModelForPerson } = config;
+
+	// the bodies' own group, so the aerial pass can skip every one at once
+	const crowdGroup = new THREE.Group();
+	innerRoomGroup.add(crowdGroup);
 
 	// parallel arrays, indexed like `respondents`
 	const personRoots = new Array(respondents.length);
@@ -31,9 +38,23 @@ export function spawnCrowd(innerRoomGroup, respondents, config) {
 			flatShading: true,
 			vertexColors: true
 		});
-		// mutated in place, to avoid thousands of allocations a frame
-		neutralMaterial.userData.outlineParameters = { thickness: outlineDefaultThickness };
-		outfitMaterial.userData.outlineParameters = { thickness: outlineDefaultThickness };
+		// shade tint follows the baked vertex colors, so feet stay black
+		outfitMaterial.onBeforeCompile = (shader) => {
+			shader.fragmentShader = shader.fragmentShader.replace(
+				"#include <emissivemap_fragment>",
+				"#include <emissivemap_fragment>\n#ifdef USE_COLOR\n\ttotalEmissiveRadiance *= vColor.rgb;\n#endif"
+			);
+		};
+		// mutated in place, to avoid thousands of allocations a frame.
+		// FIGURE_OUTLINES turns the drawn contours back on if wanted
+		neutralMaterial.userData.outlineParameters = {
+			thickness: outlineDefaultThickness,
+			visible: FIGURE_OUTLINES
+		};
+		outfitMaterial.userData.outlineParameters = {
+			thickness: outlineDefaultThickness,
+			visible: FIGURE_OUTLINES
+		};
 		instance.traverse((node) => {
 			if (node.isMesh) {
 				const originalName = node.material.name;
@@ -46,7 +67,7 @@ export function spawnCrowd(innerRoomGroup, respondents, config) {
 		personBodyMaterials[i] = outfitMaterial;
 		personSkinMaterials[i] = neutralMaterial;
 		personBaseColors[i] = new THREE.Color();
-		innerRoomGroup.add(instance);
+		crowdGroup.add(instance);
 		personRoots[i] = instance;
 		// read by the click raycast, walking up from the mesh it hit
 		instance.userData.personIndex = i;
@@ -75,11 +96,11 @@ export function spawnCrowd(innerRoomGroup, respondents, config) {
 	// an opaque disc; transparent would darken where two shadows overlap
 	const shadowGeometry = new THREE.CircleGeometry(shadowRadius, 8);
 	// unlit, so it reads the same under any light
-	const shadowMaterial = new THREE.MeshBasicMaterial({ color: 0x000000 });
+	const shadowMaterial = new THREE.MeshBasicMaterial({ color: 0x080513 });
 	// or the outline pass rings the disc
 	shadowMaterial.userData.outlineParameters = { visible: false };
 	const shadows = new THREE.InstancedMesh(shadowGeometry, shadowMaterial, respondents.length);
-	innerRoomGroup.add(shadows);
+	crowdGroup.add(shadows);
 
 	// scratch object, to avoid allocating each frame
 	const placementHelper = new THREE.Object3D();
@@ -87,6 +108,31 @@ export function spawnCrowd(innerRoomGroup, respondents, config) {
 	const flatRotation = new THREE.Quaternion().setFromEuler(
 		new THREE.Euler(-Math.PI / 2, 0, 0)
 	);
+
+	// topdown dot layer: one unfogged disc per person, hidden until the flight
+	const dotMaterial = new THREE.MeshBasicMaterial({
+		transparent: true,
+		opacity: 0,
+		depthWrite: false,
+		fog: false
+	});
+	dotMaterial.userData.outlineParameters = { visible: false };
+	const topdownDots = new THREE.InstancedMesh(
+		new THREE.CircleGeometry(1, 10),
+		dotMaterial,
+		respondents.length
+	);
+	// instances span the whole room, so the shared bounds would cull wrong
+	topdownDots.frustumCulled = false;
+	// over the floor markings, painted in instance order like the 2d map
+	topdownDots.renderOrder = 10;
+	topdownDots.visible = false;
+	// allocates the per-instance colour buffer up front
+	const dotSeedColor = new THREE.Color(1, 1, 1);
+	for (let i = 0; i < respondents.length; i++) {
+		topdownDots.setColorAt(i, dotSeedColor);
+	}
+	innerRoomGroup.add(topdownDots);
 
 	return {
 		personRoots,
@@ -97,6 +143,8 @@ export function spawnCrowd(innerRoomGroup, respondents, config) {
 		personWalkActions,
 		personRestActions,
 		shadows,
+		crowdGroup,
+		topdownDots,
 		placementHelper,
 		flatRotation
 	};

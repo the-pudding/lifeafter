@@ -4,13 +4,15 @@ import docs from "../google.config.js";
 
 const CWD = process.cwd();
 
-const fetchGoogle = async ({ id, gid }) => {
+const fetchGoogle = async ({ id, gid, tab }) => {
 	console.log(`fetching...${id}`);
 
 	const base = "https://docs.google.com";
+	// docs with multiple tabs export the first one unless a tab id ("t.0")
+	// from the doc url's ?tab= param is given
 	const post = gid
 		? `spreadsheets/u/1/d/${id}/export?format=csv&id=${id}&gid=${gid}`
-		: `document/d/${id}/export?format=txt`;
+		: `document/d/${id}/export?format=txt${tab ? `&tab=${tab}` : ""}`;
 	const url = `${base}/${post}`;
 
 	try {

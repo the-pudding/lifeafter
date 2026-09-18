@@ -186,7 +186,7 @@ export function buildFacade(scene, config) {
 	const brickGeometry = new THREE.BoxGeometry(1, BRICK_HEIGHT - BRICK_GAP, BRICK_DEPTH);
 	// toon shaded: a hard two-step ramp, no pbr falloff
 	const brickMaterial = new THREE.MeshToonMaterial({
-		color: "#2d1625",
+		color: "#2a1731",
 		gradientMap: toonGradientMap
 	});
 	// no outline on individual bricks
@@ -242,8 +242,8 @@ export function buildFacade(scene, config) {
 	const buildingSign = makeSvgNeonPanel(signSvg, {
 		width: SIGN_WIDTH,
 		height: SIGN_HEIGHT,
-		color: "#ff36a8",
-		glowColor: "#ff36a8"
+		color: "#c47aff",
+		glowColor: "#c47aff"
 	});
 	signGroup.add(buildingSign);
 
@@ -252,7 +252,7 @@ export function buildFacade(scene, config) {
 		width: LOGO_WIDTH,
 		height: LOGO_HEIGHT,
 		color: "#ffffff",
-		glowColor: "#ff36a8"
+		glowColor: "#c47aff"
 	});
 	wordmarkLogo.position.set(0, LOGO_Y, 0);
 	// starts dimmed; main lights it fully on hover
@@ -263,8 +263,8 @@ export function buildFacade(scene, config) {
 	const byline = makeSvgNeonPanel(bylineSvg, {
 		width: BYLINE_WIDTH,
 		height: BYLINE_HEIGHT,
-		color: "#ff36a8",
-		glowColor: "#ff36a8"
+		color: "#c47aff",
+		glowColor: "#c47aff"
 	});
 	// places the sign and byline for a given scale, growing up from a fixed edge
 	function layoutSign(scale = 1, centerY = null) {
@@ -283,7 +283,7 @@ export function buildFacade(scene, config) {
 	exteriorGroup.add(byline);
 
 	// the sign's pool of light on the brick, kept to the facade's own layer
-	const signLight = new THREE.PointLight("#ff36a8", 1, 7, 2);
+	const signLight = new THREE.PointLight("#c47aff", 1.4, 7, 2);
 	// out past the brick faces, beside the sign rather than behind it
 	signLight.position.set(0, doorHeight + 0.3, doorZ + BRICK_FRONT_LOCAL_Z + 0.25);
 	signLight.layers.set(facadeLightLayer);

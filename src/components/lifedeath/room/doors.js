@@ -15,7 +15,6 @@ function darkenColor(input, amount) {
 	return new THREE.Color(input).lerp(new THREE.Color(0x000000), amount);
 }
 
-// builds each door
 export function buildDoors(scene, doors, config) {
 	const {
 		doorWidth,

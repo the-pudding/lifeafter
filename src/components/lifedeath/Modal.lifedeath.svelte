@@ -9,7 +9,7 @@
 		numericScale,
 		parseNumericValue
 	} from "$data/variable_config.js";
-	import { tidyMarital } from "./people/personSummary.js";
+	import { tidyMarital, RELIGION_NOUN } from "./people/personSummary.js";
 
 	// `wave` is bindable, so flipping it here also walks the crowd
 	let { person, wave = $bindable("Y1"), onclose } = $props();
@@ -32,8 +32,7 @@
 		return String(raw);
 	}
 
-	// the variable's own span, shared with the legend so an open-ended top
-	// bucket ("3+") reads the same in both
+	// the variable's span, shared with the legend
 	function numericScaleFor(key, config) {
 		return config.type === "numeric" ? numericScale(key) : null;
 	}
@@ -50,8 +49,6 @@
 		);
 	}
 
-	const age = $derived(person?.[wave === "Y1" ? "AGE_Y1" : "AGE_Y2"] ?? null);
-	const waveYearLabel = $derived(wave === "Y1" ? "2022-23" : "2024");
 
 	// the answer as recorded, or null for missing and admin codes
 	function rawAnswer(currentPerson, baseVar, waveKey) {
@@ -68,37 +65,213 @@
 		return "person";
 	}
 
+	// pronouns, with the verb forms that agree with them
+	const SINGULAR_VERBS = {
+		identify: "identifies",
+		say: "says",
+		believe: "believes",
+		attend: "attends",
+		follow: "follows"
+	};
+	function pronounsFor(genderRaw) {
+		if (genderRaw === "Female") {
+			return { subj: "she", poss: "her", is: "is", does: "does", s: (v) => SINGULAR_VERBS[v] ?? v };
+		}
+		if (genderRaw === "Male") {
+			return { subj: "he", poss: "his", is: "is", does: "does", s: (v) => SINGULAR_VERBS[v] ?? v };
+		}
+		return { subj: "they", poss: "their", is: "are", does: "do", s: (v) => v };
+	}
+
+	const cap = (text) => text.charAt(0).toUpperCase() + text.slice(1);
+
+	// how each self-identity reads in the intro, by kind of answer
+	const IDENTITY_ADJECTIVE = new Set([
+		"White", "Black", "Asian", "Hispanic", "Arab", "Jewish", "Mestizo",
+		"Mestizo(a)", "Indigenous", "Branca", "Parda", "Preta", "Amarela",
+		"Indígena", "Colored", "Chinese-Filipino"
+	]);
+	const IDENTITY_ADJECTIVE_RENAME = {
+		"Mestizo(a)": "Mestizo",
+		"Chinese (Cantonese)": "Cantonese Chinese",
+		"Chinese (Hakka)": "Hakka Chinese"
+	};
+	const IDENTITY_AFTER = {
+		"Schedule caste": "from a Scheduled Caste",
+		"Schedule tribe": "from a Scheduled Tribe",
+		"Other backward caste": "from an Other Backward Class",
+		"Australian British/European": "of British or European descent",
+		"Kenyan Somali/Somali": "of the Somali ethnic group",
+		"Miji Kenda tribes": "of the Miji Kenda ethnic group"
+	};
+	const IDENTITY_SKIP = new Set([
+		"None", "Other", "(DK)", "(Refused)", "(Saw, skipped)",
+		"Prefer not to answer", "General", "Polish", "Turkish", "Australian",
+		"African", "Other European"
+	]);
+	// countries that take an article
+	const COUNTRY_WITH_THE = new Set(["United States", "United Kingdom", "Philippines"]);
+
+	// "Kenya:  Kamba" -> { adjective, afterPhrase }, either may be null
+	function describeIdentity(selfidRaw) {
+		if (typeof selfidRaw !== "string" || !selfidRaw.includes(":")) return {};
+		const identity = selfidRaw.split(":").slice(1).join(":").trim();
+		if (!identity || IDENTITY_SKIP.has(identity)) return {};
+		if (IDENTITY_ADJECTIVE_RENAME[identity]) {
+			return { adjective: IDENTITY_ADJECTIVE_RENAME[identity] };
+		}
+		if (IDENTITY_ADJECTIVE.has(identity)) return { adjective: identity };
+		if (IDENTITY_AFTER[identity]) return { afterPhrase: IDENTITY_AFTER[identity] };
+		// ethnic groups keep a compound's first name, minus parentheticals
+		const group = identity.split("/")[0].replace(/\s*\(.*\)$/, "").trim();
+		return { afterPhrase: `of the ${group} ethnic group` };
+	}
+
+	// "an 80-year-old", "a 22-year-old", "an Arab man"
+	function article(next) {
+		return /^(8|18$|18[^\d]|[aeiouAEIOU])/.test(next) ? "an" : "a";
+	}
+
+	// "She is married and is a homemaker." — each answer as a predicate
+	const MARITAL_PHRASE = {
+		Married: "married",
+		"Single/Never been married": "single",
+		Divorced: "divorced",
+		Separated: "separated",
+		Widowed: "widowed",
+		"Domestic partner": "in a domestic partnership"
+	};
+	const EMPLOYMENT_PHRASE = {
+		"Employed for an employer": "employed",
+		"Self-employed": "self-employed",
+		Homemaker: "a homemaker",
+		Student: "a student",
+		Retired: "retired",
+		"Unemployed and looking for a job": "unemployed"
+	};
+
+	// how each religion reads in "identifies as ..." and "grew up ..."
+	function identifiesClause(adherent, p) {
+		if (adherent === "No religion") return `${p.s("identify")} with no religion`;
+		if (adherent === "Other religion") return `${p.s("identify")} with another religion`;
+		if (adherent === "Jewish") return `${p.s("identify")} as Jewish`;
+		if (["Shinto", "Chinese folk religion", "Animist or folk religion", "Umbanda / Candomblé"].includes(adherent)) {
+			return `${p.s("follow")} ${adherent}`;
+		}
+		return `${p.s("identify")} as a ${adherent}`;
+	}
+	function grewUpSentence(adherent, p) {
+		if (adherent === "No religion") return `${cap(p.subj)} grew up with no religion.`;
+		if (adherent === "Other religion") return `${cap(p.subj)} grew up in another religion.`;
+		if (["Shinto", "Chinese folk religion", "Animist or folk religion", "Umbanda / Candomblé"].includes(adherent)) {
+			return `${cap(p.subj)} grew up following ${adherent}.`;
+		}
+		return `${cap(p.subj)} grew up ${adherent}.`;
+	}
+	function beliefClause(raw, p) {
+		if (raw === "One God") return `${p.s("say")} ${p.subj} ${p.s("believe")} in one God`;
+		if (raw === "More than one god")
+			return `${p.s("say")} ${p.subj} ${p.s("believe")} in more than one god`;
+		if (raw === "An impersonal spiritual force")
+			return `${p.s("say")} ${p.subj} ${p.s("believe")} in an impersonal spiritual force`;
+		if (raw === "Unsure") return `${p.is} unsure whether there is a god or spiritual force`;
+		if (raw === "None of these")
+			return `${p.does} not believe in a god or spiritual force`;
+		return null;
+	}
+	function attendanceClause(raw, p) {
+		const times = {
+			"A few times a year": "a few times a year",
+			"One to three times a month": "one to three times a month",
+			"Once a week": "once a week",
+			"More than once a week": "more than once a week"
+		}[raw];
+		if (raw === "Never") return `never ${p.s("attend")} religious services`;
+		return times ? `${p.s("attend")} religious services ${times}` : null;
+	}
+
+	// "x, y, and z" — or just "x and y", or "x"
+	function listClauses(clauses) {
+		if (clauses.length <= 1) return clauses.join("");
+		if (clauses.length === 2) return clauses.join(" and ");
+		return `${clauses.slice(0, -1).join(", ")}, and ${clauses[clauses.length - 1]}`;
+	}
+
 	// a plain-language intro built from their answers
 	function buildIntroSentence(currentPerson, waveKey) {
 		if (!currentPerson) return "";
 		const noun = genderNoun(currentPerson.GENDER);
+		const p = pronounsFor(currentPerson.GENDER);
 		const currentAge = currentPerson[waveKey === "Y1" ? "AGE_Y1" : "AGE_Y2"];
 
+		// who and where they are: age, gender, identity, country
+		const { adjective, afterPhrase } = describeIdentity(currentPerson.SELFID1);
+		const country = currentPerson.COUNTRY;
+		const descriptor = [
+			typeof currentAge === "number" ? `${currentAge}-year-old` : null,
+			adjective,
+			noun
+		]
+			.filter(Boolean)
+			.join(" ");
+		let sentence = `This is ${article(descriptor)} ${descriptor}`;
+		if (afterPhrase) sentence += ` ${afterPhrase}`;
+		if (typeof country === "string" && country) {
+			sentence += ` in ${COUNTRY_WITH_THE.has(country) ? "the " : ""}${country}`;
+		}
+		sentence += ".";
+		const sentences = [sentence];
+
+		// marital status and work, as their own sentence
 		const maritalRaw = rawAnswer(currentPerson, "MARITAL_STATUS", waveKey);
-		const maritalLabel = maritalRaw && tidyMarital(maritalRaw);
-		const employmentLabel = rawAnswer(currentPerson, "EMPLOYMENT", waveKey);
+		const marital = maritalRaw ? MARITAL_PHRASE[maritalRaw] : null;
+		const employmentRaw = rawAnswer(currentPerson, "EMPLOYMENT", waveKey);
+		const employment = employmentRaw ? EMPLOYMENT_PHRASE[employmentRaw] : null;
+		const predicates = [marital, employment].filter(Boolean).map((t) => `${p.is} ${t}`);
+		if (predicates.length > 0) {
+			sentences.push(`${cap(p.subj)} ${predicates.join(" and ")}.`);
+		}
+
+		// their religious life: affiliation, god, importance, attendance
+		const religionRaw = rawAnswer(currentPerson, "REL2", waveKey);
+		const adherent = religionRaw ? (RELIGION_NOUN[religionRaw] ?? null) : null;
+		const beliefRaw = rawAnswer(currentPerson, "BELIEVE_GOD_BROAD", waveKey);
+		const importantRaw = rawAnswer(currentPerson, "REL_IMPORTANT", waveKey);
+		const attendRaw = rawAnswer(currentPerson, "ATTEND_SVCS", waveKey);
+		const clauses = [
+			adherent && identifiesClause(adherent, p),
+			beliefRaw && beliefClause(beliefRaw, p),
+			importantRaw === "Yes"
+				? `${p.s("say")} religion is important in ${p.poss} daily life`
+				: importantRaw === "No"
+					? `${p.s("say")} religion is not important in ${p.poss} daily life`
+					: null,
+			attendRaw && attendanceClause(attendRaw, p)
+		].filter(Boolean);
+		if (clauses.length > 0) sentences.push(`${cap(p.subj)} ${listClauses(clauses)}.`);
+
+		// where they started: religion at age twelve (asked once)
+		const grewUpRaw = rawAnswer(currentPerson, "REL1", "Y1");
+		const grewUpAdherent = grewUpRaw ? (RELIGION_NOUN[grewUpRaw] ?? null) : null;
+		if (grewUpAdherent) sentences.push(grewUpSentence(grewUpAdherent, p));
+
+		// and the question the room is built on
 		const afterDeathColumn = columnForWave("AFTER_DEATH", waveKey);
 		const afterDeathLabel = afterDeathColumn
 			? getCategoryFor("AFTER_DEATH", currentPerson[afterDeathColumn])?.label
 			: null;
-
-		let sentence = "This is a";
-		if (typeof currentAge === "number") sentence += ` ${currentAge}-year-old`;
-		sentence += ` ${noun}`;
-		const traits = [maritalLabel, employmentLabel].filter(Boolean).map((t) => t.toLowerCase());
-		if (traits.length > 0) sentence += ` who is ${traits.join(" and ")}`;
-		sentence += ".";
-
 		if (afterDeathLabel) {
 			const belief =
 				afterDeathLabel === "Yes"
-					? "believe"
+					? `${p.subj} ${p.s("believe")}`
 					: afterDeathLabel === "No"
-						? "do not believe"
-						: "are unsure whether";
-			sentence += ` In ${waveKey === "Y1" ? "2022-23" : "2024"}, they ${belief} there is life after death.`;
+						? `${p.subj} ${p.does} not believe`
+						: `${p.subj} ${p.is} unsure whether`;
+			sentences.push(
+				`In ${waveKey === "Y1" ? "2022-23" : "2024"}, ${belief} there is life after death.`
+			);
 		}
-		return sentence;
+		return sentences.join(" ");
 	}
 
 	const introSentence = $derived(buildIntroSentence(person, wave));
@@ -127,10 +300,6 @@
 			</div>
 
 			<p class="narrative">{introSentence}</p>
-			<div class="stat">
-				<span class="statLabel">Age ({waveYearLabel})</span>
-				<span class="statValue">{age ?? "—"}</span>
-			</div>
 
 			{#each groups as group}
 				{@const rows = group.options.filter(({ key }) => {
@@ -209,7 +378,7 @@
 		transition: left 200ms cubic-bezier(0.25, 0.1, 0.25, 1);
 		overflow-y: scroll;
 		pointer-events: auto;
-		scrollbar-color: #3d2840 black;
+		scrollbar-color: #472a45 black;
 		scrollbar-width: thin;
 	}
 	.shelf::-webkit-scrollbar {
@@ -219,7 +388,7 @@
 		background: black;
 	}
 	.shelf::-webkit-scrollbar-thumb {
-		background: #3d2840;
+		background: #472a45;
 		border-radius: 3px;
 	}
 	.shelf.shelfopen {
@@ -238,7 +407,7 @@
 		cursor: pointer;
 		color: rgba(255,255,255,0.8);
 		font-weight: bold;
-		font-family: var(--font-mono);
+		font-family: var(--font-sans);
 		background: #000;
 		padding: 10px 5px;
 		border: none;
@@ -266,7 +435,7 @@
 		margin-bottom: 14px;
 	}
 	.wave-toggle {
-		background: rgba(255, 255, 255, 0.1);
+		background: #1a0c2b;
 		color: #eee;
 		border: 1px solid rgba(255, 255, 255, 0.2);
 		border-radius: 0.35rem;
@@ -275,7 +444,7 @@
 		cursor: pointer;
 	}
 	.wave-toggle:hover {
-		background: rgba(255, 255, 255, 0.18);
+		background: #2a1740;
 	}
 	.wave-toggle.active {
 		background: #9d00ff;
@@ -285,7 +454,8 @@
 	.narrative {
 		font-size: 0.85rem;
 		line-height: 1.5;
-		color: rgba(255, 255, 255, 0.95);
+		/* the modal's default text: a very faint pink/purple, not pure white */
+		color: rgba(243, 229, 248, 0.95);
 		margin: 0 0 16px;
 	}
 	.waveHed {
@@ -343,7 +513,7 @@
 		top: 50%;
 		transform: translateY(-50%);
 		margin-left: 4px;
-		color: rgba(255, 255, 255, 0.85);
+		color: rgba(243, 229, 248, 0.85);
 	}
 	/* small counts as one dot per unit, filled up to the value */
 	.pipRow {

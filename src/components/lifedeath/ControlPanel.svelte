@@ -60,7 +60,11 @@
 		{:else if legendData?.kind === "categorical"}
 			<div class="legend legend--enter">
 				{#each legendData.items as item (item.label)}
-					<div class="legend-row" style:background={item.color}>
+					<!-- category hue dimmed under a dark wash so the white label survives bright swatches -->
+					<div
+						class="legend-row"
+						style:background="linear-gradient(rgba(8, 4, 14, 0.25), rgba(8, 4, 14, 0.25)), {item.color}"
+					>
 						{item.label}
 					</div>
 				{/each}
@@ -112,7 +116,7 @@
 		/* border: 1px solid rgba(255, 255, 255, 0.1); */
 		border-radius: 0.5rem;
 		color: #eee;
-		font-family: var(--font-serif);
+		font-family: var(--font-sans);
 		font-size: 0.8rem;
 		line-height: 1.6;
 		/* backdrop-filter: blur(3px); */
@@ -133,7 +137,11 @@
 	}
 
 	.field select {
-		font-size: 1.05rem !important;
+		/* matches the legend size below it */
+		font-size: 0.95rem !important;
+		text-shadow:
+			0 1px 3px rgba(0, 0, 0, 0.95),
+			0 0 12px rgba(0, 0, 0, 0.7);
 		/* reset.css targets the bare tag and would win otherwise */
 		font-family: inherit;
 		font-weight: 700;
@@ -202,8 +210,8 @@
 
 	.mode-toggle {
 		align-self: flex-start;
-		font-family: var(--font-serif);
-		background: transparent;
+		font-family: var(--font-sans);
+		background: #1a0c2b;
 		color: rgba(255, 255, 255, 0.4);
 		border: 1px solid rgba(255, 255, 255, 0.25);
 		border-radius: 0rem;
@@ -222,7 +230,7 @@
 
 	/* selected is white, unselected dimmed */
 	.mode-toggle.active {
-		background: transparent;
+		background: #1a0c2b;
 		border-color: #fff;
 		color: #fff;
 	}
@@ -272,7 +280,7 @@
 		}
 		.panel :global(select),
 		.field select {
-			font-size: 0.8rem !important;
+			font-size: 0.72rem !important;
 		}
 		.legend {
 			font-size: 0.72rem;

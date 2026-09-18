@@ -1,9 +1,8 @@
 import { ZONE_WIDTH } from "../room/roomConfig.js";
 
 // wave to revert to when no beat names one
-const DEFAULT_WAVE = "Y1";
+const DEFAULT_WAVE = "Y2";
 
-// which copy.json beats are active for the walker, and the flags they set
 // marks where the audio toggle goes in a beat's text
 export const STORY_AUDIO_TOKEN = "{{audio}}";
 
@@ -13,6 +12,18 @@ export const STORY_EXPLORE_TOKEN = "{{explore}}";
 const STORY_AUDIO_MARKUP = `<div class="hints audio">${STORY_AUDIO_TOKEN}</div>`;
 
 const STORY_EXPLORE_MARKUP = `<div class="hints audio">${STORY_EXPLORE_TOKEN}</div>`;
+
+// ">> NAME|headline" in a beat's text names its inline chart and caption
+const CHART_MARKER = /(?:^|\r?\n)[ \t]*>>[ \t]*([A-Za-z0-9_-]+)[ \t]*(?:\|[ \t]*([^\r\n]*))?/g;
+
+function extractChartMarker(text) {
+	let chart = null;
+	const stripped = text.replace(CHART_MARKER, (full, chartName, headline) => {
+		if (!chart) chart = { name: chartName, caption: headline?.trim() || null };
+		return "";
+	});
+	return { text: stripped.trim(), chart };
+}
 
 export function createStoryBeats({
 	copy,
@@ -44,12 +55,11 @@ export function createStoryBeats({
 		lastStoryAssignedWave = null;
 	}
 
-	// the opening and closing beats: the first and last shared entries
-	// that render a box. each gets its button injected, since copy.json is
-	// regenerated from the doc and can't carry them
+	// the first and last text beats carry the audio and explore buttons
 	const textEntries = (copy.all ?? []).filter((entry) => entry.text?.trim());
 	const firstTextEntry = textEntries[0];
 	const lastTextEntry = textEntries[textEntries.length - 1];
+
 
 	// beats matching the walker: shared entries plus their zone
 	function update() {
@@ -63,7 +73,11 @@ export function createStoryBeats({
 				highlightMap: false,
 				hideYear: false,
 				hasBeat: false,
-				narrationId: null
+				showPanels: false,
+				narrationId: null,
+				chart: null,
+				beatAge: null,
+				beatAgeEnd: null
 			});
 			return;
 		}
@@ -74,10 +88,16 @@ export function createStoryBeats({
 		let matchedHideMap = false;
 		let matchedHighlightMap = false;
 		let matchedHideYear = false;
+		let matchedShowPanels = false;
 		let matchedAny = false;
 		let matchedVariableEntry = null;
 		// the first matching id; its {id}.mp3 narrates the beat
 		let matchedNarrationId = null;
+		// the first matching chart name, rendered under the beat's text
+		let matchedChart = null;
+		// the span of the first matching text beat, for the floor flash
+		let matchedBeatAge = null;
+		let matchedBeatAgeEnd = null;
 		// flags arrive as strings from the spreadsheet
 		const isFlagSet = (value) => value === "true" || value === true;
 		const collect = (entries) => {
@@ -86,7 +106,13 @@ export function createStoryBeats({
 					matchedAny = true;
 					// text-free entries still carry flags
 					if (entry.text?.trim()) {
-						let text = entry.text;
+						if (matchedBeatAge === null) {
+							matchedBeatAge = Number(entry.age);
+							matchedBeatAgeEnd = Number(entry.age_end);
+						}
+						const marker = extractChartMarker(entry.text);
+						if (!matchedChart && marker.chart) matchedChart = marker.chart;
+						let text = marker.text;
 						if (entry === firstTextEntry && !text.includes(STORY_AUDIO_TOKEN)) {
 							text += ` ${STORY_AUDIO_MARKUP}`;
 						}
@@ -104,6 +130,9 @@ export function createStoryBeats({
 					if (isFlagSet(entry.hide_map)) matchedHideMap = true;
 					if (isFlagSet(entry.hl_minimap)) matchedHighlightMap = true;
 					if (isFlagSet(entry.hide_year)) matchedHideYear = true;
+					if (isFlagSet(entry.show_panels)) matchedShowPanels = true;
+					// a `chart:` field still works as a marker-free fallback
+					if (!matchedChart && entry.chart) matchedChart = { name: entry.chart, caption: null };
 					if (!matchedVariableEntry && (entry.var_color || entry.wave)) {
 						matchedVariableEntry = entry;
 					}
@@ -121,7 +150,11 @@ export function createStoryBeats({
 			hideYear: matchedHideYear,
 			// whether the script is running here at all
 			hasBeat: matchedAny,
-			narrationId: matchedNarrationId
+			showPanels: matchedShowPanels,
+			narrationId: matchedNarrationId,
+			chart: matchedChart,
+			beatAge: matchedBeatAge,
+			beatAgeEnd: matchedBeatAgeEnd
 		});
 
 		if (!matchedVariableEntry) {

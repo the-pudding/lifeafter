@@ -5,31 +5,31 @@ import notSureSvg from "$svg/not-sure.svg?raw";
 import yesSvg from "$svg/yes.svg?raw";
 
 // the one background: scene, fog, minimap, topdown and the load screen
-export const BG_COLOR = "#0d0815";
+export const BG_COLOR = "#110818";
 
 export const BG_COLOR_CSS = `#${BG_COLOR.toString(16).padStart(6, "0")}`;
 
-// missing/null values
-export const MUTED_COLOR = "#cccccc";
+// no-answer people: desaturated dark purple
+export const MUTED_COLOR = "#443254";
 
 // sign, door frames, lamps
-export const NEON_PINK = "#ff8dce";
+export const NEON_PINK = "#cfa4ff";
 
 // floor tint over age spans with no story beat
-export const STORY_GAP_FLOOR_COLOR = "#250819";
+export const STORY_GAP_FLOOR_COLOR = "#1e0b2a";
 
 // door fills, per zone
 export const DOOR_ZONE_COLORS = {
-	No: "rgb(69, 50, 7)",
+	No: "#53043d",
 	Unsure: "#3e1f42",
-	Yes: "#53043d"
+	Yes: "rgb(69, 50, 7)"
 };
 
 // hover/focus variant
 export const DOOR_ZONE_COLORS_LIGHT = {
-	No: "rgb(255, 179, 1)",
+	No: "#fd08a8",
 	Unsure: "#8c19c6",
-	Yes: "#fd08a8"
+	Yes: "rgb(255, 179, 1)"
 };
 
 export const ROOM_WIDTH = 30; // left/right: No, Unsure, Yes, one third each
@@ -150,6 +150,9 @@ export const WHEEL_RESPONSE_EXPONENT = 1.9;
 // touch deltas are far smaller than wheel deltas, so they get their own reference
 export const TOUCH_FULL_SPEED_DELTA = 24;
 
+// swipes walk faster, since thumbs can't repeat as fast as a wheel
+export const TOUCH_WALK_BOOST = 2;
+
 // scroll and swipe walking scale down on small screens
 export const SCROLL_WALK_NARROW_WIDTH = 1100; // at or below: slowest
 
@@ -157,11 +160,16 @@ export const SCROLL_WALK_WIDE_WIDTH = 1700; // at or above: unchanged
 
 export const SCROLL_WALK_MIN_SCALE = 0.345;
 
+// story mode's forward-facing turn cone
+export const STORY_YAW_CONE_DEGREES = 140;
+// how quickly the overshoot eases back inside the cone; bigger is gentler
+export const STORY_YAW_PUSHBACK_TIME = 0.3;
+
 // arrow-key rate. x WALK_SPEED = ~5 units/sec
 export const KEY_MOVE_DELTA_PER_SECOND = 250;
 
 // camera glide. smaller = snappier
-export const FOLLOW_TIME = 0.1; // seconds to close ~63% of the remaining distance
+export const FOLLOW_TIME = 0.05; // seconds to close ~63% of the remaining distance
 
 // door auto-walk. smoothDamp carries velocity across the x->z handoff
 export const DOOR_WALK_SPEED = 10; // world units/second, smoothDamp's speed cap
@@ -179,8 +187,8 @@ export const DOOR_WALK_YAW_SPEED = Math.PI * 0.7; // radians/second, turning to 
 // keeps near-clip plane out of walls
 export const WALK_MARGIN = 3;
 
-// tighter, so side walls are reachable
-export const SIDE_WALL_MARGIN = 0.4;
+// keeps the walker inside the colonnade, out of the pillar aisles
+export const SIDE_WALL_MARGIN = 2.2;
 
 export const MIN_WALK_X = -HALF_WIDTH + SIDE_WALL_MARGIN;
 

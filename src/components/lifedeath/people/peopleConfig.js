@@ -54,7 +54,7 @@ export const FIGURE_HEIGHT = 2;
 export const SHADOW_RADIUS = 0.4;
 
 // outline thickness, nearest band
-export const OUTLINE_DEFAULT_THICKNESS = 0.005;
+export const OUTLINE_DEFAULT_THICKNESS = 0.003;
 
 // past this, walk mixer stops updating
 export const LOD_FREEZE_DISTANCE = 5;
