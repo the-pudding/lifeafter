@@ -261,7 +261,7 @@
 		);
 	}
 
-	// touch screens tap, so hint copy swaps the verb
+	// touch screens tap and swipe, and have no keys to mention
 	const touchHints =
 		typeof window !== "undefined" &&
 		!window.matchMedia("(hover: hover) and (pointer: fine)").matches;
@@ -271,7 +271,11 @@
 			/(<div class="hints[^"]*">)([\s\S]*?)(<\/div>)/g,
 			(_match, open, inner, close) =>
 				open +
-				inner.replace(/\bclick\b/gi, (word) => (word[0] === "C" ? "Tap" : "tap")) +
+				inner
+					.replace(/\s*or arrow keys/gi, "")
+					.replace(/\s*or spacebar/gi, "")
+					.replace(/\bclick\b/gi, (word) => (word[0] === "C" ? "Tap" : "tap"))
+					.replace(/\bscroll\b/gi, (word) => (word[0] === "S" ? "Swipe" : "swipe")) +
 				close
 		);
 	}
