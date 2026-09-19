@@ -118,6 +118,13 @@ main, .loading-screen {
 	box-shadow: none;
 	transform: translate(2px, 2px);
 }
+/* keyboard focus: a bright ring, so enter's target is unmistakable */
+.lifedeath-room button:focus-visible,
+.shelf button:focus-visible,
+.lifedeath-room .minimap-canvas:focus-visible {
+	outline: 2px solid #fff;
+	outline-offset: 2px;
+}
 
 /* nothing here is selectable: a drag is the camera */
 .lifedeath-room,
@@ -201,7 +208,7 @@ main, .loading-screen {
 .story-overlay p {
 	margin: 0 0 8px;
 	/* steps down on narrow screens, where vertical space is short */
-	font-size: 20px;
+	font-size: 18px;
 	line-height: 1.7em;
 	background: transparent;
 	/* a black outline on the words themselves, so they hold up over the
@@ -225,7 +232,7 @@ main, .loading-screen {
 }
 @media (max-width: 1800px) {
 	.story-overlay p {
-		font-size: 19px;
+		font-size: 17.5px;
 	}
 }
 @media (max-width: 1200px) {
@@ -235,12 +242,12 @@ main, .loading-screen {
 }
 @media (max-width: 800px) {
 	.story-overlay p {
-		font-size: 17px;
+		font-size: 16.5px;
 	}
 }
 @media (max-width: 600px) {
 	.story-overlay p {
-		font-size: 13.6px;
+		font-size: 13px;
 	}
 }
 /* the audio row carries no icon, so it skips the shared left pull */
@@ -299,36 +306,50 @@ main, .loading-screen {
 	text-decoration-color: #fff;
 }
 
-/* the hint rows under a story beat */
+/* the hint rows: centered, floating 30% up from the bottom of the
+   screen, the icon stacked on its own line above the direction */
 .story-overlay p .hints {
+    position: absolute;
+    /* the usual height, but never closer than 16px above the story text */
+    bottom: max(calc(18vh - 10px), calc(100% + 16px));
+    left: 50%;
+    transform: translateX(-50%);
+    margin: 0;
+    width: max-content;
+    white-space: nowrap;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
     text-align: center;
     font-style: italic;
-    /* display: inline-flex;  */
-    align-items: center;
-    justify-content: center;
 	font-size: 14px;
 	text-transform: uppercase;
 	padding: 10px 0;
 }
-
-/* the icon variants shift left to balance their leading icon box; a bare
-   .hints (like the closing "keep walking" line) stays truly centered */
-.story-overlay p .hints.click,
-.story-overlay p .hints.scroll,
-.story-overlay p .hints.pan {
-	margin-left: -3em;
+/* single-icon hints drop the inline spacing once stacked */
+.story-overlay p .hints.click::before,
+.story-overlay p .hints.scroll::before {
+    margin-right: 0;
+    margin-bottom: 0;
+}
+/* a paired audio row sits a step below the primary hint */
+.story-overlay p .hints.audio {
+    bottom: max(calc(18vh - 64px), calc(100% + 12px));
 }
 
-/* shared icon box for every hint */
+
+
+/* shared icon box: masked white glyphs, the touch-first defaults */
 .story-overlay p .hints.click::before,
 .story-overlay p .hints.scroll::before,
-.story-overlay p .hints.pan::before {
+.story-overlay p .hints.pan::before,
+.story-overlay p .hints.pan::after {
     content: "";
     display: inline-block;
     width: 2em;
     height: 2em;
-    margin-right: 1em;
-	margin-bottom: -7px;
+    margin-bottom: -7px;
     background-color: #fff;
     filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.9));
     -webkit-mask-size: contain;
@@ -341,21 +362,110 @@ main, .loading-screen {
 
 /* click: the hand cursor, whose url is set inline so it can carry the base path */
 .story-overlay p .hints.click::before {
+    order: -2;
     -webkit-mask-image: var(--click-cursor-url);
     mask-image: var(--click-cursor-url);
 }
-/* scroll: a down arrow that bobs */
+/* the spacebar keycap only exists on keyboard devices (below) */
+.story-overlay p .hints.click::after {
+    display: none;
+}
+
+/* walk: an up arrow that bobs; bare on touch, a keycap on desktop */
 .story-overlay p .hints.scroll::before {
-    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M20 12l-1.41-1.41L13 16.17V4h-2v12.17l-5.58-5.59L4 12l8 8 8-8z'/%3E%3C/svg%3E");
-    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M20 12l-1.41-1.41L13 16.17V4h-2v12.17l-5.58-5.59L4 12l8 8 8-8z'/%3E%3C/svg%3E");
+    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M4 12l1.41 1.41L11 7.83V20h2V7.83l5.58 5.59L20 12l-8-8-8 8z'/%3E%3C/svg%3E");
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M4 12l1.41 1.41L11 7.83V20h2V7.83l5.58 5.59L20 12l-8-8-8 8z'/%3E%3C/svg%3E");
     animation: scrollSubtle 1.5s ease-in-out infinite;
 }
 
-/* pan: a side-to-side arrow */
+/* rotate: the two arrows sit side by side over the label */
 .story-overlay p .hints.pan::before {
-    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M22 12l-4-4v3H6V8l-4 4 4 4v-3h12v3z'/%3E%3C/svg%3E");
-    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M22 12l-4-4v3H6V8l-4 4 4 4v-3h12v3z'/%3E%3C/svg%3E");
-    animation: panSubtle 2s ease-in-out infinite;
+    order: -2;
+    position: relative;
+    left: -18px;
+    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z'/%3E%3C/svg%3E");
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z'/%3E%3C/svg%3E");
+}
+.story-overlay p .hints.pan::after {
+    order: -1;
+    position: relative;
+    left: 18px;
+    /* pulled up level with its partner (whose -7px bottom margin counts) */
+    margin-top: -31px;
+    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8-8-8z'/%3E%3C/svg%3E");
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8-8-8z'/%3E%3C/svg%3E");
+}
+
+/* keyboard devices (a fine, hovering pointer): the hints wear keycaps */
+@media (hover: hover) and (pointer: fine) {
+    .story-overlay p .hints.scroll::before,
+    .story-overlay p .hints.pan::before,
+    .story-overlay p .hints.pan::after {
+        background-color: transparent;
+        -webkit-mask-image: none;
+        mask-image: none;
+        background-size: 65% 65%;
+        background-position: center;
+        background-repeat: no-repeat;
+        box-sizing: border-box;
+        border: 1.5px solid #fff;
+        box-shadow: 2px 2px 0 #fff;
+    }
+    .story-overlay p .hints.scroll::before {
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='white' d='M4 12l1.41 1.41L11 7.83V20h2V7.83l5.58 5.59L20 12l-8-8-8 8z'/%3E%3C/svg%3E");
+    }
+    /* the two arrow keys take turns being pressed — left, right */
+    .story-overlay p .hints.pan::before {
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='white' d='M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z'/%3E%3C/svg%3E");
+        animation: hint-keypress 1.6s ease-in-out infinite;
+    }
+    .story-overlay p .hints.pan::after {
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='white' d='M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8-8-8z'/%3E%3C/svg%3E");
+        animation: hint-keypress 1.6s ease-in-out infinite;
+        animation-delay: 0.8s;
+    }
+    /* a real key press takes over: the idle act yields... */
+    .story-overlay.key-left-down p .hints.pan::before,
+    .story-overlay.key-left-down p .hints.pan::after,
+    .story-overlay.key-right-down p .hints.pan::before,
+    .story-overlay.key-right-down p .hints.pan::after,
+    .story-overlay.key-walk-down p .hints.scroll::before {
+        animation: none;
+        transform: none;
+        box-shadow: 2px 2px 0 #fff;
+    }
+    /* ...and the held key's cap goes down */
+    .story-overlay.key-left-down p .hints.pan::before,
+    .story-overlay.key-right-down p .hints.pan::after,
+    .story-overlay.key-walk-down p .hints.scroll::before {
+        transform: translate(2px, 2px);
+        box-shadow: none;
+    }
+    /* only the minimap hint gains its spacebar, beside the hand */
+    .story-overlay p .hints.click.minimap::before {
+        position: relative;
+        left: -43px;
+    }
+    .story-overlay p .hints.click.minimap::after {
+        content: "SPACE";
+        order: -1;
+        display: inline-block;
+        box-sizing: border-box;
+        position: relative;
+        left: 18px;
+        /* pulled up beside the hand, centered on it */
+        margin-top: -31px;
+        width: 78px;
+        padding: 0.1em 0 0.14em;
+        text-align: center;
+        border: 1.5px solid #fff;
+        box-shadow: 2px 2px 0 #fff;
+        color: #fff;
+        font-size: 9px;
+        font-style: normal;
+        letter-spacing: 0.16em;
+        filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.9));
+    }
 }
 
 /* hint icon animations */
@@ -370,13 +480,15 @@ main, .loading-screen {
     }
 }
 
-/* glides left and right */
-@keyframes panSubtle {
-    0%, 100% {
-        transform: translateX(-3px);
+/* a keycap press: the shadow collapses and the key sinks into it */
+@keyframes hint-keypress {
+    0%, 30%, 100% {
+        transform: none;
+        box-shadow: 2px 2px 0 #fff;
     }
-    50% {
-        transform: translateX(3px);
+    10%, 20% {
+        transform: translate(2px, 2px);
+        box-shadow: none;
     }
 }
 /* the colored spans get a little breathing room inside their fill */

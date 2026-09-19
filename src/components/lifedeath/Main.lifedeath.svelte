@@ -261,9 +261,24 @@
 		);
 	}
 
+	// touch screens tap, so hint copy swaps the verb
+	const touchHints =
+		typeof window !== "undefined" &&
+		!window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+	function localizeHintVerbs(text) {
+		if (!touchHints) return text;
+		return text.replace(
+			/(<div class="hints[^"]*">)([\s\S]*?)(<\/div>)/g,
+			(_match, open, inner, close) =>
+				open +
+				inner.replace(/\bclick\b/gi, (word) => (word[0] === "C" ? "Tap" : "tap")) +
+				close
+		);
+	}
+
 	// turns markdown links into anchors, and the tokens into their buttons
 	function renderStoryText(text, playing = false) {
-		return text
+		return localizeHintVerbs(text)
 			.replace(
 				/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
 				(_match, label, href) =>
@@ -282,10 +297,10 @@
 	let hideYear = $state(false);
 	// whether any beat is active here at all
 	let storyHasBeat = $state(false);
-	// overhead panels show only where the doc's show_panels flag allows
-	let storyShowPanels = $state(false);
 	// the active beat's id; {id}.mp3 narrates it
 	let narrationId = $state(null);
+	// which arrow keys are held right now, echoed by the hint keycaps
+	let heldArrowHint = $state({ left: false, right: false, walk: false });
 	// the load screen's fade out, slow on purpose
 	const LOADING_FADE_MS = 2600;
 	// the label and line clear well before the veil does
@@ -410,7 +425,7 @@
 	const outermostDoorX =
 		Math.max(...DOORS.map((d) => Math.abs(d.x))) + DOOR_WIDTH / 2;
 	const distanceToDoors = DEFAULT_START_Z - DOOR_Z;
-	const DOOR_VIEW_MARGIN = 1.35; // breathing room past the doors' exact edges; also sets how wide the walk view is
+	const DOOR_VIEW_MARGIN = 1.45; // breathing room past the doors' exact edges; also sets how wide the walk view is
 	const requiredHalfHorizontalFovRad =
 		Math.atan(outermostDoorX / distanceToDoors) * DOOR_VIEW_MARGIN;
 	const computeDoorVisibleFovDegrees = (aspect) =>
@@ -418,6 +433,20 @@
 	// world-sized text loses pixels at a wider fov, so it scales against 16:9
 	const REFERENCE_ASPECT = 16 / 9;
 	const REFERENCE_FOV = computeDoorVisibleFovDegrees(REFERENCE_ASPECT);
+	// narrow screens clamp the fov short of the wide view's door margin, so
+	// the spawn slides to where all three doors fit while filling the width
+	function computeStartZ(aspect) {
+		const halfVerticalRad = THREE.MathUtils.degToRad(
+			computeDoorVisibleFovDegrees(aspect) / 2
+		);
+		const halfHorizontalRad = Math.atan(Math.tan(halfVerticalRad) * aspect);
+		if (halfHorizontalRad >= requiredHalfHorizontalFovRad - 1e-6)
+			return DEFAULT_START_Z;
+		// a slim margin, so the doors run as wide as the screen allows
+		const FIT_MARGIN = 1.12;
+		const distance = outermostDoorX / Math.tan(halfHorizontalRad / FIT_MARGIN);
+		return DOOR_Z + Math.min(Math.max(distance, 6), MAX_WALK_Z - DOOR_Z);
+	}
 	// capped per surface: a label overruns its door long before the sign does
 	const MAX_DOOR_LABEL_SCALE = 1.25;
 	const MAX_SIGN_SCALE = 2.3;
@@ -478,12 +507,14 @@
 	// a beat's recording turned out not to exist, so it has no voiceover
 	let narrationMissing = $state(false);
 	// sunday: before 20 and under narrated beats; monday: the rest and 80+
+	// (chart beats have no recording, so they score as monday even with sound off)
 	const musicTrack = $derived(
 		currentAge !== null && currentAge < 20
 			? "sunday"
 			: exploreMode ||
 				  narrationId === null ||
 				  narrationMissing ||
+				  storyChart !== null ||
 				  (currentAge !== null && currentAge >= 80)
 				? "monday"
 				: "sunday"
@@ -934,7 +965,6 @@
 					highlightMap = result.highlightMap;
 					hideYear = result.hideYear;
 					storyHasBeat = result.hasBeat;
-					storyShowPanels = result.showPanels;
 					narrationId = result.narrationId;
 					storyChart = result.chart;
 					if (result.beatAge !== lastFlashedBeatAge) {
@@ -1561,7 +1591,8 @@
 				debugAgeParam !== null && debugAgeParam !== "" ? ageToZ(Number(debugAgeParam)) : null;
 			// where input wants the walker
 			let targetWalkX = 0;
-			let targetWalkZ = debugAgeZ ?? (debugMode ? DEBUG_START_Z : DEFAULT_START_Z);
+			let targetWalkZ =
+				debugAgeZ ?? (debugMode ? DEBUG_START_Z : computeStartZ(width / height));
 			// where they actually are, gliding toward it
 			let renderWalkX = targetWalkX;
 			let renderWalkZ = targetWalkZ;
@@ -1590,7 +1621,7 @@
 			// an extra tilt once inside, added on top so dragging stays 1:1
 			let roomEntryPitchOffset = 0;
 
-			// moves the target along a ground direction; shared by walk and strafe
+			// moves the target along a ground direction
 			function moveDirection(dirX, dirZ, rawDelta) {
 				// the cornered preview isn't a control surface
 				if (mode !== "walk") return;
@@ -1633,9 +1664,18 @@
 				moveDirection(Math.sin(targetCameraYaw), -Math.cos(targetCameraYaw), rawDelta);
 			}
 
-			// positive strafes right
-			function strafe(rawDelta) {
-				moveDirection(Math.cos(targetCameraYaw), Math.sin(targetCameraYaw), rawDelta);
+			// held left/right arrows turn the view rather than strafing;
+			// the rate ramps in and out so key turns don't snap
+			const KEY_TURN_RADIANS_PER_SECOND = Math.PI * 0.55;
+			const KEY_TURN_EASE_SECONDS = 0.12;
+			let keyTurnVelocity = 0;
+			function advanceKeyTurn(turnDirection, dt) {
+				const ease = 1 - Math.exp(-dt / KEY_TURN_EASE_SECONDS);
+				keyTurnVelocity +=
+					(turnDirection * KEY_TURN_RADIANS_PER_SECOND - keyTurnVelocity) * ease;
+				if (Math.abs(keyTurnVelocity) > 0.001 && mode === "walk") {
+					targetCameraYaw = wrapAngle(targetCameraYaw + keyTurnVelocity * dt);
+				}
 			}
 
 			const doorRaycaster = new THREE.Raycaster();
@@ -1668,12 +1708,14 @@
 				getMode: () => mode,
 				getPositionMode: () => positionMode,
 				getSelectedVariable: () => selectedVariable,
-				getHasStoryText: () => !exploreMode && !storyShowPanels,
 				// during a beat, a hovered person's panel replaces the beat's own
 				getInStoryBeat: () => !exploreMode && storyHasBeat,
-				// beats keep focus tight: one panel, or a few under a chart stretch
+				// story mode keeps focus tighter under the quiet score:
+				// one panel while Sunday plays, three under Monday, four exploring
 				getMaxPanels: () =>
-					exploreMode ? NEARBY_PEOPLE_MAX : storyChart !== null ? 3 : 1,
+					exploreMode ? NEARBY_PEOPLE_MAX : musicTrack === "sunday" ? 1 : 3,
+				getConeHalfAngle: () =>
+					exploreMode ? NEARBY_PERSON_FOV_HALF_ANGLE : Math.PI / 8,
 				getHoveredPersonIndex: () => hoveredPersonIndex
 			});
 
@@ -1695,6 +1737,8 @@
 			}
 
 			function handleDoorClick(event) {
+				// buttons and overlays sit above the scene: never click through
+				if (event.target !== renderer.domElement) return;
 				if (flightActive) return;
 				// the live position, so click-to-enter always works
 				if (insideRoom || mode !== "walk") return;
@@ -1732,6 +1776,8 @@
 
 			// opens the modal on a click, raycasting only visible people
 			function handlePersonClick(event) {
+				// buttons and overlays sit above the scene: never click through
+				if (event.target !== renderer.domElement) return;
 				if (flightActive) return;
 				if (mode !== "walk") return;
 				// only from inside; outside, the doors are the interaction
@@ -1774,6 +1820,8 @@
 			}
 
 			function handleFacadeLinkClick(event) {
+				// buttons and overlays sit above the scene: never click through
+				if (event.target !== renderer.domElement) return;
 				if (flightActive) return;
 				if (mode !== "walk") return;
 				if (inputController.hasDragged || isPointerOverMinimap(event)) return;
@@ -1914,8 +1962,16 @@
 				}
 			}
 
-			// arrows walk and strafe while held; space toggles topdown
+			// arrows walk and turn while held; space toggles topdown
 			const heldArrowKeys = new Set();
+			// mirrors real presses onto the hint keycaps
+			function syncArrowHint() {
+				heldArrowHint = {
+					left: heldArrowKeys.has("ArrowLeft"),
+					right: heldArrowKeys.has("ArrowRight"),
+					walk: heldArrowKeys.has("ArrowUp") || heldArrowKeys.has("ArrowDown")
+				};
+			}
 			function handleKeyDown(event) {
 				if (event.key === "Tab" && !insideRoom && mode === "walk") {
 					event.preventDefault();
@@ -1948,18 +2004,36 @@
 						}
 					}
 					heldArrowKeys.add(event.key);
+					syncArrowHint();
 				} else if (event.key === " ") {
+					// buttons handle their own space presses
+					if (event.target.closest?.("button, [role='button']")) return;
 					event.preventDefault();
 					// ignores auto-repeat, so it doesn't rapid-fire
 					if (event.repeat) return;
+					// outside, space works the highlighted door; a first press
+					// highlights rather than walking through one unasked
+					if (!insideRoom && mode === "walk") {
+						if (exteriorFocusIndex === -1) {
+							exteriorFocusIndex = 0;
+							highlightExteriorFocus();
+						} else {
+							activateExteriorFocus();
+						}
+						return;
+					}
 					requestModeChange(mode === "walk" ? "topdown" : "walk");
 				}
 			}
 			function handleKeyUp(event) {
-				if (event.key.startsWith("Arrow")) heldArrowKeys.delete(event.key);
+				if (event.key.startsWith("Arrow")) {
+					heldArrowKeys.delete(event.key);
+					syncArrowHint();
+				}
 			}
 			function handleWindowBlur() {
 				heldArrowKeys.clear();
+				syncArrowHint();
 				windowFocused = false;
 			}
 			function handleWindowFocus() {
@@ -2370,8 +2444,11 @@
 					const keyMoveDelta = KEY_MOVE_DELTA_PER_SECOND * dt;
 					if (heldArrowKeys.has("ArrowUp")) walk(keyMoveDelta);
 					if (heldArrowKeys.has("ArrowDown")) walk(-keyMoveDelta);
-					if (heldArrowKeys.has("ArrowRight")) strafe(keyMoveDelta);
-					if (heldArrowKeys.has("ArrowLeft")) strafe(-keyMoveDelta);
+					advanceKeyTurn(
+						(heldArrowKeys.has("ArrowRight") ? 1 : 0) -
+							(heldArrowKeys.has("ArrowLeft") ? 1 : 0),
+						dt
+					);
 				}
 
 				// once lined up, release the queued depth and face forward
@@ -2480,7 +2557,8 @@
 				updateDoors(dt);
 				currentAge = zToAge(renderWalkZ);
 				walkAgeExact = zToAgeExact(renderWalkZ);
-				// inside, the strip before the first age line counts as 18
+				// entering the room counts as age 18 immediately: the first
+				// zone beats fire at the door, and plaza beats stay outside
 				if (renderWalkZ < HALF_DEPTH) {
 					const firstAge = ageMin + 1;
 					if (currentAge < firstAge) currentAge = firstAge;
@@ -2531,7 +2609,6 @@
 					// story off, so clear what it left on screen
 					narrationId = null;
 					storyTexts = [];
-					storyShowPanels = true;
 					hidePanel = false;
 					hideMap = false;
 					highlightMap = false;
@@ -2754,6 +2831,9 @@
 		<div
 			class="story-overlay"
 			class:no_map={shouldHideMap}
+			class:key-left-down={heldArrowHint.left}
+			class:key-right-down={heldArrowHint.right}
+			class:key-walk-down={heldArrowHint.walk}
 			onclick={(event) => {
 				if (event.target.closest("[data-story-audio]")) toggleAudio();
 				if (event.target.closest("[data-story-explore]")) exploreExplicit = true;
@@ -3029,10 +3109,10 @@
 		z-index: 4;
 	}
 
-	/* the between-beats nudge, sitting where the story text would */
+	/* the between-beats nudge, at the hints' shared height */
 	.walk-hint {
 		position: absolute;
-		bottom: 42px;
+		bottom: 18vh;
 		left: 50%;
 		transform: translateX(-50%);
 		z-index: 10;

@@ -436,9 +436,10 @@
 	}
 	.wave-toggle {
 		background: #1a0c2b;
-		color: #eee;
-		border: 1px solid rgba(255, 255, 255, 0.2);
-		border-radius: 0.35rem;
+		/* unselected: raised, in a darker purple */
+		color: #8f6fae;
+		border: 1px solid rgba(207, 164, 255, 0.35);
+		border-radius: 0;
 		padding: 0.35rem 0.6rem;
 		font-size: 0.75rem;
 		cursor: pointer;
@@ -446,10 +447,13 @@
 	.wave-toggle:hover {
 		background: #2a1740;
 	}
+	/* selected: white, and pressed into its shadow */
 	.wave-toggle.active {
-		background: #9d00ff;
-		border-color: #9d00ff;
+		background: #1a0c2b;
+		border-color: rgba(207, 164, 255, 0.7);
 		color: #fff;
+		box-shadow: none;
+		transform: translate(2px, 2px);
 	}
 	.narrative {
 		font-size: 0.85rem;

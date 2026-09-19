@@ -127,13 +127,13 @@ export const MAX_DRAG_PITCH = (60 * Math.PI) / 180;
 export const isMobileViewport =
 	typeof window !== "undefined" && window.innerWidth <= 640;
 
-// start pitch. positive = up. phones tilt down
+// start pitch. positive = up. the wider fov leaves room to aim higher
 export const DEFAULT_CAMERA_PITCH = isMobileViewport
-	? (-4 * Math.PI) / 180
-	: (2 * Math.PI) / 180;
+	? (0 * Math.PI) / 180
+	: (6 * Math.PI) / 180;
 
-// extra look-down once inside
-export const ROOM_ENTRY_PITCH_TILT = (-6 * Math.PI) / 180;
+// extra look-down once inside, sized so the in-room pitch stays put
+export const ROOM_ENTRY_PITCH_TILT = (-10 * Math.PI) / 180;
 
 export const ROOM_ENTRY_PITCH_TIME = 0.6; // seconds to close ~63% of that tilt
 

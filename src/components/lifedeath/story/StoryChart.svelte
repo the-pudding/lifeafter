@@ -41,7 +41,8 @@
 			caption: "Changing afterlife belief, by life-threatening situations experienced",
 			series: [
 				{ name: "Experienced “a lot”", color: "#ff00aa", values: [36.0, 34.4, 33.2, 31.5, 30.4, 25.7] },
-				{ name: "“Not at all”", color: REF, values: [33.1, 30.4, 26.4, 25.2, 21.7, 22.0] }
+				// the legend's own coral for the not-at-all bucket
+				{ name: "“Not at all”", color: "#ff7f72", values: [33.1, 30.4, 26.4, 25.2, 21.7, 22.0] }
 			]
 		},
 		"CHANGE-ATTEND_SVCS-LINE": {
@@ -62,7 +63,8 @@
 			caption: "Changing afterlife belief, by depression levels",
 			series: [
 				{ name: "Frequent depression", color: "#ff00aa", values: [38.1, 33.3, 31.7, 29.5, 31.9, 30.1] },
-				{ name: "Everyone else", color: REF, values: [32.5, 30.1, 27.8, 25.4, 23.4, 21.9] }
+				// the legend's own coral for the not-depressed bucket
+				{ name: "Everyone else", color: "#ff7f72", values: [32.5, 30.1, 27.8, 25.4, 23.4, 21.9] }
 			]
 		},
 		"UNSURE-CHANGE-LINE": {
@@ -83,7 +85,14 @@
 		}
 	};
 	const chart = $derived(CHARTS[name] ?? null);
-	const shownCaption = $derived(caption?.trim() || chart?.caption || "");
+	const shownCaption = $derived.by(() => {
+		const raw = caption?.trim() || chart?.caption || "";
+		// doc captions sometimes arrive shouting; settle them to sentence case
+		if (raw && raw === raw.toUpperCase() && raw !== raw.toLowerCase()) {
+			return raw[0] + raw.slice(1).toLowerCase();
+		}
+		return raw;
+	});
 
 	// geometry in real pixels, from the measured width
 	let width = $state(0);
@@ -138,17 +147,19 @@
 
 		// the walker's age as a fractional bucket index, points at centers
 		let marker = null;
+		let markerBucket = null;
 		if (typeof age === "number") {
 			let frac = 0;
 			for (let i = 0; i < BUCKET_AGES.length; i++) {
 				const [lo, hi] = BUCKET_AGES[i];
 				if (age >= hi && i < BUCKET_AGES.length - 1) continue;
 				frac = i + (age - lo) / (hi - lo) - 0.5;
+				markerBucket = i;
 				break;
 			}
 			marker = x(Math.min(Math.max(frac, 0), n - 1));
 		}
-		return { lines, labels, ticks, marker };
+		return { lines, labels, ticks, marker, markerBucket };
 	});
 </script>
 
@@ -184,9 +195,10 @@
 						<circle cx={p.x} cy={p.y} r="3" fill={line.color} />
 					{/each}
 				{/each}
-				<!-- narrow screens keep every other tick, so labels never collide -->
+				<!-- narrow screens keep a strict every-other cadence of ticks,
+				     phased so the walker's own decade is always labeled -->
 				{#each geo.ticks as t}
-					{#if width >= 430 || t.i % 2 === 0 || t.i === geo.ticks.length - 1}
+					{#if width >= 430 || t.i % 2 === (geo.markerBucket ?? 0) % 2}
 						<text class="tick" x={t.x} y={HEIGHT - 4} text-anchor={t.i === 0 ? "start" : t.i === geo.ticks.length - 1 ? "end" : "middle"}>{t.label}</text>
 					{/if}
 				{/each}
@@ -216,10 +228,14 @@
 	figcaption {
 		font-size: 13.5px;
 		font-weight: 600;
-		text-transform: uppercase;
-		letter-spacing: 0.05em;
+		letter-spacing: 0.02em;
 		color: rgba(255, 255, 255, 0.85);
 		margin-bottom: 3px;
+	}
+	@media (max-width: 600px) {
+		figcaption {
+			font-size: 11px;
+		}
 	}
 	.legend {
 		display: flex;

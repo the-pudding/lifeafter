@@ -94,7 +94,8 @@ export function spawnCrowd(innerRoomGroup, respondents, config) {
 	});
 
 	// an opaque disc; transparent would darken where two shadows overlap
-	const shadowGeometry = new THREE.CircleGeometry(shadowRadius, 8);
+	// (enough segments that it reads as a smooth ellipse, not an octagon)
+	const shadowGeometry = new THREE.CircleGeometry(shadowRadius, 24);
 	// unlit, so it reads the same under any light
 	const shadowMaterial = new THREE.MeshBasicMaterial({ color: 0x080513 });
 	// or the outline pass rings the disc

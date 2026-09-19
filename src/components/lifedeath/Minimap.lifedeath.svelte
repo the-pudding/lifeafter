@@ -490,6 +490,9 @@
 
 <canvas
 	class="minimap-canvas"
+	tabindex="0"
+	role="button"
+	aria-label="Open the overhead map"
 	class:topdown-active={mode === "topdown"}
 	class:is-hidden={hidden}
 	class:is-pulsing={bounce && mode !== "topdown" && !hidden}
@@ -505,6 +508,16 @@
 		}
 		const index = hitTestPerson(event.clientX, event.clientY);
 		if (index !== null) onPersonClick?.(index);
+	}}
+	onkeydown={(event) => {
+		if (event.key !== "Enter" && event.key !== " ") return;
+		event.preventDefault();
+		onAcknowledge?.();
+		onClickSound?.();
+		if (mode !== "topdown") {
+			if (onEnterTopdown) onEnterTopdown();
+			else mode = "topdown";
+		}
 	}}
 	onpointerenter={() => onAcknowledge?.()}
 	onmousemove={handleMinimapMouseMove}
@@ -555,13 +568,14 @@
 			background-color: #1a0c2b;
 		}
 		50% {
-			background-color: #3d1240;
+			/* a dark cast of the border's lavender */
+			background-color: #372558;
 		}
 	}
 	@media (prefers-reduced-motion: reduce) {
 		.minimap-canvas.is-pulsing {
 			animation: none;
-			background-color: #250a29;
+			background-color: #2b1e47;
 		}
 	}
 

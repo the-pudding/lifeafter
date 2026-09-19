@@ -212,8 +212,9 @@
 		align-self: flex-start;
 		font-family: var(--font-sans);
 		background: #1a0c2b;
-		color: rgba(255, 255, 255, 0.4);
-		border: 1px solid rgba(255, 255, 255, 0.25);
+		/* unselected: raised, in a darker purple */
+		color: #8f6fae;
+		border: 1px solid rgba(207, 164, 255, 0.35);
 		border-radius: 0rem;
 		padding: 0.3rem 0.55rem;
 		font-size: 0.78rem;
@@ -224,15 +225,17 @@
 	}
 
 	.mode-toggle:hover {
-		color: rgba(255, 255, 255, 0.75);
-		border-color: rgba(255, 255, 255, 0.45);
+		color: #b596d6;
+		border-color: rgba(207, 164, 255, 0.55);
 	}
 
-	/* selected is white, unselected dimmed */
+	/* selected: white, and pressed into its shadow */
 	.mode-toggle.active {
 		background: #1a0c2b;
-		border-color: #fff;
+		border-color: rgba(207, 164, 255, 0.7);
 		color: #fff;
+		box-shadow: none;
+		transform: translate(2px, 2px);
 	}
 
 	.mode-toggle.active:hover {

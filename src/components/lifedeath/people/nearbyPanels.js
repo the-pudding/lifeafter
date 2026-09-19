@@ -41,9 +41,10 @@ export function createNearbyPanels({
 	getMode,
 	getPositionMode,
 	getSelectedVariable,
-	getHasStoryText,
-	// how many ambient panels may show; the story trims this to one
+	// how many ambient panels may show; the story trims this down
 	getMaxPanels = () => NEARBY_PEOPLE_MAX,
+	// the selection cone's half-angle; story mode narrows it
+	getConeHalfAngle = () => NEARBY_PERSON_FOV_HALF_ANGLE,
 	// during a story beat, a hovered person takes over the panel slot
 	getInStoryBeat = () => false,
 	// the hovered person always gets a panel
@@ -245,14 +246,7 @@ export function createNearbyPanels({
 				? hovered
 				: null;
 
-		// while story text is up, fade out and only track the hovered person
-		if (getHasStoryText()) {
-			for (const index of nearbySelected) {
-				if (index !== hoveredIndex) dropNearbyPanel(index);
-			}
-			nearbySelected = hoveredIndex === null ? [] : [hoveredIndex];
-			nearbySelectionTimer = NEARBY_SELECTION_REFRESH_INTERVAL;
-		} else if (getInStoryBeat() && hoveredIndex !== null) {
+		if (getInStoryBeat() && hoveredIndex !== null) {
 			// a beat's own panel yields: hide it and show the hovered person
 			for (const index of nearbySelected) {
 				if (index !== hoveredIndex) dropNearbyPanel(index);
@@ -270,7 +264,7 @@ export function createNearbyPanels({
 			);
 			const cosHalfAngle = Math.cos(
 				Math.min(
-					NEARBY_PERSON_FOV_HALF_ANGLE,
+					getConeHalfAngle(),
 					Math.max(0, horizontalHalfFovRad - NEARBY_PERSON_FOV_SCREEN_MARGIN)
 				)
 			);

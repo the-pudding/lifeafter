@@ -19,7 +19,7 @@
       "hide_map": "true",
       "hide_year": "true",
       "wave": "1",
-      "text": "The thousands of people here answered a question about the afterlife as part of the [Global Flourishing Study](https://globalflourishingstudy.com/). Keep walking!\r\n\r\n\r\n<div class=\"hints scroll\">Scroll to walk</div>"
+      "text": "The thousands of people here answered a question about the afterlife as part of the [Global Flourishing Study](https://globalflourishingstudy.com/). Keep walking!"
     },
     {
       "id": "2",
@@ -28,7 +28,7 @@
       "hide_year": "true",
       "hide_map": "true",
       "wave": "1",
-      "text": "As you explore, you can click on a person to learn more about them.\r\n\r\n\r\n<div class=\"hints click\">Click on a person</div>"
+      "text": "What we believe about the afterlife hints at how we think about the universe—and our place in it. But our beliefs are shaped by what we experience during our lives. As that changes, so do our beliefs about the afterlife.\r\n\r\n\r\n<div class=\"hints click\">Click on a person to see details</div>"
     },
     {
       "id": "3",
@@ -37,7 +37,7 @@
       "hl_minimap": "true",
       "hide_year": "true",
       "wave": "1",
-      "text": "Here in the front are younger people. As you walk to the back, you’ll encounter older people.\r\n\r\n\r\n<div class=\"hints click\">Click the minimap</div>"
+      "text": "Here in the front are younger people. As you walk to the back, you’ll encounter older people.\r\n\r\n\r\n<div class=\"hints click minimap\">Click the minimap or spacebar</div>"
     },
     {
       "id": "4",
@@ -276,7 +276,7 @@
       "hide_panel": "true",
       "hide_year": "true",
       "wave": "1",
-      "text": "You’re among people who <span class=no_belief>do not believe</span> in an afterlife. You heretic! (Just kidding.)\r\n\r\n\r\n<div class=\"hints scroll\">Scroll to walk</div>"
+      "text": "You’re among people who <span class=no_belief>do not believe</span> in an afterlife. You heretic! (Just kidding.)\r\n\r\n\r\n<div class=\"hints scroll\">Scroll or arrow keys to walk</div>"
     },
     {
       "id": "no2",
@@ -285,7 +285,7 @@
       "hide_map": "true",
       "hide_year": "true",
       "wave": "1",
-      "text": "To your immediate right are people who are <span class=unsure>unsure</span> there is an afterlife. On the far right are people who <span class=belief>believe</span> in an afterlife.\r\n\r\n\r\n<div class=\"hints pan\">Drag to rotate</div>"
+      "text": "To your immediate right are people who are <span class=unsure>unsure</span> there is an afterlife. On the far right are people who <span class=belief>believe</span> in an afterlife.\r\n\r\n\r\n<div class=\"hints pan\">Drag or arrow keys to turn</div>"
     }
   ],
   "unsure": [
@@ -297,7 +297,7 @@
       "hide_panel": "true",
       "hide_year": "true",
       "wave": "1",
-      "text": "You’re among people who are <span class=unsure>unsure</span> if there’s an afterlife. You have plenty of fence-sitters here with you here.\r\n\r\n\r\n<div class=\"hints scroll\">Scroll to walk</div>"
+      "text": "You’re among people who are <span class=unsure>unsure</span> if there’s an afterlife. You have plenty of fence-sitters here with you here.\r\n\r\n\r\n<div class=\"hints scroll\">Scroll or arrow keys to walk</div>"
     },
     {
       "id": "unsure2",
@@ -306,7 +306,7 @@
       "hide_map": "true",
       "hide_year": "true",
       "wave": "1",
-      "text": "To your left are people who <span class=no_belief>don’t believe</span> in an afterlife. To your right are people who do <span class=belief>believe</span>.\r\n\r\n\r\n<div class=\"hints pan\">Drag to rotate</div>"
+      "text": "To your left are people who <span class=no_belief>don’t believe</span> in an afterlife. To your right are people who do <span class=belief>believe</span>.\r\n\r\n\r\n<div class=\"hints pan\">Drag or arrow keys to turn</div>"
     }
   ],
   "yes": [
@@ -318,7 +318,7 @@
       "hide_year": "true",
       "hide_panel": "true",
       "wave": "1",
-      "text": "You’re among people who <span class=belief>believe</span> there is life after death. This is the most populous part of the room.\r\n\r\n\r\n<div class=\"hints scroll\">Scroll to walk</div>"
+      "text": "You’re among people who <span class=belief>believe</span> there is life after death. This is the most populous part of the room.\r\n\r\n\r\n<div class=\"hints scroll\">Scroll or arrow keys to walk</div>"
     },
     {
       "id": "yes2",
@@ -327,7 +327,7 @@
       "hide_map": "true",
       "hide_year": "true",
       "wave": "1",
-      "text": "To your immediate left are people who are <span class=unsure>unsure</span> if there is an afterlife. On the far left are people who <span class=no_belief>don’t believe</span> in an afterlife.\r\n\r\n\r\n<div class=\"hints pan\">Drag to rotate</div>"
+      "text": "To your immediate left are people who are <span class=unsure>unsure</span> if there is an afterlife. On the far left are people who <span class=no_belief>don’t believe</span> in an afterlife.\r\n\r\n\r\n<div class=\"hints pan\">Drag or arrow keys to turn</div>"
     }
   ],
   "info": "This piece was made by [Alvin Chang](https://alvinschang.com/) using data from the [Global Flourish Study](https://globalflourishingstudy.com/). The survey data includes nearly 130,000 respondents from 23 countries that completed both waves of the survey in 2022-23 and 2024. The room includes a representative sample of 1,500 respondents. The broad historical and cohort findings are from the [Integrated Values Surveys](https://www.worldvaluessurvey.org/WVSNewsShow.jsp?ID=442), which combines the World Values Survey and the European Values Study. Percentages are included in the charts, but what drives the findings and the overarching story is the broad comparisons and the direction of change.\r\n\r\n\r\nOne thing that isn’t included in this piece is that the worldwide belief and religiosity numbers have stayed relatively steady. Researchers Pippa Norris and Ronald Inglehart have [found](https://www.cambridge.org/core/books/sacred-and-secular/5CE209CE245D444D40BB44D0DDD78F43) that this is because of two phenomena that cut against each other: One is that people in wealthier countries faced a decreasing amount of existential threats—and,  in turn, religiosity and fertility rates dropped. The other is that people in poorer countries still face existential threats, and religion continues to provide security and predictability; fertility rates in those countries have stayed high. As a result, belief has stayed steady worldwide, even though belief within countries has changed rapidly.\r\n\r\n\r\nThe two songs are original compositions, named “Sunday” and “Monday,” created in Ableton Live.\r\n\r\n\r\nTo read more about how this piece was made and to keep up with Alvin’s work, subscribe to [this newsletter](https://buttondown.com/charthead/)."
