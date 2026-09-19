@@ -1443,18 +1443,32 @@
 				applyColorVariable(selectedVariable);
 			});
 
-			// speed marks: white corner streaks that grow with the walk speed
-			// and travel outward moving forward, inward moving backward
-			const SPEED_LINES_PER_SIDE = 10;
+			// speed marks, like running into wind: side gusts hugging the
+			// edges plus fainter strands streaking at the face from mid-screen.
+			// all travel outward moving forward, inward moving backward
 			const SPEED_FULL = 18; // world units/sec, matching the wind's full gust
 			const speedLineAngles = [];
 			const speedLineSeeds = [];
-			// clustered on the left and right edges, fanning a little up and down
+			const speedLineBandLo = [];
+			const speedLineBandHi = [];
+			const speedLineFace = [];
+			// side gusts on the left and right edges
 			for (const side of [0, Math.PI]) {
-				for (let i = 0; i < SPEED_LINES_PER_SIDE; i++) {
+				for (let i = 0; i < 8; i++) {
 					speedLineAngles.push(side + (Math.random() - 0.5) * 1.15);
 					speedLineSeeds.push(Math.random());
+					speedLineBandLo.push(0.55);
+					speedLineBandHi.push(0.98);
+					speedLineFace.push(false);
 				}
+			}
+			// face strands: anywhere on screen, running from nearer the middle
+			for (let i = 0; i < 14; i++) {
+				speedLineAngles.push(Math.random() * Math.PI * 2);
+				speedLineSeeds.push(Math.random());
+				speedLineBandLo.push(0.16);
+				speedLineBandHi.push(0.8);
+				speedLineFace.push(true);
 			}
 			let speedLevel = 0;
 			let speedFlow = 0;
@@ -1482,9 +1496,9 @@
 				// quick to appear, a touch slower to settle, like the wind
 				const ease = target > speedLevel ? dt * 7 : dt * 3.5;
 				speedLevel += (target - speedLevel) * Math.min(1, ease);
-				// the streaks slide along their band, faster at speed
+				// the strands slide along their bands, faster at speed
 				speedTravel +=
-					dt * (0.12 + 1.1 * speedLevel * speedLevel) * (speedFlow >= 0 ? 1 : -1);
+					dt * (0.2 + 2.0 * speedLevel * speedLevel) * (speedFlow >= 0 ? 1 : -1);
 				const dpr = Math.min(window.devicePixelRatio, 2);
 				const w = Math.round(speedCanvas.clientWidth * dpr);
 				const h = Math.round(speedCanvas.clientHeight * dpr);
@@ -1507,28 +1521,32 @@
 				marksCtx.lineCap = "round";
 				const cx = w / 2;
 				const cy = h / 2;
-				const BAND_LO = 0.55;
-				const BAND_HI = 0.98;
 				for (let i = 0; i < speedLineAngles.length; i++) {
+					const face = speedLineFace[i];
 					const cos = Math.cos(speedLineAngles[i]);
 					const sin = Math.sin(speedLineAngles[i]);
 					// distance from center to the screen edge along this angle
 					const edgeR = Math.min(Math.abs(cx / cos), Math.abs(cy / sin));
-					// where this streak sits along its band right now
+					// where this strand sits along its band; face strands rush
 					let t =
-						(speedTravel * (0.7 + speedLineSeeds[i] * 0.6) +
+						(speedTravel *
+							(0.7 + speedLineSeeds[i] * 0.6) *
+							(face ? 1.5 : 1) +
 							speedLineSeeds[i]) %
 						1;
 					if (t < 0) t += 1;
 					// fades in and out at the band's ends, so the wrap is quiet
 					const envelope = Math.sin(t * Math.PI);
-					const outer = edgeR * (BAND_LO + (BAND_HI - BAND_LO) * t);
+					const bandLo = speedLineBandLo[i];
+					const outer =
+						edgeR * (bandLo + (speedLineBandHi[i] - bandLo) * t);
 					const len =
 						edgeR * (0.05 + 0.18 * speedLevel) * (0.7 + 0.3 * envelope);
+					// pretty transparent throughout; face strands the fainter
 					marksCtx.strokeStyle = `rgba(255, 255, 255, ${
-						speedLevel * envelope * 0.55
+						speedLevel * envelope * (face ? 0.18 : 0.28)
 					})`;
-					marksCtx.lineWidth = dpr * (1 + speedLevel);
+					marksCtx.lineWidth = dpr * (face ? 0.8 + 0.5 * speedLevel : 1 + speedLevel);
 					marksCtx.beginPath();
 					marksCtx.moveTo(cx + cos * outer, cy + sin * outer);
 					marksCtx.lineTo(cx + cos * (outer - len), cy + sin * (outer - len));
