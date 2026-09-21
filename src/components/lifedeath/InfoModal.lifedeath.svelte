@@ -18,6 +18,19 @@
 			)
 			.filter(Boolean)
 	);
+
+	// focus moves into the shelf on open and back to the trigger on close
+	let shelfEl = null;
+	let lastFocused = null;
+	$effect(() => {
+		if (open) {
+			lastFocused = document.activeElement;
+			shelfEl?.focus();
+		} else if (lastFocused) {
+			lastFocused.focus?.();
+			lastFocused = null;
+		}
+	});
 </script>
 
 <div
@@ -26,13 +39,18 @@
 	role="dialog"
 	aria-label="About this piece"
 	tabindex="-1"
+	inert={!open}
+	bind:this={shelfEl}
 	onclick={(e) => e.stopPropagation()}
 	onmousedown={(e) => e.stopPropagation()}
-	onkeydown={(e) => e.stopPropagation()}
+	onkeydown={(e) => {
+		if (e.key === "Escape") onclose();
+		e.stopPropagation();
+	}}
 >
 	<button class="detailsClose" onclick={onclose}>Close panel</button>
 	<div class="modalData">
-		<div class="waveHed">About this piece</div>
+		<h2 class="waveHed">About this piece</h2>
 		{#each paragraphs as p}
 			<p class="narrative">{@html p}</p>
 		{/each}

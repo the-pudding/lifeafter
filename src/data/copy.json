@@ -19,7 +19,7 @@
       "hide_map": "true",
       "hide_year": "true",
       "wave": "1",
-      "text": "The thousands of people here answered a question about the afterlife as part of the [Global Flourishing Study](https://globalflourishingstudy.com/). Keep walking!"
+      "text": "The thousands of people here answered a question about the afterlife as part of the [Global Flourishing Study](https://globalflourishingstudy.com/). Keep walking!\r\n\r\n\r\n<div class=\"hints click\">Click on a person to see details</div>"
     },
     {
       "id": "2",
@@ -28,7 +28,7 @@
       "hide_year": "true",
       "hide_map": "true",
       "wave": "1",
-      "text": "What we believe about the afterlife hints at how we think about the universe—and our place in it. But our beliefs are shaped by what we experience during our lives. As that changes, so do our beliefs about the afterlife.\r\n\r\n\r\n<div class=\"hints click\">Click on a person to see details</div>"
+      "text": "What we believe about the afterlife hints at how we think about the universe—and our place in it. But our beliefs are shaped by what we experience during our lives. As that changes, so do our beliefs about the afterlife."
     },
     {
       "id": "3",
@@ -63,7 +63,7 @@
       "var_color": "CHANGE_ANSWER",
       "wave": "2",
       "hide_year": "true",
-      "text": ">> CHANGE_BELIEF-AGE-LINE"
+      "text": ">> CHANGE_BELIEF-AGE-LINE|People who changed their beliefs about the afterlife"
     },
     {
       "id": "7",
@@ -91,7 +91,7 @@
       "wave": "2",
       "hide_year": "true",
       "show_panels": "true",
-      "text": ">> BELIEF-WITHOUT-RELIGION-LINE | Afterlife believers who say religion isn't important in their lives"
+      "text": ">> BELIEF-WITHOUT-RELIGION-LINE |People who believe in an afterlife but say religion isn't important in their lives"
     },
     {
       "id": "11",
@@ -127,7 +127,7 @@
       "wave": "2",
       "hide_year": "true",
       "show_panels": "true",
-      "text": ">> CHANGE-THREAT-LINE|Changing afterlife belief, by life-threatening situations experienced"
+      "text": ">> CHANGE-THREAT-LINE|Who changed their afterlife belief, by life-threatening situations experienced"
     },
     {
       "id": "15",

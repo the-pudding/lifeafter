@@ -1,8 +1,8 @@
 // display config for every GFS variable: categorical buckets and numeric ranges
 
 export const PALETTE = [
-  "#ffbe2e", // 0 — warm amber/orange
-  "#ff7f72", // 1 — coral
+  "#ffd863", // 0 — bright pure yellow
+  "#d6653c", // 1 — burnt orange
   "#c964ff", // 2 — vivid purple
   "#c42f8a", // 3 — magenta
   "#ff00aa"  // 4 — bright pink
@@ -229,7 +229,7 @@ export const variableConfig =
       {
         "key": "europe",
         "label": "Europe",
-        "color": "#ff7f72",
+        "color": "#d6653c",
         "keepColor": true,
         "values": ["Europe"]
       },
@@ -243,7 +243,7 @@ export const variableConfig =
       {
         "key": "s_se_asia",
         "label": "South & SE Asia",
-        "color": "#ffbe2e",
+        "color": "#ffd863",
         "keepColor": true,
         "values": ["South & SE Asia"]
       },
@@ -1644,7 +1644,7 @@ export const variableConfig =
       {
         "key": "hinduism",
         "label": "Hinduism",
-        "color": "#ffae57",
+        "color": "#ffa22e",
         "keepColor": true,
         "values": [
           "Hinduism"
@@ -1653,7 +1653,7 @@ export const variableConfig =
       {
         "key": "buddhism",
         "label": "Buddhism",
-        "color": "#ff7f72",
+        "color": "#d6653c",
         "keepColor": true,
         "values": [
           "Buddhism"
@@ -1735,7 +1735,7 @@ export const variableConfig =
       {
         "key": "hinduism",
         "label": "Hinduism",
-        "color": "#ffae57",
+        "color": "#ffa22e",
         "keepColor": true,
         "values": [
           "Hinduism"
@@ -1744,7 +1744,7 @@ export const variableConfig =
       {
         "key": "buddhism",
         "label": "Buddhism",
-        "color": "#ff7f72",
+        "color": "#d6653c",
         "keepColor": true,
         "values": [
           "Buddhism"
@@ -4820,8 +4820,9 @@ export const GRADIENT_PALETTE = [
 	"#7d2ed9", // deep pink-leaning purple (low end)
 	"#b342e0", // violet-magenta
 	"#ef5abc", // pink
-	"#ff7d7a", // pink-coral
-	"#ffae57" // bright orange (high end)
+	"#ff6f66", // pink-coral
+	"#ffa22e", // bright orange
+	"#ffd863" // the palette's pure yellow (high end)
 ];
 
 // blends two hex colours
@@ -5149,8 +5150,32 @@ function hexLuma(hex) {
 	return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
 
+// the dark wash that keeps white text readable on a category color; warm
+// hues (yellows/oranges) wash toward brown rather than black, since a
+// blackened yellow reads olive-green
+export function washedBackgroundCSS(color) {
+	let warm = false;
+	if (/^#[0-9a-fA-F]{6}$/.test(color)) {
+		const r = parseInt(color.slice(1, 3), 16);
+		const g = parseInt(color.slice(3, 5), 16);
+		const b = parseInt(color.slice(5, 7), 16);
+		const max = Math.max(r, g, b);
+		const d = max - Math.min(r, g, b);
+		if (d > 0) {
+			let h;
+			if (max === r) h = 60 * (((g - b) / d) % 6);
+			else if (max === g) h = 60 * ((b - r) / d + 2);
+			else h = 60 * ((r - g) / d + 4);
+			if (h < 0) h += 360;
+			warm = h >= 25 && h <= 80;
+		}
+	}
+	const wash = warm ? "rgba(122, 58, 0, 0.35)" : "rgba(8, 4, 14, 0.25)";
+	return `linear-gradient(${wash}, ${wash}), ${color}`;
+}
+
 function hlRule(cls, color) {
-	return `.${cls} { background: linear-gradient(rgba(8, 4, 14, 0.25), rgba(8, 4, 14, 0.25)), ${color}; color: #fff; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8); font-weight: inherit; padding: 0 0.25em; border-radius: 2px; -webkit-box-decoration-break: clone; box-decoration-break: clone; }`;
+	return `.${cls} { background: ${washedBackgroundCSS(color)}; color: #fff; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8); font-weight: inherit; padding: 0 0.25em; border-radius: 2px; -webkit-box-decoration-break: clone; box-decoration-break: clone; }`;
 }
 
 export const highlightClasses = [];

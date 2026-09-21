@@ -341,7 +341,9 @@ export function buildRoomShell(scene, innerRoomGroup, config) {
 	beaconCanvas.height = 128;
 	const beaconCtx = beaconCanvas.getContext("2d");
 	const beaconGradient = beaconCtx.createRadialGradient(64, 64, 0, 64, 64, 64);
-	beaconGradient.addColorStop(0, "rgba(255, 240, 255, 1)");
+	// normal blending, so nudging into it stays this purple instead of
+	// additively clamping to white
+	beaconGradient.addColorStop(0, "rgba(249, 221, 252, 1)");
 	beaconGradient.addColorStop(0.45, "rgba(249, 221, 252, 0.6)");
 	beaconGradient.addColorStop(1, "rgba(249, 221, 252, 0)");
 	beaconCtx.fillStyle = beaconGradient;
@@ -352,7 +354,6 @@ export function buildRoomShell(scene, innerRoomGroup, config) {
 		map: beaconTexture,
 		transparent: true,
 		opacity: 0.85,
-		blending: THREE.AdditiveBlending,
 		depthWrite: false,
 		fog: false
 	});

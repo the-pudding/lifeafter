@@ -210,6 +210,10 @@
 	});
 	// the between-beats nudge: an arrow spun toward the light each frame
 	let walkHintOn = $state(false);
+	// turned away from the story's front: the hint area offers a way back
+	let keepGoingOn = $state(false);
+	// set by the scene, where the walk targets live
+	let keepGoingImpl = null;
 	// a beat's optional inline chart: { name, caption } (see StoryChart.svelte)
 	let storyChart = $state(null);
 	// the walker's unrounded age, for the chart's position marker
@@ -238,6 +242,12 @@
 	let currentAge = $state(null);
 	// the active story text, which can be more than one block
 	let storyTexts = $state([]);
+	// the beats' text with markup stripped, for the screen-reader live region
+	const storyPlainText = $derived(
+		storyTexts
+			.map((text) => text.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim())
+			.join(" ")
+	);
 	// the audio toggle's markup; `playing` is an argument so the label stays live
 	function storyAudioButton(playing) {
 		const icon = playing
@@ -352,6 +362,18 @@
 	let exploreExplicit = $state(false);
 	// where the script runs out
 	const STORY_END_AGE = storyEndAge(copy);
+	// the first text beat ahead of an age, for the keep-going walk
+	function nextBeatStartAfter(age, zoneKey) {
+		const entries = [...(copy.all ?? []), ...(copy[zoneKey] ?? [])];
+		let next = null;
+		for (const entry of entries) {
+			if (!entry.text?.trim()) continue;
+			const start = Number(entry.age);
+			if (!Number.isFinite(start) || start <= age) continue;
+			if (next === null || start < next) next = start;
+		}
+		return next;
+	}
 	const pastStoryEnd = $derived(
 		STORY_END_AGE !== null && currentAge !== null && currentAge > STORY_END_AGE
 	);
@@ -1120,18 +1142,25 @@
 			scene.add(cameraLight);
 
 			// the toon ramp: two hard steps, short of white and black
-			const toonRampCanvas = document.createElement("canvas");
-			toonRampCanvas.width = 2;
-			toonRampCanvas.height = 1;
-			const toonRampCtx = toonRampCanvas.getContext("2d");
-			[15, 215].forEach((v, i) => {
-				toonRampCtx.fillStyle = `rgb(${v}, ${v}, ${v})`;
-				toonRampCtx.fillRect(i, 0, 1, 1);
-			});
-			const toonGradientMap = new THREE.CanvasTexture(toonRampCanvas);
-			toonGradientMap.minFilter = THREE.NearestFilter;
-			toonGradientMap.magFilter = THREE.NearestFilter;
-			toonGradientMap.generateMipmaps = false;
+			function makeToonRamp(dark, lit) {
+				const rampCanvas = document.createElement("canvas");
+				rampCanvas.width = 2;
+				rampCanvas.height = 1;
+				const rampCtx = rampCanvas.getContext("2d");
+				[dark, lit].forEach((v, i) => {
+					rampCtx.fillStyle = `rgb(${v}, ${v}, ${v})`;
+					rampCtx.fillRect(i, 0, 1, 1);
+				});
+				const ramp = new THREE.CanvasTexture(rampCanvas);
+				ramp.minFilter = THREE.NearestFilter;
+				ramp.magFilter = THREE.NearestFilter;
+				ramp.generateMipmaps = false;
+				return ramp;
+			}
+			const toonGradientMap = makeToonRamp(15, 215);
+			// the crowd's own ramp sits nearer full-bright, so outfit colors
+			// match the legend and minimap instead of muddying under the lights
+			const crowdGradientMap = makeToonRamp(15, 250);
 
 			// a vertical gradient for walls and doors; stops run top to bottom
 			function createVerticalGradientTexture(stops) {
@@ -1320,7 +1349,7 @@
 				placementHelper,
 				flatRotation: FLAT_ROTATION
 			} = spawnCrowd(innerRoomGroup, respondents, {
-				toonGradientMap,
+				toonGradientMap: crowdGradientMap,
 				outlineDefaultThickness: OUTLINE_DEFAULT_THICKNESS,
 				shadowRadius: SHADOW_RADIUS,
 				pickModelForPerson
@@ -1671,7 +1700,7 @@
 			// held left/right arrows turn the view rather than strafing;
 			// the rate ramps in and out so key turns don't snap
 			const KEY_TURN_RADIANS_PER_SECOND = Math.PI * 0.55;
-			const KEY_TURN_EASE_SECONDS = 0.12;
+			const KEY_TURN_EASE_SECONDS = 0.05;
 			let keyTurnVelocity = 0;
 			function advanceKeyTurn(turnDirection, dt) {
 				const ease = 1 - Math.exp(-dt / KEY_TURN_EASE_SECONDS);
@@ -1727,6 +1756,27 @@
 			function isPointerOverMinimap(event) {
 				return minimapComponent.containsPoint(event.clientX, event.clientY);
 			}
+
+			// the keep-going walk: face front, center in the current third,
+			// and glide to the next story beat on the door walk's easing
+			keepGoingImpl = () => {
+				const zoneCenter =
+					renderWalkX < -ZONE_WIDTH / 2
+						? -ZONE_WIDTH
+						: renderWalkX > ZONE_WIDTH / 2
+							? ZONE_WIDTH
+							: 0;
+				const age = walkAgeExact ?? zToAgeExact(renderWalkZ);
+				const nextStart = nextBeatStartAfter(age, storyBeats.currentZoneKey());
+				targetWalkX = zoneCenter;
+				// a hair past the beat's line, so it triggers on arrival
+				if (nextStart !== null) targetWalkZ = ageToZ(nextStart + 0.05);
+				targetCameraYaw = 0;
+				doorWalkEasing = true;
+				doorWalkVelX = 0;
+				doorWalkVelZ = 0;
+				doorWalkVelYaw = 0;
+			};
 
 			// sets the walk target through a door: across first, then forward
 			function walkThroughDoor(door) {
@@ -1863,15 +1913,37 @@
 
 			// lights the label rather than the panel, so it needs reverting by hand
 			const DOOR_LABEL_HOVER_BRIGHTNESS = 2.4;
+			// eased over a short fade, so hover feels smooth rather than snapping
+			const DOOR_LABEL_FADE_TIME = 0.12;
 			let hoveredDoor = null;
+			// door -> its label's current brightness, only while fading
+			const doorLabelFades = new Map();
 			function setHoveredDoor(door) {
 				if (hoveredDoor === door) return;
-				if (hoveredDoor) {
-					hoveredDoor.label.material[4].color.setScalar(DOOR_LABEL_DIM_BRIGHTNESS);
+				// a door mid-fade keeps its current value; a settled one starts
+				// from the state it was left in
+				if (hoveredDoor && !doorLabelFades.has(hoveredDoor)) {
+					doorLabelFades.set(hoveredDoor, DOOR_LABEL_HOVER_BRIGHTNESS);
 				}
 				hoveredDoor = door;
-				if (hoveredDoor) {
-					hoveredDoor.label.material[4].color.setScalar(DOOR_LABEL_HOVER_BRIGHTNESS);
+				if (hoveredDoor && !doorLabelFades.has(hoveredDoor)) {
+					doorLabelFades.set(hoveredDoor, DOOR_LABEL_DIM_BRIGHTNESS);
+				}
+			}
+			function advanceDoorLabelFades(dt) {
+				if (doorLabelFades.size === 0) return;
+				const step = 1 - Math.exp(-dt / DOOR_LABEL_FADE_TIME);
+				for (const [door, current] of doorLabelFades) {
+					const target =
+						door === hoveredDoor ? DOOR_LABEL_HOVER_BRIGHTNESS : DOOR_LABEL_DIM_BRIGHTNESS;
+					let next = current + (target - current) * step;
+					if (Math.abs(next - target) < 0.01) {
+						next = target;
+						doorLabelFades.delete(door);
+					} else {
+						doorLabelFades.set(door, next);
+					}
+					door.label.material[4].color.setScalar(next);
 				}
 			}
 
@@ -2528,6 +2600,7 @@
 
 				updateEnteredRoom();
 				advanceFocusFade(dt);
+				advanceDoorLabelFades(dt);
 				advanceMusicFade(dt);
 				soundFx.updateWind(dt, renderWalkX, renderWalkZ);
 				dust.update(dt, renderWalkX, renderWalkZ, candleGlowX, candleGlowY);
@@ -2628,6 +2701,18 @@
 				nearbyPanels.update(dt);
 				beatFloorFlashImpl?.update(dt);
 
+				// turned around mid-story: the way back replaces the hints
+				keepGoingOn =
+					!exploreMode &&
+					mode === "walk" &&
+					!flightActive &&
+					hasEnteredRoom &&
+					!autoWalking &&
+					!doorWalkEasing &&
+					!inLight &&
+					!pastStoryEnd &&
+					Math.abs(wrapAngle(cameraYaw)) > Math.PI * 0.75;
+
 				// between beats, the hint arrow points at the light
 				const hintOn =
 					!exploreMode &&
@@ -2636,6 +2721,7 @@
 					hasEnteredRoom &&
 					!autoWalking &&
 					!inLight &&
+					!keepGoingOn &&
 					storyTexts.length === 0;
 				if (hintOn) {
 					// world bearing of the light from here, relative to the view
@@ -2856,6 +2942,14 @@
 			{/key}
 		</div>
 	{/if}
+	{#if keepGoingOn}
+		<!-- turned away from the story: one press faces front and walks on -->
+		<div class="walk-hint" transition:fade>
+			<button class="walk-hint-explore keep-going" onclick={() => keepGoingImpl?.()}>
+				Keep going
+			</button>
+		</div>
+	{/if}
 	{#if walkHintOn}
 		<!-- between beats: the way onward, spun toward the light -->
 		<div class="walk-hint" transition:fade>
@@ -2898,8 +2992,11 @@
 		class:mode-veil--opaque={modeVeilVisible}
 		style="--mode-fade-ms: {MODE_FADE_MS}ms"
 	></div>
+	<!-- persistent, so screen readers hear each beat as it arrives; the
+	     visual overlay mounts and unmounts, which live regions miss -->
+	<div class="sr-only" aria-live="polite">{storyPlainText}</div>
 	<!-- shown while pressing into the light at the back wall -->
-	<div class="light-message" class:light-message--on={lightMessageOn}>
+	<div class="light-message" role="status" class:light-message--on={lightMessageOn}>
 		Hi, it's good to see you. But you can't go in here right now.
 	</div>
 	<!-- background music, off by default -->
@@ -3166,10 +3263,27 @@
 		color: #fff;
 		border-color: #fff;
 	}
+	/* the turn-around offer stands alone, so it reads a touch larger */
+	.walk-hint .keep-going {
+		font-size: 14px;
+		padding: 0.5rem 1.4rem;
+	}
 
 	/* the minimap styles itself */
 
 
+	/* visually hidden, still read by screen readers */
+	.sr-only {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		padding: 0;
+		margin: -1px;
+		overflow: hidden;
+		clip: rect(0, 0, 0, 0);
+		white-space: nowrap;
+		border: 0;
+	}
 	/* black on the white light, so it only reads once you're in it */
 	.light-message {
 		position: absolute;

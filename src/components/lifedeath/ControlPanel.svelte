@@ -1,5 +1,7 @@
 <script>
 	// overlay ui; reads and writes the props main passes
+	import { washedBackgroundCSS } from "$data/variable_config.js";
+
 	let {
 		variableOptions,
 		selectedVariable = $bindable(),
@@ -63,7 +65,7 @@
 					<!-- category hue dimmed under a dark wash so the white label survives bright swatches -->
 					<div
 						class="legend-row"
-						style:background="linear-gradient(rgba(8, 4, 14, 0.25), rgba(8, 4, 14, 0.25)), {item.color}"
+						style:background={washedBackgroundCSS(item.color)}
 					>
 						{item.label}
 					</div>

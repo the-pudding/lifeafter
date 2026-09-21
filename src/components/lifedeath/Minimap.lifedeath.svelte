@@ -39,6 +39,28 @@
 		return `${weight}${weight ? " " : ""}${size}px ${minimapFontStack}`;
 	}
 
+	// tiny dots wash out, so the map boosts saturation — but keeps hue and
+	// lightness as-is, so every shade matches the crowd, legend and highlights
+	function accentuate(cssColor) {
+		if (cssColor[0] !== "#" || cssColor.length !== 7) return cssColor;
+		const r = parseInt(cssColor.slice(1, 3), 16) / 255;
+		const g = parseInt(cssColor.slice(3, 5), 16) / 255;
+		const b = parseInt(cssColor.slice(5, 7), 16) / 255;
+		const max = Math.max(r, g, b);
+		const min = Math.min(r, g, b);
+		const l = (max + min) / 2;
+		const d = max - min;
+		if (d === 0) return cssColor;
+		let s = d / (1 - Math.abs(2 * l - 1));
+		let h;
+		if (max === r) h = 60 * (((g - b) / d) % 6);
+		else if (max === g) h = 60 * ((b - r) / d + 2);
+		else h = 60 * ((r - g) / d + 4);
+		if (h < 0) h += 360;
+		s = Math.min(1, s * 1.3);
+		return `hsl(${h.toFixed(0)}, ${(s * 100).toFixed(0)}%, ${(l * 100).toFixed(0)}%)`;
+	}
+
 	// pre-rendered dot sprites keyed by color, quantized to 4 bits per channel
 	// (invisible at this dot size); drawImage beats per-dot arc+fill by a lot
 	const DOT_SPRITE_PX = 16;
@@ -55,7 +77,7 @@
 			sprite.width = DOT_SPRITE_PX;
 			sprite.height = DOT_SPRITE_PX;
 			const sctx = sprite.getContext("2d");
-			sctx.fillStyle = cssColor;
+			sctx.fillStyle = accentuate(cssColor);
 			sctx.beginPath();
 			sctx.arc(DOT_SPRITE_PX / 2, DOT_SPRITE_PX / 2, DOT_SPRITE_PX / 2, 0, Math.PI * 2);
 			sctx.fill();
@@ -82,13 +104,15 @@
 	const MINIMAP_LINE_COLOR = "#ffffff";
 	// the static grid, subtler than the tracking line
 	const MINIMAP_AXIS_LINE_COLOR = "rgba(255, 255, 255, 0.3)";
-	// fallback tracking-line width in walk mode
-	const MINIMAP_TRACKING_LINE_WIDTH = 1;
-	// label margins; the corner box only reserves the top strip
+	// matches the css breakpoint that grows the corner box
+	const WIDE_SCREEN_MIN_WIDTH = 1400;
+	// label margins; the corner box only reserves the top strip, except on
+	// roomier screens, where a left strip holds the age numbers
 	function axisMargins(mode) {
-		return mode === "topdown"
-			? { left: 22, top: 16 }
-			: { left: 0, top: 14 };
+		if (mode === "topdown") return { left: 22, top: 16 };
+		const wide =
+			typeof window !== "undefined" && window.innerWidth >= WIDE_SCREEN_MIN_WIDTH;
+		return { left: wide ? 10 : 0, top: 14 };
 	}
 
 	// set once by init(), so plain closure state
@@ -135,9 +159,12 @@
 		const isTopdown = mode === "topdown";
 		// the strip the age numbers and column labels sit in
 		const { left: axisLeftMargin, top: axisTopMargin } = axisMargins(mode);
-		// mirrored on the right, or the plot sits off-centre
+		// topdown mirrors the margin on the right, or the plot sits off-centre;
+		// the corner box keeps its left strip flush instead
 		const logicalWidth =
-			MINIMAP_WIDTH_PX + axisLeftMargin + axisLeftMargin + MINIMAP_OUTER_PADDING;
+			MINIMAP_WIDTH_PX +
+			axisLeftMargin * (isTopdown ? 2 : 1) +
+			MINIMAP_OUTER_PADDING;
 		const logicalHeight =
 			MINIMAP_HEIGHT_PX + axisTopMargin + MINIMAP_OUTER_PADDING + MINIMAP_BOTTOM_PADDING;
 		// one uniform scale, so circles stay round and the rest letterboxes
@@ -163,11 +190,12 @@
 
 		// pinned to screen pixels too, or the lines draw far too thick
 		const lineWidthLogical = cssPxToLogical(1);
-		const trackingLineWidthLogical = isTopdown
-			? cssPxToLogical(1.5)
-			: MINIMAP_TRACKING_LINE_WIDTH;
+		// pinned like the grid, so the bigger corner box can't fatten it
+		const trackingLineWidthLogical = cssPxToLogical(isTopdown ? 1.5 : 1);
 
-		// age axis: a tick every ten years, numbered only in topdown
+		// age axis: a tick every ten years, numbered in topdown and, when the
+		// corner box has its wide-screen left strip, above each extended line
+		const cornerAgeNumbersOn = !isTopdown && axisLeftMargin > 0;
 		ctx.strokeStyle = MINIMAP_AXIS_LINE_COLOR;
 		ctx.lineWidth = lineWidthLogical;
 		const ageAxisStart = Math.ceil(ageMin / 10) * 10;
@@ -177,15 +205,24 @@
 			ctx.textBaseline = "middle";
 			ctx.fillStyle = "rgba(255, 255, 255, 0.6)";
 			ctx.font = serifFont(axisFontLogicalPx);
+		} else if (cornerAgeNumbersOn) {
+			// matches the column labels at the top
+			ctx.textAlign = "left";
+			ctx.textBaseline = "alphabetic";
+			ctx.fillStyle = "rgba(255, 255, 255, 0.85)";
+			ctx.font = serifFont(axisFontLogicalPx);
 		}
 		for (let age = ageAxisStart; age <= ageAxisEnd; age += 10) {
 			const y = axisTopMargin + worldZToMinimapPx(ageToZ(age));
 			ctx.beginPath();
-			ctx.moveTo(axisLeftMargin, y);
+			// the wide-screen corner box extends the line into the left strip
+			ctx.moveTo(cornerAgeNumbersOn ? 0 : axisLeftMargin, y);
 			ctx.lineTo(axisLeftMargin + MINIMAP_WIDTH_PX, y);
 			ctx.stroke();
 			if (isTopdown) {
 				ctx.fillText(String(age), axisLeftMargin - 5, y);
+			} else if (cornerAgeNumbersOn) {
+				ctx.fillText(String(age), 0, y - 3);
 			}
 		}
 
@@ -250,7 +287,7 @@
 			ctx.beginPath();
 			ctx.arc(px, py, PERSON_DOT_RADIUS * 2.2, 0, Math.PI * 2);
 			ctx.fill();
-			ctx.fillStyle = personColorCSS[hoveredPersonIndex];
+			ctx.fillStyle = accentuate(personColorCSS[hoveredPersonIndex]);
 			ctx.beginPath();
 			ctx.arc(px, py, PERSON_DOT_RADIUS * 1.5, 0, Math.PI * 2);
 			ctx.fill();
@@ -267,13 +304,14 @@
 			ctx.stroke();
 		}
 
-		// a full-width marker at the walker's depth
+		// a marker at the walker's depth, inset from the plot's edges
+		const trackingLineSpan = MINIMAP_WIDTH_PX * 0.8;
 		const lineY = worldZToMinimapPx(walkerZ);
 		ctx.fillStyle = MINIMAP_LINE_COLOR;
 		ctx.fillRect(
-			0,
+			(MINIMAP_WIDTH_PX - trackingLineSpan) / 2,
 			lineY - trackingLineWidthLogical / 2,
-			MINIMAP_WIDTH_PX,
+			trackingLineSpan,
 			trackingLineWidthLogical
 		);
 
@@ -592,7 +630,8 @@
 		background: var(--bg-color, #110818);
 	}
 
-	/* roomier screens get a bigger corner box, in the same proportion */
+	/* roomier screens get a bigger corner box; at these sizes the strip for
+	   the age numbers fits without shrinking the plot */
 	@media (min-width: 1400px) {
 		.minimap-canvas:not(.topdown-active) {
 			width: 178px;

@@ -275,6 +275,19 @@
 	}
 
 	const introSentence = $derived(buildIntroSentence(person, wave));
+
+	// focus moves into the shelf on open and back to the trigger on close
+	let shelfEl = null;
+	let lastFocused = null;
+	$effect(() => {
+		if (open) {
+			lastFocused = document.activeElement;
+			shelfEl?.focus();
+		} else if (lastFocused) {
+			lastFocused.focus?.();
+			lastFocused = null;
+		}
+	});
 </script>
 
 <div
@@ -283,18 +296,36 @@
 	role="dialog"
 	aria-label="Respondent details"
 	tabindex="-1"
+	inert={!open}
+	bind:this={shelfEl}
 	onclick={(e) => e.stopPropagation()}
 	onmousedown={(e) => e.stopPropagation()}
-	onkeydown={(e) => e.stopPropagation()}
+	onkeydown={(e) => {
+		if (e.key === "Escape") onclose();
+		e.stopPropagation();
+	}}
 >
 	<button class="detailsClose" onclick={onclose}>Close panel</button>
 	<div class="modalData">
 		{#if person}
+			<h2 class="sr-only">Details</h2>
 			<div class="wave-toggle-row">
-				<button class="wave-toggle" class:active={wave === "Y1"} onclick={() => (wave = "Y1")}>
+				<button
+					class="wave-toggle"
+					class:active={wave === "Y1"}
+					aria-pressed={wave === "Y1"}
+					data-label="2022-23"
+					onclick={() => (wave = "Y1")}
+				>
 					2022-23
 				</button>
-				<button class="wave-toggle" class:active={wave === "Y2"} onclick={() => (wave = "Y2")}>
+				<button
+					class="wave-toggle"
+					class:active={wave === "Y2"}
+					aria-pressed={wave === "Y2"}
+					data-label="2024"
+					onclick={() => (wave = "Y2")}
+				>
 					2024
 				</button>
 			</div>
@@ -307,49 +338,53 @@
 					return column && person[column] != null && person[column] !== "";
 				})}
 				{#if rows.length > 0}
-					<div class="waveHed">{group.parent}</div>
-					{#each rows as { key, label }}
-						{@const config = variableConfig[key]}
-						{@const column = columnForWave(key, wave)}
-						{@const isPip = isPipVariable(key, config)}
-						{@const scale = !isPip ? numericScaleFor(key, config) : null}
-						{@const numericValue =
-							isPip || scale ? parseNumericValue(key, person[column]) : null}
-						<div class="stat">
-							<span class="statLabel">{label}</span>
-							{#if isPip && numericValue !== null}
-								{#if numericValue === 0}
-									<span class="statValue">None</span>
-								{:else}
-									<div class="pipRow" role="img" aria-label="{numericValue}">
-										{#each { length: numericValue } as _}
-											<span class="pip pip--filled"></span>
-										{/each}
-									</div>
-								{/if}
-							{:else if scale && numericValue !== null}
-								{@const fraction = fillFractionFor(numericValue, scale)}
-								<div class="rangeBar" role="img" aria-label="{formatValue(key, config, column)} of {scale.min} to {scale.maxLabel}">
-									<div class="rangeBarFill" style="width: {fraction * 100}%">
-										{#if fraction >= 0.22}
-											<span class="rangeBarValue rangeBarValue--inside"
-												>{formatValue(key, config, column)}</span
-											>
+					<h3 class="waveHed">{group.parent}</h3>
+					<dl class="statList">
+						{#each rows as { key, label }}
+							{@const config = variableConfig[key]}
+							{@const column = columnForWave(key, wave)}
+							{@const isPip = isPipVariable(key, config)}
+							{@const scale = !isPip ? numericScaleFor(key, config) : null}
+							{@const numericValue =
+								isPip || scale ? parseNumericValue(key, person[column]) : null}
+							<div class="stat">
+								<dt class="statLabel">{label}</dt>
+								<dd class="statBody">
+									{#if isPip && numericValue !== null}
+										{#if numericValue === 0}
+											<span class="statValue">None</span>
+										{:else}
+											<div class="pipRow" role="img" aria-label="{numericValue}">
+												{#each { length: numericValue } as _}
+													<span class="pip pip--filled"></span>
+												{/each}
+											</div>
 										{/if}
-									</div>
-									{#if fraction < 0.22}
-										<span
-											class="rangeBarValue rangeBarValue--outside"
-											style="left: {fraction * 100}%"
-											>{formatValue(key, config, column)}</span
-										>
+									{:else if scale && numericValue !== null}
+										{@const fraction = fillFractionFor(numericValue, scale)}
+										<div class="rangeBar" role="img" aria-label="{formatValue(key, config, column)} of {scale.min} to {scale.maxLabel}">
+											<div class="rangeBarFill" style="width: {fraction * 100}%">
+												{#if fraction >= 0.22}
+													<span class="rangeBarValue rangeBarValue--inside"
+														>{formatValue(key, config, column)}</span
+													>
+												{/if}
+											</div>
+											{#if fraction < 0.22}
+												<span
+													class="rangeBarValue rangeBarValue--outside"
+													style="left: {fraction * 100}%"
+													>{formatValue(key, config, column)}</span
+												>
+											{/if}
+										</div>
+									{:else}
+										<span class="statValue">{formatValue(key, config, column)}</span>
 									{/if}
-								</div>
-							{:else}
-								<span class="statValue">{formatValue(key, config, column)}</span>
-							{/if}
-						</div>
-					{/each}
+								</dd>
+							</div>
+						{/each}
+					</dl>
 				{/if}
 			{/each}
 		{/if}
@@ -443,15 +478,28 @@
 		padding: 0.35rem 0.6rem;
 		font-size: 0.75rem;
 		cursor: pointer;
+		display: inline-flex;
+		flex-direction: column;
+		align-items: center;
+	}
+	/* a hidden bold ghost of the label reserves the bold width, so the
+	   selected state's weight can't resize the button */
+	.wave-toggle::after {
+		content: attr(data-label);
+		font-weight: bold;
+		height: 0;
+		overflow: hidden;
+		visibility: hidden;
 	}
 	.wave-toggle:hover {
 		background: #2a1740;
 	}
-	/* selected: white, and pressed into its shadow */
+	/* selected: white and bold, and pressed into its shadow */
 	.wave-toggle.active {
 		background: #1a0c2b;
 		border-color: rgba(207, 164, 255, 0.7);
 		color: #fff;
+		font-weight: bold;
 		box-shadow: none;
 		transform: translate(2px, 2px);
 	}
@@ -462,12 +510,27 @@
 		color: rgba(243, 229, 248, 0.95);
 		margin: 0 0 16px;
 	}
+	/* visually hidden, still read by screen readers */
+	.sr-only {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		padding: 0;
+		margin: -1px;
+		overflow: hidden;
+		clip: rect(0, 0, 0, 0);
+		white-space: nowrap;
+		border: 0;
+	}
 	.waveHed {
 		font-size: 1rem;
 		margin: 20px 0 8px;
 		font-weight: bold;
 		color: var(--color-light-purple);
 		border-bottom: 2px solid var(--color-light-purple);
+	}
+	.statList {
+		margin: 0;
 	}
 	.stat {
 		display: block;
@@ -478,6 +541,9 @@
 	.statLabel {
 		display: block;
 		color: rgba(255, 255, 255, 0.5);
+	}
+	.statBody {
+		margin: 0;
 	}
 	.statValue {
 		display: block;
@@ -495,7 +561,8 @@
 		position: relative;
 		height: 100%;
 		min-width: 2px;
-		background: #9d00ff;
+		/* a darker shade of --color-light-purple, so white labels still read */
+		background: #9c6a92;
 		display: flex;
 		align-items: center;
 		justify-content: flex-end;
@@ -536,8 +603,8 @@
 		flex: none;
 	}
 	.pip--filled {
-		background: #9d00ff;
-		border-color: #9d00ff;
+		background: #9c6a92;
+		border-color: #9c6a92;
 	}
 	.fixed_spacer {
 		position: sticky;

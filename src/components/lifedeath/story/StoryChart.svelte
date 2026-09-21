@@ -19,12 +19,12 @@
 	const DECADES = ["18–29", "30s", "40s", "50s", "60s", "70+"];
 	const CHARTS = {
 		"CHANGE_BELIEF-AGE-LINE": {
-			caption: "Share who changed their afterlife answer, by age",
+			caption: "People who changed their beliefs about the afterlife",
 			// purple matches the room's "changed answer" legend color
 			series: [{ name: "All adults", color: "#c964ff", values: [34.0, 30.8, 28.6, 26.1, 24.6, 22.6] }]
 		},
 		"BELIEF-WITHOUT-RELIGION-LINE": {
-			caption: "Believers who say religion isn’t important in their lives",
+			caption: "People who believe in an afterlife but say religion isn't important in their lives",
 			series: [
 				{ name: "Western countries", color: "#ff00aa", values: [45.9, 40.7, 39.2, 34.7, 28.8, 23.9] },
 				{ name: "Non-Western countries", color: "#c964ff", values: [13.0, 15.9, 18.0, 22.1, 24.5, 26.8] }
@@ -38,18 +38,17 @@
 			]
 		},
 		"CHANGE-THREAT-LINE": {
-			caption: "Changing afterlife belief, by life-threatening situations experienced",
+			caption: "Who changed their afterlife belief, by life-threatening situations experienced",
 			series: [
-				{ name: "Experienced “a lot”", color: "#ff00aa", values: [36.0, 34.4, 33.2, 31.5, 30.4, 25.7] },
-				// the legend's own coral for the not-at-all bucket
-				{ name: "“Not at all”", color: "#ff7f72", values: [33.1, 30.4, 26.4, 25.2, 21.7, 22.0] }
+				{ name: "Experienced “a lot”", color: "#ffd863", values: [36.0, 34.4, 33.2, 31.5, 30.4, 25.7] },
+				{ name: "“Not at all”", color: "#c964ff", values: [33.1, 30.4, 26.4, 25.2, 21.7, 22.0] }
 			]
 		},
 		"CHANGE-ATTEND_SVCS-LINE": {
 			caption: "Changing afterlife belief, by regular church attendance",
 			series: [
-				{ name: "Attend weekly or more", color: "#ff00aa", values: [33.9, 30.4, 26.7, 22.3, 19.1, 15.6] },
-				{ name: "Less than weekly", color: REF, values: [34.1, 31.0, 29.4, 27.4, 26.5, 24.8] }
+				{ name: "Attend weekly or more", color: "#ffd863", values: [33.9, 30.4, 26.7, 22.3, 19.1, 15.6] },
+				{ name: "Less than weekly", color: "#c964ff", values: [34.1, 31.0, 29.4, 27.4, 26.5, 24.8] }
 			]
 		},
 		"CHANGE-WIDOWED-LINE": {
@@ -62,9 +61,8 @@
 		"CHANGE-DEPRESSED-LINE": {
 			caption: "Changing afterlife belief, by depression levels",
 			series: [
-				{ name: "Frequent depression", color: "#ff00aa", values: [38.1, 33.3, 31.7, 29.5, 31.9, 30.1] },
-				// the legend's own coral for the not-depressed bucket
-				{ name: "Everyone else", color: "#ff7f72", values: [32.5, 30.1, 27.8, 25.4, 23.4, 21.9] }
+				{ name: "Frequent depression", color: "#ffd863", values: [38.1, 33.3, 31.7, 29.5, 31.9, 30.1] },
+				{ name: "Everyone else", color: "#c964ff", values: [32.5, 30.1, 27.8, 25.4, 23.4, 21.9] }
 			]
 		},
 		"UNSURE-CHANGE-LINE": {
@@ -72,7 +70,7 @@
 			// the zones' own colors: yes amber, unsure purple, no magenta
 			series: [
 				{ name: "Stayed unsure", color: "#c964ff", values: [55.5, 58.8, 61.5, 64.2, 64.8, 69.0] },
-				{ name: "Moved to belief", color: "#ffbe2e", values: [25.0, 21.4, 21.0, 18.8, 17.7, 14.1] },
+				{ name: "Moved to belief", color: "#ffd863", values: [25.0, 21.4, 21.0, 18.8, 17.7, 14.1] },
 				{ name: "Moved to disbelief", color: "#ff00aa", values: [19.4, 19.8, 17.5, 17.0, 17.5, 16.9] }
 			]
 		},

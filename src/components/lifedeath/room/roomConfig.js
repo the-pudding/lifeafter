@@ -34,7 +34,7 @@ export const DOOR_ZONE_COLORS_LIGHT = {
 
 export const ROOM_WIDTH = 30; // left/right: No, Unsure, Yes, one third each
 
-export const ROOM_DEPTH = 290; // front/back (younger <-> older)
+export const ROOM_DEPTH = 360; // front/back (younger <-> older)
 
 export const ROOM_HEIGHT = 50;
 

@@ -1,4 +1,4 @@
-import{$ as e,A as t,B as n,C as r,D as i,F as a,I as o,J as s,O as c,P as l,Q as u,S as d,T as f,Z as p,a as m,at as h,bt as g,et as _,f as v,g as y,ht as b,i as x,it as S,j as C,k as w,mt as T,nt as E,o as D,ot as O,p as k,q as A,s as j,u as M,w as N,x as P,xt as F,y as I,yt as L}from"../chunks/CWQ-BRZE.js";import{a as R}from"../chunks/Cmpqhp7D.js";import"../chunks/CT0T0Gak.js";import"../chunks/DnsWOCDb.js";import{n as z,t as ee}from"../chunks/CLEXYS2o.js";var te=C(`<section id="demo-link"><h2>Link</h2> <p><a href="elements">Default element styles demo</a></p> <p><a href="fonts">Pudding-hosted font previews</a></p> <p><a href="ui">BitsUI styled components</a></p></section>`);function B(e){w(e,te())}var V=C(`<section id="demo-image"><h2>Image</h2> <p>img tag</p> <img src="../assets/demo/test.jpg" alt="cat" class="svelte-b56t42"/> <p>background image</p> <div class="svelte-b56t42"></div></section>`);function H(e){w(e,V())}var U=C(`<section id="demo-element"><h2>Dynamic Svelte Element</h2> <!></section>`);function W(r){let i=[{tag:`h3`,text:`I am a h3 tag.`},{tag:`p`,text:`I am p tag.`}];var a=U();N(e(p(a),2),17,()=>i,f,(e,r)=>{let i=()=>n(r).tag,a=()=>n(r).text;var o=t();I(u(o),i,!1,(e,t)=>{var n=l();A(()=>c(n,a())),w(t,n)}),w(e,o)}),g(a),w(r,a)}var G=C(`<p> </p>`);function K(e,t){var n=G(),r=p(n);g(n),A(()=>c(r,`I am component A and my favorite number is ${t.number??``}.`)),w(e,n)}var q=C(`<p> </p>`);function J(e,t){var n=q(),r=p(n);g(n),A(()=>c(r,`I am component B and my name is ${t.name??``}.`)),w(e,n)}var Y=C(`<section id="demo-component"><h2>Dynamic Svelte Component</h2> <!></section>`);function X(r){let i={A:K,B:J},a=[{component:`A`,number:42},{component:`B`,name:`Russell`}];var o=Y();N(e(p(o),2),17,()=>a,f,(e,r)=>{let a=O(()=>i[n(r).component]);var o=t();P(u(o),()=>n(a),(e,t)=>{t(e,D(()=>n(r)))}),w(e,o)}),g(o),w(r,o)}var Z=C(`<div><!></div>`);function Q(e,t){b(t,!0);let n=x(t,`root`,3,null),r=x(t,`top`,3,0),i=x(t,`bottom`,3,0),a=x(t,`increments`,3,100),o=x(t,`value`,15,void 0),c=[],l=[],u=[],f=[],m;function h(){let e=0,t=0;for(let n=0;n<c.length;n++)c[n]>e&&(e=c[n],t=n);o(e>0?t:void 0)}function _(e,t){let a=e=>{e[0].isIntersecting,c[t]=e[0].intersectionRatio,h()},o=`${r()?r()*-1:0}px 0px ${i()?i()*-1:0}px 0px`,s={root:n(),rootMargin:o,threshold:l};f[t]&&f[t].disconnect();let u=new IntersectionObserver(a,s);u.observe(e),f[t]=u}function v(){u.length&&u.forEach(_)}s(()=>{for(let e=0;e<a()+1;e++)l.push(e/a());u=m.querySelectorAll(`:scope > *:not(iframe)`),v()}),s(()=>{r(),i(),v()});var y=Z();d(p(y),()=>t.children??F),g(y),j(y,e=>m=e,()=>m),w(e,y),T()}var ne=C(`<div><p class="svelte-1sxgmm9"> </p></div>`),re=C(`<section id="scrolly"><h2 class="svelte-1sxgmm9">Scrolly <span> </span></h2> <div class="spacer svelte-1sxgmm9"></div> <!> <div class="spacer svelte-1sxgmm9"></div></section>`);function ie(r){let i=S(void 0);var a=re(),o=p(a),s=e(p(o)),l=p(s,!0);g(s),g(o),Q(e(o,4),{get value(){return n(i)},set value(e){E(i,e,!0)},children:(e,r)=>{var a=t();N(u(a),16,()=>[0,1,2,3,4],f,(e,t,r)=>{let a=O(()=>n(i)===r);var o=ne();let s;var l=p(o),u=p(l,!0);g(l),g(o),A(()=>{s=y(o,1,`step svelte-1sxgmm9`,null,s,{active:n(a)}),c(u,t)}),w(e,o)}),w(e,a)},$$slots:{default:!0}}),L(2),g(a),A(()=>c(l,n(i)||`-`)),w(r,a)}var ae=`{
+import{$ as e,A as t,B as n,C as r,D as i,F as a,I as o,J as s,O as c,P as l,Q as u,S as d,T as f,Z as p,a as m,at as h,bt as g,et as _,f as v,g as y,ht as b,i as x,it as S,j as C,k as w,mt as T,nt as E,o as D,ot as O,p as k,q as A,s as j,u as M,w as N,x as P,xt as F,y as I,yt as L}from"../chunks/CWQ-BRZE.js";import{a as R}from"../chunks/ixgtezj1.js";import"../chunks/CT0T0Gak.js";import"../chunks/DnsWOCDb.js";import{n as z,t as ee}from"../chunks/D2xpceg1.js";var te=C(`<section id="demo-link"><h2>Link</h2> <p><a href="elements">Default element styles demo</a></p> <p><a href="fonts">Pudding-hosted font previews</a></p> <p><a href="ui">BitsUI styled components</a></p></section>`);function B(e){w(e,te())}var V=C(`<section id="demo-image"><h2>Image</h2> <p>img tag</p> <img src="../assets/demo/test.jpg" alt="cat" class="svelte-b56t42"/> <p>background image</p> <div class="svelte-b56t42"></div></section>`);function H(e){w(e,V())}var U=C(`<section id="demo-element"><h2>Dynamic Svelte Element</h2> <!></section>`);function W(r){let i=[{tag:`h3`,text:`I am a h3 tag.`},{tag:`p`,text:`I am p tag.`}];var a=U();N(e(p(a),2),17,()=>i,f,(e,r)=>{let i=()=>n(r).tag,a=()=>n(r).text;var o=t();I(u(o),i,!1,(e,t)=>{var n=l();A(()=>c(n,a())),w(t,n)}),w(e,o)}),g(a),w(r,a)}var G=C(`<p> </p>`);function K(e,t){var n=G(),r=p(n);g(n),A(()=>c(r,`I am component A and my favorite number is ${t.number??``}.`)),w(e,n)}var q=C(`<p> </p>`);function J(e,t){var n=q(),r=p(n);g(n),A(()=>c(r,`I am component B and my name is ${t.name??``}.`)),w(e,n)}var Y=C(`<section id="demo-component"><h2>Dynamic Svelte Component</h2> <!></section>`);function X(r){let i={A:K,B:J},a=[{component:`A`,number:42},{component:`B`,name:`Russell`}];var o=Y();N(e(p(o),2),17,()=>a,f,(e,r)=>{let a=O(()=>i[n(r).component]);var o=t();P(u(o),()=>n(a),(e,t)=>{t(e,D(()=>n(r)))}),w(e,o)}),g(o),w(r,o)}var Z=C(`<div><!></div>`);function Q(e,t){b(t,!0);let n=x(t,`root`,3,null),r=x(t,`top`,3,0),i=x(t,`bottom`,3,0),a=x(t,`increments`,3,100),o=x(t,`value`,15,void 0),c=[],l=[],u=[],f=[],m;function h(){let e=0,t=0;for(let n=0;n<c.length;n++)c[n]>e&&(e=c[n],t=n);o(e>0?t:void 0)}function _(e,t){let a=e=>{e[0].isIntersecting,c[t]=e[0].intersectionRatio,h()},o=`${r()?r()*-1:0}px 0px ${i()?i()*-1:0}px 0px`,s={root:n(),rootMargin:o,threshold:l};f[t]&&f[t].disconnect();let u=new IntersectionObserver(a,s);u.observe(e),f[t]=u}function v(){u.length&&u.forEach(_)}s(()=>{for(let e=0;e<a()+1;e++)l.push(e/a());u=m.querySelectorAll(`:scope > *:not(iframe)`),v()}),s(()=>{r(),i(),v()});var y=Z();d(p(y),()=>t.children??F),g(y),j(y,e=>m=e,()=>m),w(e,y),T()}var ne=C(`<div><p class="svelte-1sxgmm9"> </p></div>`),re=C(`<section id="scrolly"><h2 class="svelte-1sxgmm9">Scrolly <span> </span></h2> <div class="spacer svelte-1sxgmm9"></div> <!> <div class="spacer svelte-1sxgmm9"></div></section>`);function ie(r){let i=S(void 0);var a=re(),o=p(a),s=e(p(o)),l=p(s,!0);g(s),g(o),Q(e(o,4),{get value(){return n(i)},set value(e){E(i,e,!0)},children:(e,r)=>{var a=t();N(u(a),16,()=>[0,1,2,3,4],f,(e,t,r)=>{let a=O(()=>n(i)===r);var o=ne();let s;var l=p(o),u=p(l,!0);g(l),g(o),A(()=>{s=y(o,1,`step svelte-1sxgmm9`,null,s,{active:n(a)}),c(u,t)}),w(e,o)}),w(e,a)},$$slots:{default:!0}}),L(2),g(a),A(()=>c(l,n(i)||`-`)),w(r,a)}var ae=`{
   "hed": "life after death?",
   "all": [
     {
@@ -19,7 +19,7 @@ import{$ as e,A as t,B as n,C as r,D as i,F as a,I as o,J as s,O as c,P as l,Q a
       "hide_map": "true",
       "hide_year": "true",
       "wave": "1",
-      "text": "The thousands of people here answered a question about the afterlife as part of the [Global Flourishing Study](https://globalflourishingstudy.com/). Keep walking!"
+      "text": "The thousands of people here answered a question about the afterlife as part of the [Global Flourishing Study](https://globalflourishingstudy.com/). Keep walking!\\r\\n\\r\\n\\r\\n<div class=\\"hints click\\">Click on a person to see details</div>"
     },
     {
       "id": "2",
@@ -28,7 +28,7 @@ import{$ as e,A as t,B as n,C as r,D as i,F as a,I as o,J as s,O as c,P as l,Q a
       "hide_year": "true",
       "hide_map": "true",
       "wave": "1",
-      "text": "What we believe about the afterlife hints at how we think about the universe—and our place in it. But our beliefs are shaped by what we experience during our lives. As that changes, so do our beliefs about the afterlife.\\r\\n\\r\\n\\r\\n<div class=\\"hints click\\">Click on a person to see details</div>"
+      "text": "What we believe about the afterlife hints at how we think about the universe—and our place in it. But our beliefs are shaped by what we experience during our lives. As that changes, so do our beliefs about the afterlife."
     },
     {
       "id": "3",
@@ -63,7 +63,7 @@ import{$ as e,A as t,B as n,C as r,D as i,F as a,I as o,J as s,O as c,P as l,Q a
       "var_color": "CHANGE_ANSWER",
       "wave": "2",
       "hide_year": "true",
-      "text": ">> CHANGE_BELIEF-AGE-LINE"
+      "text": ">> CHANGE_BELIEF-AGE-LINE|People who changed their beliefs about the afterlife"
     },
     {
       "id": "7",
@@ -91,7 +91,7 @@ import{$ as e,A as t,B as n,C as r,D as i,F as a,I as o,J as s,O as c,P as l,Q a
       "wave": "2",
       "hide_year": "true",
       "show_panels": "true",
-      "text": ">> BELIEF-WITHOUT-RELIGION-LINE | Afterlife believers who say religion isn't important in their lives"
+      "text": ">> BELIEF-WITHOUT-RELIGION-LINE |People who believe in an afterlife but say religion isn't important in their lives"
     },
     {
       "id": "11",
@@ -127,7 +127,7 @@ import{$ as e,A as t,B as n,C as r,D as i,F as a,I as o,J as s,O as c,P as l,Q a
       "wave": "2",
       "hide_year": "true",
       "show_panels": "true",
-      "text": ">> CHANGE-THREAT-LINE|Changing afterlife belief, by life-threatening situations experienced"
+      "text": ">> CHANGE-THREAT-LINE|Who changed their afterlife belief, by life-threatening situations experienced"
     },
     {
       "id": "15",
