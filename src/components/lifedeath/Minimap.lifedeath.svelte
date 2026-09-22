@@ -13,7 +13,9 @@
 		onAcknowledge,
 		onClickSound,
 		onPersonClick,
-		onEnterTopdown
+		onEnterTopdown,
+		// topdown: the walker's line dragged to a new spot on the map
+		onWalkerDrag
 	} = $props();
 
 	let minimapCanvas;
@@ -86,10 +88,10 @@
 		return sprite;
 	}
 
-	// the answer columns, left to right; "Maybe" is the shown wording for Unsure
+	// the answer columns, left to right
 	const GROUP_LABELS = [
 		{ text: "No", zone: -1 },
-		{ text: "Maybe", zone: 0 },
+		{ text: "Unsure", zone: 0 },
 		{ text: "Yes", zone: 1 }
 	];
 
@@ -105,7 +107,7 @@
 	// the static grid, subtler than the tracking line
 	const MINIMAP_AXIS_LINE_COLOR = "rgba(255, 255, 255, 0.3)";
 	// matches the css breakpoint that grows the corner box
-	const WIDE_SCREEN_MIN_WIDTH = 1400;
+	const WIDE_SCREEN_MIN_WIDTH = 1001;
 	// label margins; the corner box only reserves the top strip, except on
 	// roomier screens, where a left strip holds the age numbers
 	function axisMargins(mode) {
@@ -190,8 +192,12 @@
 
 		// pinned to screen pixels too, or the lines draw far too thick
 		const lineWidthLogical = cssPxToLogical(1);
-		// pinned like the grid, so the bigger corner box can't fatten it
-		const trackingLineWidthLogical = cssPxToLogical(isTopdown ? 1.5 : 1);
+		// pinned like the grid, so the bigger corner box can't fatten it;
+		// under the pointer it thickens a touch, ready to be grabbed
+		const walkerLit = walkerLineHovered || walkerDragging;
+		const trackingLineWidthLogical = cssPxToLogical(
+			(isTopdown ? 1.5 : 1) * (walkerLit ? 1.7 : 1)
+		);
 
 		// age axis: a tick every ten years, numbered in topdown and, when the
 		// corner box has its wide-screen left strip, above each extended line
@@ -332,8 +338,9 @@
 			coneGradient.addColorStop(1, "rgba(255, 255, 255, 0)");
 			ctx.save();
 			// clipped to the plot, so it can't run out over the labels
+			// (already in plot-local space, so the rect starts at the origin)
 			ctx.beginPath();
-			ctx.rect(axisLeftMargin, axisTopMargin, MINIMAP_WIDTH_PX, MINIMAP_HEIGHT_PX);
+			ctx.rect(0, 0, MINIMAP_WIDTH_PX, MINIMAP_HEIGHT_PX);
 			ctx.clip();
 			ctx.fillStyle = coneGradient;
 			ctx.beginPath();
@@ -344,9 +351,9 @@
 			ctx.fill();
 			ctx.restore();
 		}
-		ctx.fillStyle = "rgba(254, 253, 254,1)";
+		ctx.fillStyle = "rgba(254, 253, 254, 1)";
 		ctx.beginPath();
-		ctx.arc(walkerCanvasX, lineY, 4.5, 0, Math.PI * 2);
+		ctx.arc(walkerCanvasX, lineY, walkerLit ? 5.2 : 4.5, 0, Math.PI * 2);
 		ctx.fill();
 
 		// the age under the dot, stroked to stay legible over the scatter
@@ -369,8 +376,20 @@
 		ctx.restore();
 		ctx.restore();
 
-		// cached for the hit test, which needs this frame's transform
-		lastDrawState = { scale, offsetX, offsetY, axisLeftMargin, axisTopMargin, minimapX, minimapZ, respondentCount };
+		// cached for the hit test, which needs this frame's transform; the
+		// walker's line position feeds the drag grab test
+		lastDrawState = {
+			scale,
+			offsetX,
+			offsetY,
+			axisLeftMargin,
+			axisTopMargin,
+			minimapX,
+			minimapZ,
+			respondentCount,
+			walkerLineY: lineY,
+			walkerCanvasX
+		};
 	}
 
 	// keeps the raster buffer a dpr multiple of the css box
@@ -392,6 +411,7 @@
 			// drop the inline cursor and hover, or they stick
 			minimapCanvas.style.cursor = "";
 			hoveredPersonIndex = null;
+			walkerLineHovered = false;
 			return;
 		}
 		const { left: axisLeftMargin, top: axisTopMargin } = axisMargins("topdown");
@@ -485,14 +505,86 @@
 		return bestIndex;
 	}
 
-	// topdown only: a pointer cursor and a highlight over a real dot
+	// client position to the plot's own logical space
+	function pointerToLogical(clientX, clientY) {
+		const { scale, offsetX, offsetY, axisLeftMargin, axisTopMargin } = lastDrawState;
+		const rect = minimapCanvas.getBoundingClientRect();
+		const rasterX = ((clientX - rect.left) / rect.width) * minimapCanvas.width;
+		const rasterY = ((clientY - rect.top) / rect.height) * minimapCanvas.height;
+		return {
+			x: (rasterX - offsetX) / scale - MINIMAP_OUTER_PADDING - axisLeftMargin,
+			y: (rasterY - offsetY) / scale - MINIMAP_OUTER_PADDING - axisTopMargin
+		};
+	}
+
+	// how many logical units one css pixel covers, for grab tolerances
+	function logicalPerCssPx() {
+		return (
+			(minimapCanvas.width / (minimapCanvas.clientWidth || 1)) / lastDrawState.scale
+		);
+	}
+
+	// dragging the walker's line: sideways moves them across the room,
+	// up and down changes their depth
+	let walkerDragging = false;
+	let walkerDragMoved = false;
+	// true while the pointer sits on the line or dot; draw() lights them up
+	let walkerLineHovered = false;
+	function pointerOnWalkerLine(clientX, clientY) {
+		if (!lastDrawState || lastDrawState.walkerLineY === undefined) return false;
+		const p = pointerToLogical(clientX, clientY);
+		const onLine =
+			Math.abs(p.y - lastDrawState.walkerLineY) <= 10 * logicalPerCssPx() &&
+			p.x >= 0 &&
+			p.x <= MINIMAP_WIDTH_PX;
+		// the dot bulges past the line's tolerance, and grabs too
+		const dx = p.x - lastDrawState.walkerCanvasX;
+		const dy = p.y - lastDrawState.walkerLineY;
+		const dotReach = 4.5 + 6 * logicalPerCssPx();
+		return onLine || dx * dx + dy * dy <= dotReach * dotReach;
+	}
+	function handleMinimapPointerDown(event) {
+		if (mode !== "topdown" || !onWalkerDrag || !lastDrawState) return;
+		if (!pointerOnWalkerLine(event.clientX, event.clientY)) return;
+		walkerDragging = true;
+		walkerDragMoved = false;
+		minimapCanvas.setPointerCapture?.(event.pointerId);
+		minimapCanvas.style.cursor = "grabbing";
+		event.preventDefault();
+	}
+	function handleMinimapPointerMove(event) {
+		if (!walkerDragging) return;
+		walkerDragMoved = true;
+		const p = pointerToLogical(event.clientX, event.clientY);
+		onWalkerDrag({
+			x: p.x / minimapScaleX - roomConfig.halfWidth,
+			z: p.y / minimapScaleZ + minimapZBackWall
+		});
+	}
+	function handleMinimapPointerUp(event) {
+		if (!walkerDragging) return;
+		walkerDragging = false;
+		minimapCanvas.releasePointerCapture?.(event.pointerId);
+		minimapCanvas.style.cursor = "default";
+	}
+
+	// topdown only: the walker's grab hand first, then a pointer over a dot
 	function handleMinimapMouseMove(event) {
-		if (mode !== "topdown") return;
-		hoveredPersonIndex = hitTestPerson(event.clientX, event.clientY);
-		minimapCanvas.style.cursor = hoveredPersonIndex !== null ? "pointer" : "default";
+		if (mode !== "topdown" || walkerDragging) return;
+		walkerLineHovered =
+			!!onWalkerDrag && pointerOnWalkerLine(event.clientX, event.clientY);
+		hoveredPersonIndex = walkerLineHovered
+			? null
+			: hitTestPerson(event.clientX, event.clientY);
+		minimapCanvas.style.cursor = walkerLineHovered
+			? "grab"
+			: hoveredPersonIndex !== null
+				? "pointer"
+				: "default";
 	}
 	function handleMinimapMouseLeave() {
-		if (mode !== "topdown") return;
+		if (mode !== "topdown" || walkerDragging) return;
+		walkerLineHovered = false;
 		hoveredPersonIndex = null;
 		minimapCanvas.style.cursor = "default";
 	}
@@ -528,14 +620,20 @@
 
 <canvas
 	class="minimap-canvas"
-	tabindex="0"
+	tabindex={hidden ? -1 : 0}
 	role="button"
 	aria-label="Open the overhead map"
+	aria-hidden={hidden}
 	class:topdown-active={mode === "topdown"}
 	class:is-hidden={hidden}
 	class:is-pulsing={bounce && mode !== "topdown" && !hidden}
 	bind:this={minimapCanvas}
 	onclick={(event) => {
+		// a drag isn't a click; don't select whoever it ended over
+		if (walkerDragMoved) {
+			walkerDragMoved = false;
+			return;
+		}
 		onAcknowledge?.();
 		onClickSound?.();
 		if (mode !== "topdown") {
@@ -558,6 +656,10 @@
 		}
 	}}
 	onpointerenter={() => onAcknowledge?.()}
+	onpointerdown={handleMinimapPointerDown}
+	onpointermove={handleMinimapPointerMove}
+	onpointerup={handleMinimapPointerUp}
+	onpointercancel={handleMinimapPointerUp}
 	onmousemove={handleMinimapMouseMove}
 	onmouseleave={handleMinimapMouseLeave}
 ></canvas>
@@ -632,16 +734,22 @@
 
 	/* roomier screens get a bigger corner box; at these sizes the strip for
 	   the age numbers fits without shrinking the plot */
+	@media (min-width: 1001px) {
+		.minimap-canvas:not(.topdown-active) {
+			width: 200px;
+			height: 393px;
+		}
+	}
 	@media (min-width: 1400px) {
 		.minimap-canvas:not(.topdown-active) {
-			width: 178px;
-			height: 350px;
+			width: 240px;
+			height: 472px;
 		}
 	}
 	@media (min-width: 1800px) {
 		.minimap-canvas:not(.topdown-active) {
-			width: 208px;
-			height: 409px;
+			width: 272px;
+			height: 535px;
 		}
 	}
 

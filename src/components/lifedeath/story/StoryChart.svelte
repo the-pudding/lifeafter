@@ -1,6 +1,6 @@
 <script>
 	// the small line chart under a story beat, sized off its container
-	let { name, caption = null, age = null } = $props();
+	let { name, caption = null, subcaption = null, age = null } = $props();
 
 	// each x bucket's age span, for the you-are-here marker
 	const BUCKET_AGES = [
@@ -17,14 +17,19 @@
 
 	// weighted GFS panel figures; null = cell too thin to draw
 	const DECADES = ["18–29", "30s", "40s", "50s", "60s", "70+"];
+	// `description`: the overall trend in words, for screen readers
 	const CHARTS = {
 		"CHANGE_BELIEF-AGE-LINE": {
 			caption: "People who changed their beliefs about the afterlife",
+			description:
+				"The share of adults who changed their answer falls steadily with age, from 34% of adults under 30 to 23% of those 70 and older.",
 			// purple matches the room's "changed answer" legend color
 			series: [{ name: "All adults", color: "#c964ff", values: [34.0, 30.8, 28.6, 26.1, 24.6, 22.6] }]
 		},
 		"BELIEF-WITHOUT-RELIGION-LINE": {
 			caption: "People who believe in an afterlife but say religion isn't important in their lives",
+			description:
+				"The two lines move in opposite directions with age: in Western countries the share falls from 46% of adults under 30 to 24% of those 70 and older, while in non-Western countries it rises from 13% to 27%.",
 			series: [
 				{ name: "Western countries", color: "#ff00aa", values: [45.9, 40.7, 39.2, 34.7, 28.8, 23.9] },
 				{ name: "Non-Western countries", color: "#c964ff", values: [13.0, 15.9, 18.0, 22.1, 24.5, 26.8] }
@@ -32,6 +37,8 @@
 		},
 		"AFTERLIFE-ATTEND_SVCS-LINE": {
 			caption: "Afterlife belief, by regular church attendance",
+			description:
+				"Among weekly attenders, belief rises with age from 69% of adults under 30 to 81% of those 70 and older. Among less-frequent attenders it stays near 38-39% before dropping to 29% at 70 and older.",
 			series: [
 				{ name: "Attend weekly or more", color: "#ff00aa", values: [69.4, 72.9, 74.6, 77.8, 80.3, 80.5] },
 				{ name: "Less than weekly", color: REF, values: [39.7, 37.9, 38.9, 39.3, 37.4, 29.0] }
@@ -39,6 +46,8 @@
 		},
 		"CHANGE-THREAT-LINE": {
 			caption: "Who changed their afterlife belief, by life-threatening situations experienced",
+			description:
+				"Both groups change their answers less as they age, but people who experienced a lot of life-threatening situations change more at every age — falling from 36% of adults under 30 to 26% at 70 and older, versus 33% to 22% for those who experienced none.",
 			series: [
 				{ name: "Experienced “a lot”", color: "#ffd863", values: [36.0, 34.4, 33.2, 31.5, 30.4, 25.7] },
 				{ name: "“Not at all”", color: "#c964ff", values: [33.1, 30.4, 26.4, 25.2, 21.7, 22.0] }
@@ -46,6 +55,8 @@
 		},
 		"CHANGE-ATTEND_SVCS-LINE": {
 			caption: "Changing afterlife belief, by regular church attendance",
+			description:
+				"Among weekly attenders, changing answers falls sharply with age, from 34% of adults under 30 to 16% of those 70 and older. Among less-frequent attenders it declines more slowly, from 34% to 25%.",
 			series: [
 				{ name: "Attend weekly or more", color: "#ffd863", values: [33.9, 30.4, 26.7, 22.3, 19.1, 15.6] },
 				{ name: "Less than weekly", color: "#c964ff", values: [34.1, 31.0, 29.4, 27.4, 26.5, 24.8] }
@@ -53,6 +64,8 @@
 		},
 		"CHANGE-WIDOWED-LINE": {
 			caption: "Changing afterlife belief, by marital status",
+			description:
+				"Widowed people start out far more likely to change their answer — 42% in their 30s versus 31% for everyone else — but the gap closes with age, and by their 70s both groups sit near 21-23%.",
 			series: [
 				{ name: "Widowed", color: "#00e5cc", values: [null, 42.3, 34.4, 30.8, 25.8, 21.0] },
 				{ name: "Everyone else", color: REF, values: [34.0, 30.8, 28.5, 25.9, 24.5, 23.1] }
@@ -60,6 +73,8 @@
 		},
 		"CHANGE-DEPRESSED-LINE": {
 			caption: "Changing afterlife belief, by depression levels",
+			description:
+				"People with frequent depression keep changing their answers late into life, staying near 30-38% at every age, while everyone else declines steadily from 33% of adults under 30 to 22% of those 70 and older.",
 			series: [
 				{ name: "Frequent depression", color: "#ffd863", values: [38.1, 33.3, 31.7, 29.5, 31.9, 30.1] },
 				{ name: "Everyone else", color: "#c964ff", values: [32.5, 30.1, 27.8, 25.4, 23.4, 21.9] }
@@ -67,6 +82,8 @@
 		},
 		"UNSURE-CHANGE-LINE": {
 			caption: "Where unsure people move",
+			description:
+				"With age, unsure people increasingly stay unsure — rising from 56% of adults under 30 to 69% of those 70 and older. Moves toward belief fall from 25% to 14%, while moves toward disbelief hold near 17-20%.",
 			// the zones' own colors: yes amber, unsure purple, no magenta
 			series: [
 				{ name: "Stayed unsure", color: "#c964ff", values: [55.5, 58.8, 61.5, 64.2, 64.8, 69.0] },
@@ -76,6 +93,8 @@
 		},
 		"CHANGE-UNSURE-LINE": {
 			caption: "Changing afterlife belief for the unsure",
+			description:
+				"People who are unsure change their answers more than everyone else at every age. Both decline with age: from 45% versus 31% among adults under 30, to 31% versus 19% at 70 and older.",
 			series: [
 				{ name: "Unsure at first answer", color: "#c964ff", values: [44.5, 41.2, 38.5, 35.8, 35.2, 31.0] },
 				{ name: "Everyone else", color: REF, values: [30.6, 27.4, 25.1, 22.5, 20.5, 19.1] }
@@ -143,7 +162,8 @@
 		}
 		const ticks = DECADES.map((label, i) => ({ label, x: x(i), i }));
 
-		// the walker's age as a fractional bucket index, points at centers
+		// the walker's age as a fractional bucket index; each tick anchors
+		// its decade's start, so the line tracks the minimap's age exactly
 		let marker = null;
 		let markerBucket = null;
 		if (typeof age === "number") {
@@ -151,7 +171,7 @@
 			for (let i = 0; i < BUCKET_AGES.length; i++) {
 				const [lo, hi] = BUCKET_AGES[i];
 				if (age >= hi && i < BUCKET_AGES.length - 1) continue;
-				frac = i + (age - lo) / (hi - lo) - 0.5;
+				frac = i + (age - lo) / (hi - lo);
 				markerBucket = i;
 				break;
 			}
@@ -163,7 +183,13 @@
 
 {#if chart}
 	<figure class="story-chart" bind:clientWidth={width}>
-		<figcaption>{shownCaption}</figcaption>
+		<figcaption>
+			{shownCaption}
+			{#if subcaption}<span class="subhed">{subcaption}</span>{/if}
+		</figcaption>
+		{#if chart.description}
+			<p class="sr-only">{chart.description}</p>
+		{/if}
 		{#if chart.series.length > 1}
 			<div class="legend">
 				{#each chart.series as s}
@@ -172,7 +198,8 @@
 			</div>
 		{/if}
 		{#if geo}
-			<svg width={width} height={HEIGHT} role="img" aria-label={shownCaption}>
+			<!-- the figcaption and trend description carry the chart's meaning -->
+			<svg width={width} height={HEIGHT} aria-hidden="true">
 				{#if geo.marker !== null}
 					<!-- where the walker stands, on the chart's own age axis -->
 					<line
@@ -230,6 +257,27 @@
 		color: rgba(255, 255, 255, 0.85);
 		margin-bottom: 3px;
 	}
+	/* visually hidden, still read by screen readers */
+	.sr-only {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		padding: 0;
+		margin: -1px;
+		overflow: hidden;
+		clip: rect(0, 0, 0, 0);
+		white-space: nowrap;
+		border: 0;
+	}
+	/* the axis ticks' own size and color, under the headline */
+	.subhed {
+		display: block;
+		font-size: 10.5px;
+		font-weight: 400;
+		letter-spacing: normal;
+		color: rgba(255, 255, 255, 0.55);
+		margin-top: 1px;
+	}
 	@media (max-width: 600px) {
 		figcaption {
 			font-size: 11px;
@@ -242,7 +290,7 @@
 		margin: 2px 0 0;
 	}
 	.key {
-		font-size: 10.5px;
+		font-size: 12px;
 		color: rgba(255, 255, 255, 0.8);
 		display: inline-flex;
 		align-items: center;

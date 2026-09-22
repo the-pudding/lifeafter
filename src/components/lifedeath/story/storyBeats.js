@@ -6,20 +6,26 @@ const DEFAULT_WAVE = "Y2";
 // marks where the audio toggle goes in a beat's text
 export const STORY_AUDIO_TOKEN = "{{audio}}";
 
-// the same, for the explore button on the closing beat
+// an explore button, rendered only where the copy doc places it
 export const STORY_EXPLORE_TOKEN = "{{explore}}";
 
 const STORY_AUDIO_MARKUP = `<div class="hints audio">${STORY_AUDIO_TOKEN}</div>`;
 
-const STORY_EXPLORE_MARKUP = `<div class="hints audio">${STORY_EXPLORE_TOKEN}</div>`;
-
-// ">> NAME|headline" in a beat's text names its inline chart and caption
-const CHART_MARKER = /(?:^|\r?\n)[ \t]*>>[ \t]*([A-Za-z0-9_-]+)[ \t]*(?:\|[ \t]*([^\r\n]*))?/g;
+// ">> NAME|headline|subhed" in a beat's text names its inline chart, its
+// caption and an optional smaller line under it
+const CHART_MARKER =
+	/(?:^|\r?\n)[ \t]*>>[ \t]*([A-Za-z0-9_-]+)[ \t]*(?:\|[ \t]*([^|\r\n]*))?(?:\|[ \t]*([^\r\n]*))?/g;
 
 function extractChartMarker(text) {
 	let chart = null;
-	const stripped = text.replace(CHART_MARKER, (full, chartName, headline) => {
-		if (!chart) chart = { name: chartName, caption: headline?.trim() || null };
+	const stripped = text.replace(CHART_MARKER, (full, chartName, headline, subhed) => {
+		if (!chart) {
+			chart = {
+				name: chartName,
+				caption: headline?.trim() || null,
+				subcaption: subhed?.trim() || null
+			};
+		}
 		return "";
 	});
 	return { text: stripped.trim(), chart };
@@ -55,10 +61,9 @@ export function createStoryBeats({
 		lastStoryAssignedWave = null;
 	}
 
-	// the first and last text beats carry the audio and explore buttons
+	// the first text beat carries the audio button
 	const textEntries = (copy.all ?? []).filter((entry) => entry.text?.trim());
 	const firstTextEntry = textEntries[0];
-	const lastTextEntry = textEntries[textEntries.length - 1];
 
 
 	// beats matching the walker: shared entries plus their zone
@@ -115,9 +120,6 @@ export function createStoryBeats({
 						let text = marker.text;
 						if (entry === firstTextEntry && !text.includes(STORY_AUDIO_TOKEN)) {
 							text += ` ${STORY_AUDIO_MARKUP}`;
-						}
-						if (entry === lastTextEntry && !text.includes(STORY_EXPLORE_TOKEN)) {
-							text += ` ${STORY_EXPLORE_MARKUP}`;
 						}
 						matches.push(text);
 					}

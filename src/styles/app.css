@@ -263,7 +263,7 @@ main, .loading-screen {
 	gap: 0.4em;
 	vertical-align: baseline;
 	margin: 0 0.15em;
-	padding: 0.15em 0.55em 0.2em;
+	padding: 0.3em 0.55em 0.35em;
 	font-family: inherit;
 	font-size: 1.25em;
 	color: #cfa4ff;
@@ -292,6 +292,95 @@ main, .loading-screen {
 	stroke: currentColor;
 	stroke-width: 1.7;
 	stroke-linecap: round;
+}
+/* the dancing bars on the label's right */
+.story-overlay p .story-audio .eq {
+	display: inline-flex;
+	align-items: flex-end;
+	gap: 0.12em;
+	height: 0.8em;
+}
+.story-overlay p .story-audio .eq i {
+	width: 0.14em;
+	height: 0.25em;
+	background: currentColor;
+	animation: story-eq-dance 1.1s ease-in-out infinite;
+}
+.story-overlay p .story-audio .eq i:nth-child(1) {
+	animation-delay: -0.15s;
+}
+.story-overlay p .story-audio .eq i:nth-child(2) {
+	animation-delay: -0.6s;
+}
+.story-overlay p .story-audio .eq i:nth-child(3) {
+	animation-delay: -0.35s;
+}
+.story-overlay p .story-audio .eq i:nth-child(4) {
+	animation-delay: -0.85s;
+}
+@keyframes story-eq-dance {
+	0%,
+	100% {
+		height: 0.22em;
+	}
+	50% {
+		height: 0.8em;
+	}
+}
+@media (prefers-reduced-motion: reduce) {
+	.story-overlay p .story-audio .eq i {
+		animation: none;
+		height: 0.5em;
+	}
+}
+
+/* while the analyser feeds --eq1..4, every eq's bars ride the real
+   audio instead of the scripted dance (the room carries .eq-live) */
+.lifedeath-room.eq-live .eq i {
+	animation: none !important;
+	height: 100% !important;
+	transform-origin: bottom;
+}
+.lifedeath-room.eq-live .eq i:nth-child(1) {
+	transform: scaleY(var(--eq1, 0.3));
+}
+.lifedeath-room.eq-live .eq i:nth-child(2) {
+	transform: scaleY(var(--eq2, 0.3));
+}
+.lifedeath-room.eq-live .eq i:nth-child(3) {
+	transform: scaleY(var(--eq3, 0.3));
+}
+.lifedeath-room.eq-live .eq i:nth-child(4) {
+	transform: scaleY(var(--eq4, 0.3));
+}
+/* off state: the label softly bounces, asking for the click */
+.story-overlay p .story-audio .story-audio-label {
+	display: inline-block;
+}
+.story-overlay p .story-audio--nudge .story-audio-label {
+	animation: story-audio-nudge 1.2s ease-in-out infinite;
+}
+/* under the pointer it rests, so hover's own white can show */
+.story-overlay p .story-audio--nudge:hover .story-audio-label {
+	animation: none;
+}
+@keyframes story-audio-nudge {
+	0%,
+	40%,
+	100% {
+		transform: translateY(0);
+	}
+	11% {
+		transform: translateY(-7px);
+	}
+	26% {
+		transform: translateY(3px);
+	}
+}
+@media (prefers-reduced-motion: reduce) {
+	.story-overlay p .story-audio--nudge .story-audio-label {
+		animation: none;
+	}
 }
 
 .story-overlay p a {

@@ -124,7 +124,7 @@ export function createSoundFx({ getAudioOn, getFocusFade }) {
 
 	// the walk wind: a looping noise bed whose loudness and brightness
 	// follow the camera's ground speed, whatever the direction
-	const WIND_MAX_GAIN = 0.32;
+	const WIND_MAX_GAIN = 0.4;
 	const WIND_FULL_SPEED = 18;
 	let windNodes = null;
 	let windLevel = 0;
@@ -151,7 +151,7 @@ export function createSoundFx({ getAudioOn, getFocusFade }) {
 		filter.Q.value = 1.6;
 		const roof = audioContext.createBiquadFilter();
 		roof.type = "lowpass";
-		roof.frequency.value = 520;
+		roof.frequency.value = 700;
 		const gain = audioContext.createGain();
 		gain.gain.value = 0;
 		// a slow swell under the level, so it breathes rather than hisses
@@ -186,7 +186,7 @@ export function createSoundFx({ getAudioOn, getFocusFade }) {
 		const base = WIND_MAX_GAIN * windLevel * windLevel * getFocusFade();
 		windNodes.gain.gain.value = base;
 		windNodes.lfoDepth.gain.value = base * 0.3;
-		windNodes.filter.frequency.value = 100 + 200 * windLevel;
+		windNodes.filter.frequency.value = 110 + 260 * windLevel;
 	}
 
 	return {

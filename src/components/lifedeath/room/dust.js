@@ -66,20 +66,75 @@ export function createDust(scene, { ageToZ, zToAgeExact, ageMin, ageMax }) {
 		return center + d;
 	}
 
+	// the walker's wake: per-mote displacement, pushed while passing,
+	// relaxing back once the air settles
+	const offsetX = new Float32Array(COUNT);
+	const offsetZ = new Float32Array(COUNT);
+	let prevWalkX = null;
+	let prevWalkZ = null;
+	const WAKE_RADIUS = 3.2;
+	// the wake sits at body height, not the ceiling
+	const WAKE_HEIGHT = 1.6;
+	const WAKE_PUSH = 0.25;
+	const WAKE_MAX = 1.3;
+	const WAKE_SETTLE_TIME = 1.1;
+
 	// glowX/glowY: where the sconce globes sit, so motes can catch the light
-	function update(dt, walkX, walkZ, glowX, glowY) {
+	// tremor (0..1): the music's vibrato, a faint sideways shiver — never
+	// vertical, so the fall stays a fall
+	function update(dt, walkX, walkZ, glowX, glowY, tremor = 0) {
 		time += dt;
+		const shiverAmp = tremor * 0.015;
+
+		// the walker's wake, from their velocity this frame
+		let velX = 0;
+		let velZ = 0;
+		if (prevWalkX !== null && dt > 0) {
+			velX = (walkX - prevWalkX) / dt;
+			velZ = (walkZ - prevWalkZ) / dt;
+		}
+		prevWalkX = walkX;
+		prevWalkZ = walkZ;
+		const speed = Math.sqrt(velX * velX + velZ * velZ);
+		const wakeOn = speed > 0.5;
+		const wakeDecay = Math.exp(-dt / WAKE_SETTLE_TIME);
+
 		for (let i = 0; i < COUNT; i++) {
 			let y = (baseY[i] - time * fall[i]) % BOX.y;
 			if (y < 0) y += BOX.y;
 			y += 0.15;
 			const sway = Math.sin(time * 0.13 + phase[i]);
 			const drift = Math.cos(time * 0.09 + phase[i] * 1.7);
-			const x = wrap(baseX[i] + sway * 0.6, walkX, BOX.x);
+			const shiverX =
+				shiverAmp > 0.0003 ? Math.sin(time * 41 + phase[i] * 5.3) * shiverAmp : 0;
+			const x = wrap(baseX[i] + sway * 0.6 + shiverX, walkX, BOX.x);
 			const z = wrap(baseZ[i] + drift * 0.6, walkZ, BOX.z);
-			positions[i * 3] = x;
+
+			// passing pushes nearby motes outward — sideways only, so the
+			// air parts without lifting anything
+			if (wakeOn) {
+				const dx = x - walkX;
+				const dz = z - walkZ;
+				const dy = (y - WAKE_HEIGHT) * 0.8;
+				const distSq = dx * dx + dz * dz + dy * dy;
+				if (distSq < WAKE_RADIUS * WAKE_RADIUS) {
+					const dist = Math.sqrt(distSq) || 0.001;
+					const falloff = 1 - dist / WAKE_RADIUS;
+					const push = Math.min(speed, 14) * falloff * falloff * dt * WAKE_PUSH;
+					offsetX[i] += (dx / dist) * push;
+					offsetZ[i] += (dz / dist) * push;
+				}
+			}
+			offsetX[i] *= wakeDecay;
+			offsetZ[i] *= wakeDecay;
+			if (offsetX[i] > WAKE_MAX) offsetX[i] = WAKE_MAX;
+			else if (offsetX[i] < -WAKE_MAX) offsetX[i] = -WAKE_MAX;
+			if (offsetZ[i] > WAKE_MAX) offsetZ[i] = WAKE_MAX;
+			else if (offsetZ[i] < -WAKE_MAX) offsetZ[i] = -WAKE_MAX;
+
+			positions[i * 3] = x + offsetX[i];
 			positions[i * 3 + 1] = y;
-			positions[i * 3 + 2] = z;
+			positions[i * 3 + 2] = z + offsetZ[i];
 			// brightness from the nearest sconce, one per age line on each wall
 			let lit = 0.4;
 			const age = Math.round(zToAgeExact(z));

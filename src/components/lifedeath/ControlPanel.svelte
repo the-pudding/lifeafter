@@ -1,6 +1,9 @@
 <script>
 	// overlay ui; reads and writes the props main passes
-	import { washedBackgroundCSS } from "$data/variable_config.js";
+	import { variableConfig, washedBackgroundCSS } from "$data/variable_config.js";
+	// weighted (ANNUAL_WEIGHT_C2) Wave 2 breakdowns, baked by the GFS
+	// notebook pipeline (data/GFS/export_group_percentages.py)
+	import groupPercentages from "$data/group_percentages.json";
 
 	let {
 		variableOptions,
@@ -19,6 +22,27 @@
 	} = $props();
 
 	let panelEl;
+
+	// hover box under the legend: within each afterlife group, this
+	// variable's weighted answer split, colored like the legend
+	const groupStats = $derived.by(() => {
+		const stats = groupPercentages[selectedVariable];
+		const config = variableConfig[selectedVariable];
+		if (!stats || !config) return null;
+		const buckets = config.type === "numeric" ? config.ranges : config.categories;
+		const colors = (buckets ?? []).map((b) => b.color);
+		return Object.entries(stats.groups).map(([name, pcts]) => ({
+			name,
+			segments: pcts
+				.map((pct, i) => ({
+					pct,
+					color: colors[i] ?? "#443254",
+					label: stats.buckets[i]
+				}))
+				.filter((s) => s.pct > 0)
+		}));
+	});
+
 	// reports the panel's bottom edge, so the topdown map can clear it
 	$effect(() => {
 		if (!panelEl) return;
@@ -30,7 +54,8 @@
 	});
 </script>
 
-<div class="panel" class:is-hidden={hidden} bind:this={panelEl}>
+<!-- inert while faded out, so nothing hidden is read or tabbed to -->
+<div class="panel" class:is-hidden={hidden} inert={hidden} bind:this={panelEl}>
 	{#if loadingMessage}
 		<div class="loading">{loadingMessage}</div>
 	{:else}
@@ -49,30 +74,65 @@
 				</select>
 			</label>
 
-			{#if legendData?.kind === "gradient"}
-			<!-- a continuous scale: the ramp and its two ends -->
-			<div class="legend legend--gradient legend--enter">
-				<span class="legend-end">{legendData.min}</span>
-				<div
-					class="legend-ramp"
-					style:background="linear-gradient(to right, {legendData.stops.join(', ')})"
-				></div>
-				<span class="legend-end">{legendData.maxLabel ?? legendData.max}</span>
-			</div>
-		{:else if legendData?.kind === "categorical"}
-			<div class="legend legend--enter">
-				{#each legendData.items as item (item.label)}
-					<!-- category hue dimmed under a dark wash so the white label survives bright swatches -->
-					<div
-						class="legend-row"
-						style:background={washedBackgroundCSS(item.color)}
-					>
-						{item.label}
+			{#if legendData?.kind === "gradient" || legendData?.kind === "categorical"}
+			<!-- hovering the legend reveals the weighted answer split below it -->
+			<div class="legend-hover-zone">
+				{#if legendData.kind === "gradient"}
+					<!-- a continuous scale: the ramp and its two ends -->
+					<div class="legend legend--gradient legend--enter">
+						<span class="legend-end">{legendData.min}</span>
+						<div
+							class="legend-ramp"
+							style:background="linear-gradient(to right, {legendData.stops.join(', ')})"
+						></div>
+						<span class="legend-end">{legendData.maxLabel ?? legendData.max}</span>
 					</div>
-				{/each}
+				{:else}
+					<div class="legend legend--enter">
+						{#each legendData.items as item (item.label)}
+							<!-- category hue dimmed under a dark wash so the white label survives bright swatches -->
+							<div
+								class="legend-row"
+								style:background={washedBackgroundCSS(item.color)}
+							>
+								{item.label}
+							</div>
+						{/each}
+					</div>
+				{/if}
+				{#if groupStats}
+					<!-- weighted Wave 2 split of this variable inside each belief group -->
+					<div class="group-stats">
+						<div class="group-stats-title">
+							{groupStats.length > 1 ? "How each group answered" : "How everyone answered"}
+						</div>
+						{#each groupStats as group (group.name)}
+							<div class="group-stat-row">
+								{#if groupStats.length > 1}
+									<span class="group-stat-name">{group.name}</span>
+								{/if}
+								<div class="group-stat-bar">
+									{#each group.segments as seg (seg.label)}
+										<div
+											class="group-stat-seg"
+											style:width="{seg.pct}%"
+											style:background={seg.color}
+											title="{seg.label}: {seg.pct}%"
+										>
+											{#if seg.pct >= 10}
+												<span class="group-stat-pct">{Math.round(seg.pct)}%</span>
+											{/if}
+										</div>
+									{/each}
+								</div>
+							</div>
+						{/each}
+					</div>
+				{/if}
 			</div>
 			{/if}
 		{/key}
+
 
 		{#if !hideYear}
 			<div class="button-row">
@@ -147,12 +207,23 @@
 		/* reset.css targets the bare tag and would win otherwise */
 		font-family: inherit;
 		font-weight: 700;
-		background:black;
+		background: black;
 		color: white;
 		border: 1px solid rgba(255, 255, 255, 0.4);
 		border-radius: 0;
-		padding: 0.3rem 0.4rem;
+		padding: 0.3rem 1.5rem 0.3rem 0.4rem;
 		max-width: 600px;
+		/* our own chevron on the right; the black background hides native ones */
+		appearance: none;
+		-webkit-appearance: none;
+		background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23cfa4ff' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+		background-repeat: no-repeat;
+		background-position: right 0.5rem center;
+	}
+	/* story mode: a caption, not a control, so no affordance to open it */
+	.field select:disabled {
+		background-image: none;
+		padding-right: 0.4rem;
 	}
 
 	/* story mode: a caption, not a control. browsers fade a disabled select */
@@ -177,6 +248,70 @@
 	color: var(--color-light-purple);
     gap: 0.5rem; /* tighter gap between items */
     font-size: 0.95rem;
+}
+
+/* the hover box: hidden until the pointer is over the legend (or the box
+   itself, so it doesn't vanish mid-read) */
+.legend-hover-zone .group-stats {
+	display: none;
+}
+.legend-hover-zone:hover .group-stats,
+.legend-hover-zone:focus-within .group-stats {
+	display: block;
+}
+.group-stats {
+	margin-top: 0.5rem;
+	width: 270px;
+	max-width: 100%;
+	background: rgba(10, 5, 16, 0.85);
+	border: 1px solid rgba(207, 164, 255, 0.35);
+	padding: 0.5rem 0.6rem 0.6rem;
+	box-sizing: border-box;
+}
+.group-stats-title {
+	font-size: 0.7rem;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	color: var(--color-light-purple);
+	margin-bottom: 0.35rem;
+}
+.group-stat-row {
+	display: flex;
+	align-items: flex-end;
+	gap: 0.45rem;
+	/* room above each bar for the percentage labels */
+	margin-top: 16px;
+}
+.group-stat-row:first-of-type {
+	margin-top: 12px;
+}
+.group-stat-name {
+	flex: none;
+	width: 44px;
+	font-size: 0.72rem;
+	color: rgba(255, 255, 255, 0.85);
+	line-height: 1;
+	padding-bottom: 2px;
+}
+.group-stat-bar {
+	flex: 1;
+	display: flex;
+	height: 12px;
+}
+.group-stat-seg {
+	position: relative;
+	height: 100%;
+	min-width: 1px;
+}
+.group-stat-pct {
+	position: absolute;
+	top: -14px;
+	left: 50%;
+	transform: translateX(-50%);
+	font-size: 0.66rem;
+	line-height: 1;
+	color: rgba(255, 255, 255, 0.85);
+	white-space: nowrap;
 }
 
 .legend--gradient {

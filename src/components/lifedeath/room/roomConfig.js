@@ -147,6 +147,9 @@ export const WHEEL_FULL_SPEED_DELTA = 70; // delta that reaches the top of the c
 
 export const WHEEL_RESPONSE_EXPONENT = 1.9;
 
+// overall damping on wheel walking; swipes and keys are untouched
+export const WHEEL_WALK_SCALE = 0.8;
+
 // touch deltas are far smaller than wheel deltas, so they get their own reference
 export const TOUCH_FULL_SPEED_DELTA = 24;
 

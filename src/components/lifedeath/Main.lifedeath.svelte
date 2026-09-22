@@ -214,10 +214,20 @@
 	let keepGoingOn = $state(false);
 	// set by the scene, where the walk targets live
 	let keepGoingImpl = null;
+	// topdown: the map's walker line dragged to a new spot
+	let walkerDragImpl = null;
+	// the screen-reader door buttons' way in, set by the scene
+	let enterDoorImpl = null;
+	// what just happened in the scene, spoken through a live region
+	let sceneAnnouncement = $state("");
 	// a beat's optional inline chart: { name, caption } (see StoryChart.svelte)
 	let storyChart = $state(null);
 	// the walker's unrounded age, for the chart's position marker
 	let walkAgeExact = $state(null);
+	// the decade flash: "Ages 30 to 39", centered, fading as soon as it lands
+	let decadeFlash = $state(null); // { text, key }
+	// the decade the walker was last in; null outside the room
+	let lastWalkDecade = null;
 	// the beat the walker is in; its floor span stays lit
 	let lastFlashedBeatAge = null;
 	let beatFloorFlashImpl = null;
@@ -254,10 +264,12 @@
 			? '<path class="wave" d="M15.5 9.2a4 4 0 0 1 0 5.6"/><path class="wave" d="M18 6.8a7.4 7.4 0 0 1 0 10.4"/>'
 			: '<path class="wave" d="M16 9.5l5 5M21 9.5l-5 5"/>';
 		return (
-			`<button class="story-audio" type="button" data-story-audio aria-pressed="${playing}">` +
+			// while off, the label bounces, asking for the click
+			`<button class="story-audio${playing ? "" : " story-audio--nudge"}" type="button" data-story-audio aria-pressed="${playing}">` +
 			`<svg viewBox="0 0 24 24" aria-hidden="true">` +
 			`<path d="M4 9.5h3.2L12 5.4v13.2L7.2 14.5H4z"/>${icon}</svg>` +
-			`${playing ? "Turn off audio" : "Turn on audio"}</button>`
+			`<span class="story-audio-label">${playing ? "Turn off narration and music" : "Turn on narration (recommended)"}</span>` +
+			`<span class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span></button>`
 		);
 	}
 
@@ -613,6 +625,38 @@
 		}
 	}
 
+	// everything audible ends in one analyser, so the eq bars can dance
+	// to the actual sound; falls back silently where web audio can't
+	let audioAnalyser = null;
+	let analyserFreqData = null;
+	// media element sources can only be built once per element
+	const musicSources = new Map();
+	function ensureAnalyser() {
+		if (audioAnalyser) return audioAnalyser;
+		const analyserContext = soundFx.ensureContext();
+		audioAnalyser = analyserContext.createAnalyser();
+		// fine enough bins (~47 Hz at 48k) to isolate a vocal register
+		audioAnalyser.fftSize = 1024;
+		audioAnalyser.smoothingTimeConstant = 0.75;
+		audioAnalyser.connect(analyserContext.destination);
+		analyserFreqData = new Uint8Array(audioAnalyser.frequencyBinCount);
+		return audioAnalyser;
+	}
+	function routeMusicThroughAnalyser() {
+		try {
+			const analyserContext = soundFx.ensureContext();
+			const analyser = ensureAnalyser();
+			for (const el of [sundayEl, mondayEl]) {
+				if (!el || musicSources.has(el)) continue;
+				const source = analyserContext.createMediaElementSource(el);
+				source.connect(analyser);
+				musicSources.set(el, source);
+			}
+		} catch {
+			// no web audio: the bars keep their scripted dance
+		}
+	}
+
 	// audioOn is set here, since a crossfade pauses the outgoing track
 	function toggleAudio() {
 		const [incoming, outgoing] = trackPair(musicTrack);
@@ -624,6 +668,7 @@
 			audioOn = false;
 			return;
 		}
+		routeMusicThroughAnalyser();
 		musicLevels.set(incoming, 0);
 		incoming.volume = 0;
 		incoming.play().catch(() => {});
@@ -660,10 +705,8 @@
 			const gain = audioContext.createGain();
 			gain.gain.value = NARRATION_GAIN;
 			narrationGainNode = gain;
-			narrationSource
-				.connect(compressor)
-				.connect(gain)
-				.connect(audioContext.destination);
+			// ends in the shared analyser, which feeds the destination
+			narrationSource.connect(compressor).connect(gain).connect(ensureAnalyser());
 		} catch {
 			// no web audio here, so it plays at the element's own volume
 			narrationSource = null;
@@ -1509,7 +1552,8 @@
 			// speed marks, like running into wind: side gusts hugging the
 			// edges plus fainter strands streaking at the face from mid-screen.
 			// all travel outward moving forward, inward moving backward
-			const SPEED_FULL = 18; // world units/sec, matching the wind's full gust
+			// lower than the wind's full gust, so the lines wake at a stroll
+			const SPEED_FULL = 13; // world units/sec
 			const speedLineAngles = [];
 			const speedLineSeeds = [];
 			const speedLineBandLo = [];
@@ -1535,6 +1579,72 @@
 			}
 			let speedLevel = 0;
 			let speedFlow = 0;
+			// the eq bars ride the analyser: four bands into four css vars,
+			// toggled by a container class so css can swap off the scripted dance
+			const EQ_BANDS = [
+				[4, 16],
+				[16, 40],
+				[40, 88],
+				[88, 192]
+			];
+			let eqLive = false;
+			// the low-mids' fast wobble against their slow baseline: vibrato
+			// registers, steady loudness doesn't. shifts the dust.
+			// bins 1–2 of the 1024-fft at 48k: roughly 47–140 Hz — the floor,
+			// pure bass fundamentals
+			const TREMOR_BINS = [1, 3];
+			let midsBaseline = 0;
+			// the wobble's envelope, and how long it has stayed up: only a
+			// vibrato held for a beat engages the dust, not a passing hit
+			let wobbleEnv = 0;
+			let wobbleHeldSeconds = 0;
+			const WOBBLE_FLOOR = 0.3;
+			const WOBBLE_HOLD_SECONDS = 0.5;
+			let musicTremor = 0;
+			function updateEqLevels(dt) {
+				const live =
+					!!audioAnalyser && audioOn && !reducedMotionQuery.matches;
+				if (live !== eqLive) {
+					eqLive = live;
+					container.classList.toggle("eq-live", live);
+				}
+				if (!live) {
+					wobbleEnv = 0;
+					wobbleHeldSeconds = 0;
+					musicTremor += (0 - musicTremor) * Math.min(1, dt * 5);
+					return;
+				}
+				audioAnalyser.getByteFrequencyData(analyserFreqData);
+				for (let band = 0; band < EQ_BANDS.length; band++) {
+					const [from, to] = EQ_BANDS[band];
+					let sum = 0;
+					for (let i = from; i < to; i++) sum += analyserFreqData[i];
+					const avg = sum / (to - from) / 255;
+					// a floor so the bars never die, a lift so quiet passages read
+					const level = Math.min(1, 0.12 + avg * 1.5);
+					container.style.setProperty(`--eq${band + 1}`, level.toFixed(3));
+				}
+				let tremorSum = 0;
+				for (let i = TREMOR_BINS[0]; i < TREMOR_BINS[1]; i++) {
+					tremorSum += analyserFreqData[i];
+				}
+				const midsAvg = tremorSum / (TREMOR_BINS[1] - TREMOR_BINS[0]) / 255;
+				midsBaseline += (midsAvg - midsBaseline) * Math.min(1, dt * 2.5);
+				const wobble = Math.min(1, Math.abs(midsAvg - midsBaseline) * 12);
+				// slow-release envelope, so vibrato's own zero-crossings
+				// don't reset the hold timer
+				wobbleEnv +=
+					(wobble - wobbleEnv) * Math.min(1, dt * (wobble > wobbleEnv ? 14 : 3));
+				wobbleHeldSeconds =
+					wobbleEnv > WOBBLE_FLOOR ? wobbleHeldSeconds + dt : 0;
+				const tremorTarget =
+					wobbleHeldSeconds > WOBBLE_HOLD_SECONDS ? wobbleEnv : 0;
+				// swells in once earned, settles gently after
+				musicTremor +=
+					(tremorTarget - musicTremor) *
+					Math.min(1, dt * (tremorTarget > musicTremor ? 5 : 3));
+			}
+
 			let speedTravel = 0;
 			let speedPrevX = null;
 			let speedPrevZ = null;
@@ -1557,7 +1667,7 @@
 				const shown = mode === "walk" && !flightActive ? 1 : 0;
 				const target = Math.min(1, speed / SPEED_FULL) * shown;
 				// quick to appear, a touch slower to settle, like the wind
-				const ease = target > speedLevel ? dt * 7 : dt * 3.5;
+				const ease = target > speedLevel ? dt * 9 : dt * 4.5;
 				speedLevel += (target - speedLevel) * Math.min(1, ease);
 				// the strands slide along their bands, faster at speed
 				speedTravel +=
@@ -1778,8 +1888,21 @@
 				doorWalkVelYaw = 0;
 			};
 
+			// the map's walker line, dragged: sideways is x, vertical is depth
+			walkerDragImpl = ({ x, z }) => {
+				doorWalkEasing = false;
+				targetWalkX = Math.min(MAX_WALK_X, Math.max(MIN_WALK_X, x));
+				targetWalkZ = Math.min(MAX_WALK_Z, Math.max(MIN_WALK_Z, z));
+				targetWalkZ = resolveOuterDoorCollision(targetWalkX, targetWalkZ);
+				targetWalkZ = resolveInnerWallCollision(targetWalkX, targetWalkZ);
+			};
+
+			// the screen-reader buttons enter by the same walk
+			enterDoorImpl = (door) => walkThroughDoor(door);
+
 			// sets the walk target through a door: across first, then forward
 			function walkThroughDoor(door) {
+				sceneAnnouncement = `Walking through the ${door.label} door, into the room among the youngest adults.`;
 				playDoorSound();
 				targetWalkX = door.x;
 				pendingDoorWalkZ = AUTO_WALK_INSIDE_Z;
@@ -2049,6 +2172,23 @@
 				};
 			}
 			function handleKeyDown(event) {
+				// real focusables keep their native keys, so assistive tech,
+				// the sr-only door buttons and the dropdown all work
+				const activeTag = document.activeElement?.tagName;
+				if (
+					event.key === "Tab" &&
+					activeTag &&
+					/^(BUTTON|SELECT|INPUT|TEXTAREA|A)$/.test(activeTag)
+				) {
+					return;
+				}
+				if (
+					event.key.startsWith("Arrow") &&
+					activeTag &&
+					/^(SELECT|INPUT|TEXTAREA)$/.test(activeTag)
+				) {
+					return;
+				}
 				if (event.key === "Tab" && !insideRoom && mode === "walk") {
 					event.preventDefault();
 					const delta = event.shiftKey ? -1 : 1;
@@ -2602,8 +2742,9 @@
 				advanceFocusFade(dt);
 				advanceDoorLabelFades(dt);
 				advanceMusicFade(dt);
+				updateEqLevels(dt);
 				soundFx.updateWind(dt, renderWalkX, renderWalkZ);
-				dust.update(dt, renderWalkX, renderWalkZ, candleGlowX, candleGlowY);
+				dust.update(dt, renderWalkX, renderWalkZ, candleGlowX, candleGlowY, musicTremor);
 				drawSpeedLines(dt);
 				advanceNarrationFade(dt);
 				advanceCrowdColors(dt);
@@ -2647,6 +2788,32 @@
 					highlightExteriorFocus();
 				}
 				insideRoom = renderWalkZ <= HALF_DEPTH;
+
+				// crossing into a new decade flashes its span, from the 30s on;
+				// entering the room (or reappearing) sets the decade silently
+				const walkDecade =
+					insideRoom && walkAgeExact !== null ? Math.floor(walkAgeExact / 10) : null;
+				if (walkDecade !== lastWalkDecade) {
+					const cameFrom = lastWalkDecade;
+					lastWalkDecade = walkDecade;
+					// only while walking: the topdown map drags across decades
+					if (
+						mode === "walk" &&
+						!flightActive &&
+						cameFrom !== null &&
+						walkDecade !== null &&
+						walkDecade >= 3
+					) {
+						// the room starts at 18, so that decade's span reads 18–19
+						const decadeLabel = (d) => `Ages ${Math.max(18, d * 10)} to ${d * 10 + 9}`;
+						decadeFlash = {
+							text: decadeLabel(walkDecade),
+							prevText: decadeLabel(cameFrom),
+							key: (decadeFlash?.key ?? 0) + 1
+						};
+						sceneAnnouncement = `Now among ${decadeLabel(walkDecade).toLowerCase()}.`;
+					}
+				}
 
 				// the spring reclaims only the depth past the light's resting point
 				const lightRestZ = MIN_WALK_Z - LIGHT_REST_DEPTH;
@@ -2937,7 +3104,12 @@
 					<p>{@html renderStoryText(text, audioOn)}</p>
 				{/each}
 				{#if storyChart}
-					<StoryChart name={storyChart.name} caption={storyChart.caption} age={walkAgeExact} />
+					<StoryChart
+						name={storyChart.name}
+						caption={storyChart.caption}
+						subcaption={storyChart.subcaption}
+						age={walkAgeExact}
+					/>
 				{/if}
 			{/key}
 		</div>
@@ -2983,21 +3155,92 @@
 		onAcknowledge={() => (minimapAcknowledged = true)}
 		onClickSound={playClick}
 		onPersonClick={(index) => selectPersonImpl?.(index)}
+		onWalkerDrag={(pos) => walkerDragImpl?.(pos)}
 		onEnterTopdown={() =>
 			requestModeImpl ? requestModeImpl("topdown") : (mode = "topdown")}
 	/>
+	<!-- right after the map in the DOM, so tabbing follows the layout -->
+	{#if mode === "topdown"}
+		<!-- the map is the whole view here, so this offers only the way back -->
+		<button
+			class="explore-toggle explore-toggle--wide"
+			onclick={() =>
+				requestModeImpl ? requestModeImpl("walk") : (mode = "walk")}
+		>
+			Return to walk mode
+		</button>
+	{:else}
+		<button
+			class="explore-toggle"
+			class:explore-toggle--hidden={inLight ||
+				currentAge < EXPLORE_MIN_AGE ||
+				pastStoryEnd ||
+				(finalBeatSpan.start !== null &&
+					walkAgeExact !== null &&
+					walkAgeExact >= finalBeatSpan.start - 0.01)}
+			onclick={() => (exploreExplicit = !exploreExplicit)}
+		>
+			{exploreMode ? "Return to story" : "Skip to explore"}
+		</button>
+	{/if}
 	<!-- covers the walk and topdown swap, over everything else -->
 	<div
 		class="mode-veil"
 		class:mode-veil--opaque={modeVeilVisible}
 		style="--mode-fade-ms: {MODE_FADE_MS}ms"
 	></div>
+	<!-- the screen-reader way in: real buttons for the three doors -->
+	{#if !loadingMessage && !insideRoom && mode === "walk"}
+		<div class="sr-only">
+			<h2>Life after death?</h2>
+			<p>
+				You are standing outside a room holding 1,500 survey respondents from
+				around the world, arranged by their answer to one question: do you
+				believe in life after death? Pick a door to walk in, then use the up
+				arrow key to walk through the crowd from youngest to oldest.
+			</p>
+			{#each DOORS as door (door.label)}
+				<button onclick={() => enterDoorImpl?.(door)}>
+					Enter through the “{door.label}” door
+				</button>
+			{/each}
+		</div>
+	{/if}
 	<!-- persistent, so screen readers hear each beat as it arrives; the
 	     visual overlay mounts and unmounts, which live regions miss -->
 	<div class="sr-only" aria-live="polite">{storyPlainText}</div>
-	<!-- shown while pressing into the light at the back wall -->
+	<!-- scene events (entering, decade crossings), spoken as they happen -->
+	<div class="sr-only" aria-live="polite">{sceneAnnouncement}</div>
+	<!-- the decade flash: rolls from the last decade to this one, holds, fades -->
+	{#if decadeFlash}
+		{#key decadeFlash.key}
+			<div
+				class="decade-flash"
+				onanimationend={(e) => {
+					// the roll and drift also end here; only the fade clears
+					if (
+						e.target === e.currentTarget &&
+						e.animationName.includes("decade-flash-fade")
+					) {
+						decadeFlash = null;
+					}
+				}}
+			>
+				<div class="decade-window">
+					<div class="decade-roll">
+						<div>{decadeFlash.text}</div>
+						<div aria-hidden="true">{decadeFlash.prevText}</div>
+					</div>
+				</div>
+			</div>
+		{/key}
+	{/if}
+	<!-- shown while pressing into the light at the back wall; the text only
+	     exists while it's on, so screen readers don't read it at load -->
 	<div class="light-message" role="status" class:light-message--on={lightMessageOn}>
-		Hi, it's good to see you. But you can't go in here right now.
+		{#if lightMessageOn}
+			Hi, it's good to see you. But you can't go in here right now.
+		{/if}
 	</div>
 	<!-- background music, off by default -->
 	<!-- neither is fetched until the reader turns sound on -->
@@ -3039,6 +3282,13 @@
 				<path class="wave" d="M16 9.5l5 5M21 9.5l-5 5" />
 			{/if}
 		</svg>
+		<!-- roomier screens: bars that dance with the sound, quicker while
+		     the narration is actually speaking -->
+		<span
+			class="eq"
+			class:eq--on={audioOn}
+			class:eq--talking={audioOn && narrationPlaying}
+			aria-hidden="true"><i></i><i></i><i></i><i></i></span>
 	</button>
 	<button
 		class="audio-toggle info-toggle"
@@ -3059,6 +3309,8 @@
 			<rect x="11.1" y="10.4" width="1.8" height="6" rx="0.9" />
 			<circle cx="12" cy="7.6" r="1.15" />
 		</svg>
+		<!-- roomier screens: the icon gets its word -->
+		<span class="toggle-word" aria-hidden="true">Info</span>
 	</button>
 	<!-- leaves the story for free roaming, or returns to it -->
 	{#if mode === "topdown" && !flightActive}
@@ -3069,29 +3321,6 @@
 			onclick={() =>
 				requestModeImpl ? requestModeImpl("walk") : (mode = "walk")}
 		></button>
-	{/if}
-	{#if mode === "topdown"}
-		<!-- the map is the whole view here, so this offers only the way back -->
-		<button
-			class="explore-toggle explore-toggle--wide"
-			onclick={() =>
-				requestModeImpl ? requestModeImpl("walk") : (mode = "walk")}
-		>
-			Return to walk mode
-		</button>
-	{:else}
-		<button
-			class="explore-toggle"
-			class:explore-toggle--hidden={inLight ||
-				currentAge < EXPLORE_MIN_AGE ||
-				pastStoryEnd ||
-				(finalBeatSpan.start !== null &&
-					walkAgeExact !== null &&
-					walkAgeExact >= finalBeatSpan.start - 0.01)}
-			onclick={() => (exploreExplicit = !exploreExplicit)}
-		>
-			{exploreMode ? "Return to story" : "Skip to explore"}
-		</button>
 	{/if}
 	{#if debugMode}
 		<div class="debug-panel">
@@ -3284,6 +3513,78 @@
 		white-space: nowrap;
 		border: 0;
 	}
+	/* the decade flash: holds at full opacity for a second, then fades */
+	.decade-flash {
+		position: absolute;
+		top: 50%;
+		left: 50%;
+		transform: translate(-50%, -50%);
+		z-index: 9;
+		pointer-events: none;
+		font-family: var(--font-sans);
+		/* shrinks with the viewport so it always holds one line */
+		font-size: clamp(17px, 5.5vw, 56px);
+		font-weight: 800;
+		text-transform: uppercase;
+		letter-spacing: 0.12em;
+		white-space: nowrap;
+		/* bare white over the scene, shadowed so it reads on the crowd */
+		color: #fff;
+		text-shadow:
+			0 1px 3px rgba(0, 0, 0, 0.9),
+			0 0 18px rgba(0, 0, 0, 0.55);
+		opacity: 0;
+		/* 0.9s in, a long hold (the roll happens inside it), 1.3s out —
+		   with a slow drift the whole way, so it breathes */
+		animation:
+			decade-flash-fade 3.6s ease-out forwards,
+			decade-flash-drift 3.6s linear forwards;
+	}
+	/* clips to one line, so the roll below reads as an odometer */
+	.decade-window {
+		height: 1.15em;
+		overflow: hidden;
+	}
+	.decade-roll {
+		display: flex;
+		flex-direction: column;
+	}
+	.decade-roll > div {
+		line-height: 1.15;
+	}
+	/* starts on the previous decade (the lower line), then settles slowly
+	   down onto the new one */
+	.decade-roll {
+		transform: translateY(-50%);
+		animation: decade-flash-roll 1.4s 0.35s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+	}
+	@keyframes decade-flash-roll {
+		to {
+			transform: translateY(0);
+		}
+	}
+	@keyframes decade-flash-fade {
+		0% {
+			opacity: 0;
+		}
+		25%,
+		64% {
+			opacity: 1;
+		}
+		100% {
+			opacity: 0;
+		}
+	}
+	/* a near-imperceptible swell, the cinematic push-in */
+	@keyframes decade-flash-drift {
+		from {
+			transform: translate(-50%, -50%) scale(0.99);
+		}
+		to {
+			transform: translate(-50%, -50%) scale(1.035);
+		}
+	}
+
 	/* black on the white light, so it only reads once you're in it */
 	.light-message {
 		position: absolute;
@@ -3484,6 +3785,76 @@
 		stroke: currentColor;
 		stroke-width: 1.7;
 		stroke-linecap: round;
+	}
+	/* the word and the bars exist only on roomier screens */
+	.toggle-word,
+	.eq {
+		display: none;
+	}
+	@media (min-width: 1001px) {
+		.audio-toggle {
+			/* both corner buttons share this width, whatever they hold */
+			width: 92px;
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			gap: 7px;
+		}
+		.toggle-word {
+			display: block;
+			font-family: var(--font-sans);
+			font-size: 12px;
+			font-weight: 600;
+			text-transform: uppercase;
+			letter-spacing: 0.08em;
+		}
+		.eq {
+			display: flex;
+			align-items: flex-end;
+			gap: 2.5px;
+			height: 15px;
+		}
+		/* always dancing — muted while the sound is off, full color while
+		   it plays, harder while the narration speaks */
+		.eq i {
+			width: 3px;
+			height: 4px;
+			background: rgba(207, 164, 255, 0.35);
+			animation: eq-dance 1.1s ease-in-out infinite;
+		}
+		.eq i:nth-child(1) {
+			animation-delay: -0.15s;
+		}
+		.eq i:nth-child(2) {
+			animation-delay: -0.6s;
+		}
+		.eq i:nth-child(3) {
+			animation-delay: -0.35s;
+		}
+		.eq i:nth-child(4) {
+			animation-delay: -0.85s;
+		}
+		.eq--on i {
+			background: currentColor;
+		}
+		.eq--talking i {
+			animation-duration: 0.5s;
+		}
+		@media (prefers-reduced-motion: reduce) {
+			.eq i {
+				animation: none;
+				height: 9px;
+			}
+		}
+	}
+	@keyframes eq-dance {
+		0%,
+		100% {
+			height: 4px;
+		}
+		50% {
+			height: 15px;
+		}
 	}
 
 	/* bottom-right, under the minimap and matching its width */

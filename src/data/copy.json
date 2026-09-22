@@ -19,7 +19,7 @@
       "hide_map": "true",
       "hide_year": "true",
       "wave": "1",
-      "text": "The thousands of people here answered a question about the afterlife as part of the [Global Flourishing Study](https://globalflourishingstudy.com/). Keep walking!\r\n\r\n\r\n<div class=\"hints click\">Click on a person to see details</div>"
+      "text": "The thousands of people here answered a question about the afterlife as part of the [Global Flourishing Study](https://globalflourishingstudy.com/). Keep walking toward the light!\r\n\r\n\r\n<div class=\"hints click\">Click on a person to see details</div>"
     },
     {
       "id": "2",
@@ -63,7 +63,7 @@
       "var_color": "CHANGE_ANSWER",
       "wave": "2",
       "hide_year": "true",
-      "text": ">> CHANGE_BELIEF-AGE-LINE|People who changed their beliefs about the afterlife"
+      "text": ">> CHANGE_BELIEF-AGE-LINE|People who changed their beliefs about the afterlife|Changed answer between two surveys 18 months apart"
     },
     {
       "id": "7",

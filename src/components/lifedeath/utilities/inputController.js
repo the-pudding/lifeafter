@@ -4,7 +4,8 @@ import {
 	TOUCH_FULL_SPEED_DELTA,
 	TOUCH_WALK_BOOST,
 	WHEEL_FULL_SPEED_DELTA,
-	WHEEL_RESPONSE_EXPONENT
+	WHEEL_RESPONSE_EXPONENT,
+	WHEEL_WALK_SCALE
 } from "../room/roomConfig.js";
 
 // shapes a raw wheel or swipe delta into the delta the walker gets
@@ -50,7 +51,7 @@ export function createInputController({
 	function handleWheel(event) {
 		if (getMode() !== "walk") return;
 		event.preventDefault(); // don't also scroll the page
-		walk(shapeWalkDelta(event.deltaY) * getScrollWalkScale());
+		walk(shapeWalkDelta(event.deltaY) * WHEEL_WALK_SCALE * getScrollWalkScale());
 	}
 
 	// steers only while held
