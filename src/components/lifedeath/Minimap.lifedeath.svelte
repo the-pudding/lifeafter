@@ -1,6 +1,11 @@
 <script>
 	// the minimap: a canvas drawn from each person's position and colour
 	import { onMount } from "svelte";
+	// the labels below are painted on canvas, so --text-scale can't reach them
+	import {
+		SCREEN_RECORD_TEXT_SCALE,
+		screenRecordMode
+	} from "./room/roomConfig.js";
 
 	// hidden is css-only: unmounting would drop the config init() sets once
 	let {
@@ -29,14 +34,14 @@
 	// gap between the plot and the canvas border
 	// canvas text can't inherit css, so the font stack is read once from it
 	let minimapFontStack = null;
-	function serifFont(size, weight = "") {
+	function sansFont(size, weight = "") {
 		if (minimapFontStack === null) {
 			minimapFontStack =
 				(typeof window !== "undefined" &&
 					getComputedStyle(document.documentElement)
 						.getPropertyValue("--font-sans")
 						.trim()) ||
-				'"Iowan Old Style", "Tiempos Text", "Times New Roman", Times, serif';
+				"-apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif";
 		}
 		return `${weight}${weight ? " " : ""}${size}px ${minimapFontStack}`;
 	}
@@ -185,7 +190,9 @@
 		ctx.translate(MINIMAP_OUTER_PADDING, MINIMAP_OUTER_PADDING);
 
 		// pinned to screen pixels, so topdown's scale can't blow the text up
-		const axisFontCSSPx = Math.max(13, Math.min(13, window.innerWidth / 100));
+		const axisFontCSSPx =
+			Math.max(13, Math.min(13, window.innerWidth / 100)) *
+			(screenRecordMode ? SCREEN_RECORD_TEXT_SCALE : 1);
 		const cssPxToLogical = (cssPx) =>
 			(cssPx * (minimapCanvas.width / minimapCanvas.clientWidth || 1)) / scale;
 		const axisFontLogicalPx = cssPxToLogical(axisFontCSSPx);
@@ -210,13 +217,13 @@
 			ctx.textAlign = "right";
 			ctx.textBaseline = "middle";
 			ctx.fillStyle = "rgba(255, 255, 255, 0.6)";
-			ctx.font = serifFont(axisFontLogicalPx);
+			ctx.font = sansFont(axisFontLogicalPx);
 		} else if (cornerAgeNumbersOn) {
 			// matches the column labels at the top
 			ctx.textAlign = "left";
 			ctx.textBaseline = "alphabetic";
 			ctx.fillStyle = "rgba(255, 255, 255, 0.85)";
-			ctx.font = serifFont(axisFontLogicalPx);
+			ctx.font = sansFont(axisFontLogicalPx);
 		}
 		for (let age = ageAxisStart; age <= ageAxisEnd; age += 10) {
 			const y = axisTopMargin + worldZToMinimapPx(ageToZ(age));
@@ -237,7 +244,7 @@
 		ctx.textBaseline = "alphabetic";
 		ctx.fillStyle = "rgba(255, 255, 255, 0.85)";
 		let groupFontPx = axisFontLogicalPx * (isTopdown ? 1.3 : 1);
-		ctx.font = serifFont(groupFontPx);
+		ctx.font = sansFont(groupFontPx);
 		// shrunk to fit its column; the corner box is tight, so it gets more of it
 		const zoneColumnWidth = minimapScaleX * zoneWidth;
 		const groupLabelFitWidth = zoneColumnWidth * (isTopdown ? 0.85 : 0.95);
@@ -246,7 +253,7 @@
 		);
 		if (widestGroupLabelWidth > groupLabelFitWidth) {
 			groupFontPx *= groupLabelFitWidth / widestGroupLabelWidth;
-			ctx.font = serifFont(groupFontPx);
+			ctx.font = sansFont(groupFontPx);
 		}
 		const groupLabelY = axisTopMargin - 3;
 		for (const { text, zone } of GROUP_LABELS) {
@@ -359,7 +366,7 @@
 		// the age under the dot, stroked to stay legible over the scatter
 		if (currentAge !== null && currentAge !== undefined) {
 			const ageLabelFontPx = axisFontLogicalPx * 1.15;
-			ctx.font = serifFont(ageLabelFontPx, "bold");
+			ctx.font = sansFont(ageLabelFontPx, "bold");
 			ctx.textAlign = "center";
 			ctx.textBaseline = "top";
 			ctx.lineJoin = "round";
@@ -729,7 +736,12 @@
 		border: none;
 		/* the main view here, not a button */
 		box-shadow: none;
-		background: var(--bg-color, #110818);
+		/* no background of its own: the scene renders full-bleed behind this
+		   box and already clears to BG_COLOR, so the plot sits straight on it.
+		   painting the same hex here would still seam, since a css fill and
+		   the canvas's own output don't resolve identically on wide-gamut
+		   displays — letting it through is the only exact match */
+		background: transparent;
 	}
 
 	/* roomier screens get a bigger corner box; at these sizes the strip for
@@ -753,11 +765,12 @@
 		}
 	}
 
-	/* phones: a smaller box, kept in the drawn map's own proportion */
+	/* phones: a smaller box, kept in the drawn map's own proportion; wide
+	   enough that the column labels stay readable */
 	@media (max-width: 640px) {
 		.minimap-canvas:not(.topdown-active) {
-			width: min(100px, 25vw);
-			height: min(197px, 49.2vw);
+			width: min(116px, 29vw);
+			height: min(229px, 57.1vw);
 		}
 	}
 </style>

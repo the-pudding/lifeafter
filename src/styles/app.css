@@ -50,6 +50,8 @@
 	--color-unsure: #a12cb5;
 	--color-belief: #db852f;
 	--bg-color: #110818;
+	/* ?screenrecord raises this on the root; every scaled size reads it */
+	--text-scale: 1;
 	/* "1" second duration */
 	--1s: 1ms;
 }
@@ -95,6 +97,11 @@ svg {
 	display: block;
 	width: 100%;
 	height: auto;
+}
+/* the room's own background from the first paint, so nothing (body,
+   overscroll, load screen) flashes a different colour before it mounts */
+body {
+	background-color: var(--bg-color);
 }
 main, .loading-screen {
 	background: var(--bg-color) !important;
@@ -157,8 +164,8 @@ main, .loading-screen {
 @media (max-width: 800px) {
 	.story-overlay {
 		box-sizing: border-box;
-		width: calc(100% - 115px);
-		max-width: calc(100% - 115px);
+		width: calc(100% - 131px);
+		max-width: calc(100% - 131px);
 		left: 5px;
 		bottom: 0px;
 		transform: translateX(0%);
@@ -208,7 +215,7 @@ main, .loading-screen {
 .story-overlay p {
 	margin: 0 0 8px;
 	/* steps down on narrow screens, where vertical space is short */
-	font-size: 18px;
+	font-size: calc(18px * var(--text-scale, 1));
 	line-height: 1.7em;
 	background: transparent;
 	/* a black outline on the words themselves, so they hold up over the
@@ -232,22 +239,22 @@ main, .loading-screen {
 }
 @media (max-width: 1800px) {
 	.story-overlay p {
-		font-size: 17.5px;
+		font-size: calc(17.5px * var(--text-scale, 1));
 	}
 }
 @media (max-width: 1200px) {
 	.story-overlay p {
-		font-size: 17px;
+		font-size: calc(17px * var(--text-scale, 1));
 	}
 }
 @media (max-width: 800px) {
 	.story-overlay p {
-		font-size: 16.5px;
+		font-size: calc(16.5px * var(--text-scale, 1));
 	}
 }
 @media (max-width: 600px) {
 	.story-overlay p {
-		font-size: 13px;
+		font-size: calc(13px * var(--text-scale, 1));
 	}
 }
 /* the audio row carries no icon, so it skips the shared left pull */
@@ -412,7 +419,7 @@ main, .loading-screen {
     gap: 10px;
     text-align: center;
     font-style: italic;
-	font-size: 14px;
+	font-size: calc(14px * var(--text-scale, 1));
 	text-transform: uppercase;
 	padding: 10px 0;
 }
@@ -553,7 +560,7 @@ main, .loading-screen {
         border: 1.5px solid #fff;
         box-shadow: 2px 2px 0 #fff;
         color: #fff;
-        font-size: 9px;
+        font-size: calc(9px * var(--text-scale, 1));
         font-style: normal;
         letter-spacing: 0.16em;
         filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.9));
@@ -602,7 +609,7 @@ main, .loading-screen {
 /* mobile: the story text alone steps down; the rest of the ui keeps its size */
 @media (max-width: 600px) {
 	.story-overlay p .hints {
-		font-size: 11.9px;
+		font-size: calc(11.9px * var(--text-scale, 1));
 	}
 	.story-overlay p .story-audio {
 		font-size: 1.05em;

@@ -7,7 +7,7 @@ import yesSvg from "$svg/yes.svg?raw";
 // the one background: scene, fog, minimap, topdown and the load screen
 export const BG_COLOR = "#110818";
 
-export const BG_COLOR_CSS = `#${BG_COLOR.toString(16).padStart(6, "0")}`;
+export const BG_COLOR_CSS = BG_COLOR;
 
 // no-answer people: desaturated dark purple
 export const MUTED_COLOR = "#443254";
@@ -220,3 +220,13 @@ export const debugVariableParam = debugMode
 	: null;
 
 export const debugAgeParam = debugMode ? debugSearchParams.get("age") : null;
+
+// ?screenrecord=true — larger type, so the room reads in a video frame.
+// independent of ?debug, since a recording wants no hud
+export const screenRecordMode =
+	(debugSearchParams?.has("screenrecord") ?? false) &&
+	debugSearchParams.get("screenrecord") !== "false";
+
+// how much bigger that type runs. drives both the --text-scale css knob and
+// the minimap's canvas labels, which css can't reach
+export const SCREEN_RECORD_TEXT_SCALE = 1.3;

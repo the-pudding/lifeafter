@@ -136,6 +136,8 @@
 		debugSearchParams,
 		debugVariableParam,
 		isMobileViewport,
+		SCREEN_RECORD_TEXT_SCALE,
+		screenRecordMode,
 		sizeDoorLabelSvg
 	} from "./room/roomConfig.js";
 	import {
@@ -224,7 +226,7 @@
 	let storyChart = $state(null);
 	// the walker's unrounded age, for the chart's position marker
 	let walkAgeExact = $state(null);
-	// the decade flash: "Ages 30 to 39", centered, fading as soon as it lands
+	// the decade flash: "Ages 30 to 39", centered; fades in, holds, fades out
 	let decadeFlash = $state(null); // { text, key }
 	// the decade the walker was last in; null outside the room
 	let lastWalkDecade = null;
@@ -245,6 +247,14 @@
 		url.searchParams.set("variable", variable);
 		if (age !== null) url.searchParams.set("age", age.toFixed(1));
 		window.history.replaceState({}, "", url);
+	});
+	// ?screenrecord: every scaled font size reads --text-scale off the root,
+	// so setting it here reaches the overlays and the modals alike
+	$effect(() => {
+		if (!screenRecordMode) return;
+		const root = document.documentElement;
+		root.style.setProperty("--text-scale", String(SCREEN_RECORD_TEXT_SCALE));
+		return () => root.style.removeProperty("--text-scale");
 	});
 	// legend data: either categorical items or a gradient with its range
 	let legendData = $state(null);
@@ -412,6 +422,7 @@
 	// the debug hud's snapshot
 	let debugStats = $state({
 		x: 0,
+		y: EYE_HEIGHT,
 		z: 0,
 		yawDeg: 0,
 		pitchDeg: 0,
@@ -423,9 +434,21 @@
 		selectedVariable: ""
 	});
 	let debugCopyFeedback = $state(false);
+	// debug: the bare scene, with every overlay out of the way. escape exits,
+	// since the panel holding the button goes too
+	let screenshotMode = $state(false);
+	function toggleScreenshotMode() {
+		screenshotMode = !screenshotMode;
+		// an open modal would cover the shot
+		if (screenshotMode) {
+			infoOpen = false;
+			clickedPerson = null;
+			clickedPersonIndex = null;
+		}
+	}
 	function formatDebugStats(stats) {
 		return (
-			`x=${stats.x.toFixed(2)} z=${stats.z.toFixed(2)} ` +
+			`x=${stats.x.toFixed(2)} y=${stats.y.toFixed(2)} z=${stats.z.toFixed(2)} ` +
 			`yaw=${stats.yawDeg.toFixed(1)} pitch=${stats.pitchDeg.toFixed(1)} ` +
 			`fov=${stats.fov.toFixed(1)} age=${stats.age?.toFixed(1) ?? "—"} ` +
 			`mode=${stats.mode} insideRoom=${stats.insideRoom} autoWalking=${stats.autoWalking} ` +
@@ -438,8 +461,12 @@
 		setTimeout(() => (debugCopyFeedback = false), 1200);
 	}
 	// hidden by a beat, by being outside, or by pressing into the light
-	const shouldHidePanel = $derived(hidePanel || !insideRoom || inLight);
-	const shouldHideMap = $derived(hideMap || !insideRoom || inLight);
+	const shouldHidePanel = $derived(
+		hidePanel || !insideRoom || inLight || screenshotMode
+	);
+	const shouldHideMap = $derived(
+		hideMap || !insideRoom || inLight || screenshotMode
+	);
 	// the panel's height, so the topdown map can clear it
 	let controlPanelHeight = $state(0);
 	const panelClearPx = $derived(shouldHidePanel ? 0 : controlPanelHeight);
@@ -447,7 +474,7 @@
 	let storyOverlayHeight = $state(0);
 	// no text reserves nothing
 	const storyClearPx = $derived(
-		storyTexts.length > 0 && !mapView ? storyOverlayHeight : 0
+		storyTexts.length > 0 && !mapView && !screenshotMode ? storyOverlayHeight : 0
 	);
 	// the first hover or click of the minimap stops the glow, for good
 	let minimapAcknowledged = $state(false);
@@ -1761,6 +1788,8 @@
 			// the actual heading and tilt, gliding toward it
 			let cameraYaw = 0;
 			let cameraPitch = DEFAULT_CAMERA_PITCH;
+			// starts at eye level; a right-button drag moves it up or down
+			let eyeHeight = EYE_HEIGHT;
 			// an extra tilt once inside, added on top so dragging stays 1:1
 			let roomEntryPitchOffset = 0;
 
@@ -2172,6 +2201,12 @@
 				};
 			}
 			function handleKeyDown(event) {
+				// the only way back, with the debug panel's button hidden
+				if (event.key === "Escape" && screenshotMode) {
+					event.preventDefault();
+					toggleScreenshotMode();
+					return;
+				}
 				// real focusables keep their native keys, so assistive tech,
 				// the sr-only door buttons and the dropdown all work
 				const activeTag = document.activeElement?.tagName;
@@ -2285,7 +2320,14 @@
 				getCameraFov: () => camera.fov,
 				getScrollWalkScale: scrollWalkScale,
 				dragLookRadiansPerSwipe: DRAG_LOOK_RADIANS_PER_SWIPE,
-				maxDragPitch: MAX_DRAG_PITCH
+				maxDragPitch: MAX_DRAG_PITCH,
+				// debug: right-drag raises or lowers the camera, floor to ceiling
+				onEyeHeightDrag: (dyNormalized) => {
+					eyeHeight = Math.min(
+						ROOM_HEIGHT - 1,
+						Math.max(0.3, eyeHeight - dyNormalized * ROOM_HEIGHT * 0.5)
+					);
+				}
 			});
 			inputController.attach();
 			container.addEventListener("click", handleDoorClick);
@@ -2317,11 +2359,11 @@
 					Math.sin(pitch),
 					-Math.cos(yaw) * Math.cos(pitch)
 				);
-				poseHelper.position.set(renderWalkX, EYE_HEIGHT, renderWalkZ);
+				poseHelper.position.set(renderWalkX, eyeHeight, renderWalkZ);
 				poseHelper.up.set(0, 1, 0);
 				poseHelper.lookAt(
 					renderWalkX + lookDir.x,
-					EYE_HEIGHT + lookDir.y,
+					eyeHeight + lookDir.y,
 					renderWalkZ + lookDir.z
 				);
 				return {
@@ -2808,7 +2850,6 @@
 						const decadeLabel = (d) => `Ages ${Math.max(18, d * 10)} to ${d * 10 + 9}`;
 						decadeFlash = {
 							text: decadeLabel(walkDecade),
-							prevText: decadeLabel(cameFrom),
 							key: (decadeFlash?.key ?? 0) + 1
 						};
 						sceneAnnouncement = `Now among ${decadeLabel(walkDecade).toLowerCase()}.`;
@@ -2837,6 +2878,7 @@
 				if (debugMode) {
 					debugStats = {
 						x: renderWalkX,
+						y: eyeHeight,
 						z: renderWalkZ,
 						yawDeg: THREE.MathUtils.radToDeg(cameraYaw),
 						pitchDeg: THREE.MathUtils.radToDeg(cameraPitch),
@@ -2947,11 +2989,11 @@
 						Math.sin(pitch),
 						-Math.cos(cameraYaw) * Math.cos(pitch)
 					);
-					camera.position.set(renderWalkX, EYE_HEIGHT, renderWalkZ);
+					camera.position.set(renderWalkX, eyeHeight, renderWalkZ);
 					camera.up.set(0, 1, 0);
 					camera.lookAt(
 						renderWalkX + lookDir.x,
-						EYE_HEIGHT + lookDir.y,
+						eyeHeight + lookDir.y,
 						renderWalkZ + lookDir.z
 					);
 					camera.updateMatrixWorld(true);
@@ -3084,7 +3126,7 @@
 		{exploreMode}
 		bind:panelHeight={controlPanelHeight}
 	/>
-	{#if storyTexts.length > 0 && !mapView}
+	{#if storyTexts.length > 0 && !mapView && !screenshotMode}
 		<div
 			class="story-overlay"
 			class:no_map={shouldHideMap}
@@ -3114,7 +3156,7 @@
 			{/key}
 		</div>
 	{/if}
-	{#if keepGoingOn}
+	{#if keepGoingOn && !screenshotMode}
 		<!-- turned away from the story: one press faces front and walks on -->
 		<div class="walk-hint" transition:fade>
 			<button class="walk-hint-explore keep-going" onclick={() => keepGoingImpl?.()}>
@@ -3122,7 +3164,7 @@
 			</button>
 		</div>
 	{/if}
-	{#if walkHintOn}
+	{#if walkHintOn && !screenshotMode}
 		<!-- between beats: the way onward, spun toward the light -->
 		<div class="walk-hint" transition:fade>
 			<svg
@@ -3142,8 +3184,13 @@
 			{/if}
 		</div>
 	{/if}
-	<!-- corner speed marks, painted by the render loop -->
-	<canvas class="speed-lines" bind:this={speedCanvas}></canvas>
+	<!-- corner speed marks, painted by the render loop; kept mounted so the
+	     loop's canvas reference stays put, hidden when it must be invisible -->
+	<canvas
+		class="speed-lines"
+		class:speed-lines--off={screenshotMode}
+		bind:this={speedCanvas}
+	></canvas>
 	<Minimap
 		bind:this={minimapComponent}
 		bind:mode
@@ -3160,7 +3207,9 @@
 			requestModeImpl ? requestModeImpl("topdown") : (mode = "topdown")}
 	/>
 	<!-- right after the map in the DOM, so tabbing follows the layout -->
-	{#if mode === "topdown"}
+	{#if screenshotMode}
+		<!-- nothing: the bare scene -->
+	{:else if mode === "topdown"}
 		<!-- the map is the whole view here, so this offers only the way back -->
 		<button
 			class="explore-toggle explore-toggle--wide"
@@ -3211,13 +3260,13 @@
 	<div class="sr-only" aria-live="polite">{storyPlainText}</div>
 	<!-- scene events (entering, decade crossings), spoken as they happen -->
 	<div class="sr-only" aria-live="polite">{sceneAnnouncement}</div>
-	<!-- the decade flash: rolls from the last decade to this one, holds, fades -->
-	{#if decadeFlash}
+	<!-- the decade flash: fades in, holds two seconds, fades out -->
+	{#if decadeFlash && !screenshotMode}
 		{#key decadeFlash.key}
 			<div
 				class="decade-flash"
 				onanimationend={(e) => {
-					// the roll and drift also end here; only the fade clears
+					// the drift also ends here; only the fade clears
 					if (
 						e.target === e.currentTarget &&
 						e.animationName.includes("decade-flash-fade")
@@ -3226,19 +3275,18 @@
 					}
 				}}
 			>
-				<div class="decade-window">
-					<div class="decade-roll">
-						<div>{decadeFlash.text}</div>
-						<div aria-hidden="true">{decadeFlash.prevText}</div>
-					</div>
-				</div>
+				{decadeFlash.text}
 			</div>
 		{/key}
 	{/if}
 	<!-- shown while pressing into the light at the back wall; the text only
 	     exists while it's on, so screen readers don't read it at load -->
-	<div class="light-message" role="status" class:light-message--on={lightMessageOn}>
-		{#if lightMessageOn}
+	<div
+		class="light-message"
+		role="status"
+		class:light-message--on={lightMessageOn && !screenshotMode}
+	>
+		{#if lightMessageOn && !screenshotMode}
 			Hi, it's good to see you. But you can't go in here right now.
 		{/if}
 	</div>
@@ -3266,6 +3314,7 @@
 		loop
 		preload="none"
 	></audio>
+	{#if !screenshotMode}
 	<button
 		class="audio-toggle"
 		aria-pressed={audioOn}
@@ -3312,8 +3361,9 @@
 		<!-- roomier screens: the icon gets its word -->
 		<span class="toggle-word" aria-hidden="true">Info</span>
 	</button>
+	{/if}
 	<!-- leaves the story for free roaming, or returns to it -->
-	{#if mode === "topdown" && !flightActive}
+	{#if mode === "topdown" && !flightActive && !screenshotMode}
 		<!-- frames the scissored corner preview; clicking returns to walk -->
 		<button
 			class="walk-preview"
@@ -3322,24 +3372,36 @@
 				requestModeImpl ? requestModeImpl("walk") : (mode = "walk")}
 		></button>
 	{/if}
-	{#if debugMode}
+	<!-- the panel hides itself in screenshot mode, so escape is the way back -->
+	{#if debugMode && !screenshotMode}
 		<div class="debug-panel">
-			<div>x: {debugStats.x.toFixed(2)}  z: {debugStats.z.toFixed(2)}</div>
+			<div>x: {debugStats.x.toFixed(2)}  y: {debugStats.y.toFixed(2)}  z: {debugStats.z.toFixed(2)}</div>
 			<div>yaw: {debugStats.yawDeg.toFixed(1)}°  pitch: {debugStats.pitchDeg.toFixed(1)}°</div>
 			<div>fov: {debugStats.fov.toFixed(1)}  age: {debugStats.age?.toFixed(1) ?? "—"}</div>
 			<div>mode: {debugStats.mode}  inside: {debugStats.insideRoom}  autoWalk: {debugStats.autoWalking}</div>
 			<div>variable: {debugStats.selectedVariable}</div>
-			<button type="button" onclick={copyDebugStats}>
-				{debugCopyFeedback ? "Copied!" : "Copy"}
-			</button>
+			<div class="debug-buttons">
+				<button type="button" onclick={copyDebugStats}>
+					{debugCopyFeedback ? "Copied!" : "Copy"}
+				</button>
+				<button type="button" onclick={toggleScreenshotMode}>
+					Screenshot mode
+				</button>
+			</div>
+			<div class="debug-note">esc exits screenshot mode</div>
 		</div>
 	{/if}
 </div>
 
-<InfoModal open={infoOpen} text={copy.info} onclose={() => (infoOpen = false)} />
+<!-- both stay closed in screenshot mode, so a stray click can't cover the shot -->
+<InfoModal
+	open={infoOpen && !screenshotMode}
+	text={copy.info}
+	onclose={() => (infoOpen = false)}
+/>
 
 <Modal
-	person={clickedPerson}
+	person={screenshotMode ? null : clickedPerson}
 	bind:wave={positionMode}
 	onclose={() => {
 		clickedPerson = null;
@@ -3438,6 +3500,10 @@
 		pointer-events: none;
 		z-index: 4;
 	}
+	/* screenshot mode: still mounted and sized, just not painted over */
+	.speed-lines--off {
+		visibility: hidden;
+	}
 
 	/* the between-beats nudge, at the hints' shared height */
 	.walk-hint {
@@ -3453,10 +3519,12 @@
 		gap: 6px;
 		color: rgba(255, 255, 255, 0.85);
 		font-family: var(--font-sans);
-		font-size: 14px;
+		font-size: calc(14px * var(--text-scale, 1));
 		font-style: italic;
 		text-transform: uppercase;
 		letter-spacing: 0.06em;
+		/* wrapped lines stay centered under the arrow */
+		text-align: center;
 	}
 	.walk-hint svg {
 		width: 34px;
@@ -3474,7 +3542,7 @@
 		pointer-events: auto;
 		margin-top: 4px;
 		font-family: inherit;
-		font-size: 13px;
+		font-size: calc(13px * var(--text-scale, 1));
 		font-style: normal;
 		text-transform: uppercase;
 		letter-spacing: 0.06em;
@@ -3494,8 +3562,17 @@
 	}
 	/* the turn-around offer stands alone, so it reads a touch larger */
 	.walk-hint .keep-going {
-		font-size: 14px;
+		font-size: calc(14px * var(--text-scale, 1));
 		padding: 0.5rem 1.4rem;
+	}
+	/* narrow screens: the story column sits left of the minimap, so the
+	   hint spans that column exactly and centres its content in it */
+	@media (max-width: 800px) {
+		.walk-hint {
+			left: 5px;
+			width: calc(100% - 131px);
+			transform: none;
+		}
 	}
 
 	/* the minimap styles itself */
@@ -3513,7 +3590,7 @@
 		white-space: nowrap;
 		border: 0;
 	}
-	/* the decade flash: holds at full opacity for a second, then fades */
+	/* the decade flash: holds at full opacity for two seconds, then fades */
 	.decade-flash {
 		position: absolute;
 		top: 50%;
@@ -3534,41 +3611,18 @@
 			0 1px 3px rgba(0, 0, 0, 0.9),
 			0 0 18px rgba(0, 0, 0, 0.55);
 		opacity: 0;
-		/* 0.9s in, a long hold (the roll happens inside it), 1.3s out —
-		   with a slow drift the whole way, so it breathes */
+		/* 0.7s in, a 2s hold, 1s out — with a slow drift the whole way,
+		   so it breathes */
 		animation:
-			decade-flash-fade 3.6s ease-out forwards,
-			decade-flash-drift 3.6s linear forwards;
-	}
-	/* clips to one line, so the roll below reads as an odometer */
-	.decade-window {
-		height: 1.15em;
-		overflow: hidden;
-	}
-	.decade-roll {
-		display: flex;
-		flex-direction: column;
-	}
-	.decade-roll > div {
-		line-height: 1.15;
-	}
-	/* starts on the previous decade (the lower line), then settles slowly
-	   down onto the new one */
-	.decade-roll {
-		transform: translateY(-50%);
-		animation: decade-flash-roll 1.4s 0.35s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-	}
-	@keyframes decade-flash-roll {
-		to {
-			transform: translateY(0);
-		}
+			decade-flash-fade 3.7s ease-out forwards,
+			decade-flash-drift 3.7s linear forwards;
 	}
 	@keyframes decade-flash-fade {
 		0% {
 			opacity: 0;
 		}
-		25%,
-		64% {
+		19%,
+		73% {
 			opacity: 1;
 		}
 		100% {
@@ -3596,7 +3650,7 @@
 		width: min(560px, 80%);
 		text-align: center;
 		font-family: var(--font-mono);
-		font-size: 1.35rem;
+		font-size: calc(1.35rem * var(--text-scale, 1));
 		line-height: 1.6;
 		color: #000;
 		text-shadow:
@@ -3899,7 +3953,7 @@
 	/* tracks the minimap's mobile width, so the two stack flush */
 	@media (max-width: 640px) {
 		.explore-toggle {
-			width: min(100px, 25vw);
+			width: min(116px, 29vw);
 			font-size: 0.7rem;
 			padding: 0.3rem 0.35rem;
 		}
@@ -3931,6 +3985,18 @@
 		line-height: 1.4;
 		pointer-events: auto;
 		white-space: pre;
+	}
+
+	/* the two actions sit side by side under the readout */
+	.debug-buttons {
+		display: flex;
+		gap: 6px;
+	}
+	/* how to get back out, since the panel itself goes */
+	.debug-note {
+		color: rgba(0, 255, 0, 0.6);
+		font-size: 10px;
+		margin-top: 2px;
 	}
 
 	.debug-panel button {

@@ -179,7 +179,7 @@
 		border-radius: 0.5rem;
 		color: #eee;
 		font-family: var(--font-sans);
-		font-size: 0.8rem;
+		font-size: calc(0.8rem * var(--text-scale, 1));
 		line-height: 1.6;
 		/* backdrop-filter: blur(3px); */
 		/* width: 100%; */
@@ -194,13 +194,15 @@
 
 	.field span {
 		color: #a99cb8;
-		font-size: 0.85rem;
+		font-size: calc(0.85rem * var(--text-scale, 1));
 		text-transform: uppercase;
 	}
 
 	.field select {
 		/* matches the legend size below it */
-		font-size: 0.95rem !important;
+		font-size: calc(0.95rem * var(--text-scale, 1)) !important;
+		/* roomy enough that descenders (g, y) aren't clipped */
+		line-height: 1.35;
 		text-shadow:
 			0 1px 3px rgba(0, 0, 0, 0.95),
 			0 0 12px rgba(0, 0, 0, 0.7);
@@ -247,7 +249,7 @@
 	margin-left: 0px;
 	color: var(--color-light-purple);
     gap: 0.5rem; /* tighter gap between items */
-    font-size: 0.95rem;
+    font-size: calc(0.95rem * var(--text-scale, 1));
 }
 
 /* the hover box: hidden until the pointer is over the legend (or the box
@@ -269,7 +271,7 @@
 	box-sizing: border-box;
 }
 .group-stats-title {
-	font-size: 0.7rem;
+	font-size: calc(0.7rem * var(--text-scale, 1));
 	text-transform: uppercase;
 	letter-spacing: 0.05em;
 	color: var(--color-light-purple);
@@ -288,7 +290,7 @@
 .group-stat-name {
 	flex: none;
 	width: 44px;
-	font-size: 0.72rem;
+	font-size: calc(0.72rem * var(--text-scale, 1));
 	color: rgba(255, 255, 255, 0.85);
 	line-height: 1;
 	padding-bottom: 2px;
@@ -308,7 +310,7 @@
 	top: -14px;
 	left: 50%;
 	transform: translateX(-50%);
-	font-size: 0.66rem;
+	font-size: calc(0.66rem * var(--text-scale, 1));
 	line-height: 1;
 	color: rgba(255, 255, 255, 0.85);
 	white-space: nowrap;
@@ -354,7 +356,7 @@
 		border: 1px solid rgba(207, 164, 255, 0.35);
 		border-radius: 0rem;
 		padding: 0.3rem 0.55rem;
-		font-size: 0.78rem;
+		font-size: calc(0.78rem * var(--text-scale, 1));
 		cursor: pointer;
 		transition:
 			color 150ms ease-out,
@@ -381,18 +383,18 @@
 
 	.current-age {
 		color: #eee;
-		font-size: 0.7rem;
+		font-size: calc(0.7rem * var(--text-scale, 1));
 		font-weight: 600;
 	}
 
 	.instructions {
 		color: #a99cb8;
-		font-size: 0.62rem;
+		font-size: calc(0.62rem * var(--text-scale, 1));
 	}
 
 	.loading {
 		color: #c3c2b7;
-		font-size: 0.7rem;
+		font-size: calc(0.7rem * var(--text-scale, 1));
 	}
 
 	/* fades rather than cuts, and a hidden panel can't be clicked */
@@ -408,7 +410,7 @@
 	/* narrow screens: smaller type */
 	@media (max-width: 700px) {
 		.panel {
-			font-size: 0.62rem;
+			font-size: calc(0.62rem * var(--text-scale, 1));
 			gap: 0.5rem;
 			padding: 0.75rem;
 			/* stops clear of the audio button in the corner */
@@ -420,14 +422,14 @@
 		}
 		.panel :global(select),
 		.field select {
-			font-size: 0.72rem !important;
+			font-size: calc(0.78rem * var(--text-scale, 1)) !important;
 		}
 		.legend {
-			font-size: 0.72rem;
+			font-size: calc(0.72rem * var(--text-scale, 1));
 			gap: 0.35rem;
 		}
 		.mode-toggle {
-			font-size: 0.62rem;
+			font-size: calc(0.62rem * var(--text-scale, 1));
 			padding: 0.25rem 0.45rem;
 		}
 	}

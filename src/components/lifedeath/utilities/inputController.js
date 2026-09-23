@@ -28,11 +28,16 @@ export function createInputController({
 	getScrollWalkScale = () => 1,
 	dragLookRadiansPerSwipe,
 	maxDragPitch,
+	// a right-button drag adjusts the eye height; without this it's inert
+	// and the right button keeps the browser's own menu
+	onEyeHeightDrag = null,
 	dragThresholdPx = 6
 }) {
 	// last pointer position while pressed, for deltas
 	let lastMouseDragX = null;
 	let lastMouseDragY = null;
+	// a right-button press moves the camera's height, not its aim
+	let heightDragging = false;
 	let lastTouchX = null;
 	let lastTouchY = null;
 	// press origin, kept past mouseup for the total drag distance
@@ -58,6 +63,13 @@ export function createInputController({
 	function handleMouseDown(event) {
 		// the cornered preview isn't a control surface
 		if (getMode() !== "walk") return;
+		if (event.button === 2) {
+			if (!onEyeHeightDrag) return;
+			heightDragging = true;
+			lastMouseDragY = event.clientY;
+			container.style.cursor = "ns-resize";
+			return;
+		}
 		lastMouseDragX = event.clientX;
 		lastMouseDragY = event.clientY;
 		mouseDownX = event.clientX;
@@ -67,6 +79,12 @@ export function createInputController({
 	}
 
 	function handleMouseMove(event) {
+		if (heightDragging) {
+			const rect = container.getBoundingClientRect();
+			onEyeHeightDrag((event.clientY - lastMouseDragY) / rect.height);
+			lastMouseDragY = event.clientY;
+			return;
+		}
 		if (lastMouseDragX === null) return;
 		if (!hasDragged && mouseDownX !== null) {
 			const totalDist = Math.hypot(
@@ -96,9 +114,15 @@ export function createInputController({
 	}
 
 	function handleMouseUp() {
+		heightDragging = false;
 		lastMouseDragX = null;
 		lastMouseDragY = null;
 		container.style.cursor = "all-scroll";
+	}
+
+	// the right button is a control surface here, not a menu
+	function handleContextMenu(event) {
+		event.preventDefault();
 	}
 
 	function handleTouchStart(event) {
@@ -204,6 +228,7 @@ export function createInputController({
 		container.addEventListener("mousemove", handleMouseMove);
 		// on window, so releasing off the canvas still ends the drag
 		window.addEventListener("mouseup", handleMouseUp);
+		if (onEyeHeightDrag) container.addEventListener("contextmenu", handleContextMenu);
 		container.addEventListener("touchstart", handleTouchStart, { passive: false });
 		container.addEventListener("touchmove", handleTouchMove, { passive: false });
 		container.addEventListener("touchend", handleTouchEnd);
@@ -215,6 +240,7 @@ export function createInputController({
 		container.removeEventListener("mousedown", handleMouseDown);
 		container.removeEventListener("mousemove", handleMouseMove);
 		window.removeEventListener("mouseup", handleMouseUp);
+		if (onEyeHeightDrag) container.removeEventListener("contextmenu", handleContextMenu);
 		container.removeEventListener("touchstart", handleTouchStart);
 		container.removeEventListener("touchmove", handleTouchMove);
 		container.removeEventListener("touchend", handleTouchEnd);

@@ -251,11 +251,11 @@
 		font-family: var(--font-sans);
 	}
 	figcaption {
-		font-size: 13.5px;
+		font-size: calc(13.5px * var(--text-scale, 1));
 		font-weight: 600;
 		letter-spacing: 0.02em;
 		color: rgba(255, 255, 255, 0.85);
-		margin-bottom: 3px;
+		margin-bottom: 7px;
 	}
 	/* visually hidden, still read by screen readers */
 	.sr-only {
@@ -272,7 +272,7 @@
 	/* the axis ticks' own size and color, under the headline */
 	.subhed {
 		display: block;
-		font-size: 10.5px;
+		font-size: calc(10.5px * var(--text-scale, 1));
 		font-weight: 400;
 		letter-spacing: normal;
 		color: rgba(255, 255, 255, 0.55);
@@ -280,7 +280,7 @@
 	}
 	@media (max-width: 600px) {
 		figcaption {
-			font-size: 11px;
+			font-size: calc(12px * var(--text-scale, 1));
 		}
 	}
 	.legend {
@@ -290,7 +290,7 @@
 		margin: 2px 0 0;
 	}
 	.key {
-		font-size: 12px;
+		font-size: calc(12px * var(--text-scale, 1));
 		color: rgba(255, 255, 255, 0.8);
 		display: inline-flex;
 		align-items: center;
@@ -311,11 +311,11 @@
 		text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
 	}
 	.value {
-		font-size: 12px;
+		font-size: calc(12px * var(--text-scale, 1));
 		font-weight: 700;
 	}
 	.tick {
-		font-size: 10.5px;
+		font-size: calc(10.5px * var(--text-scale, 1));
 		fill: rgba(255, 255, 255, 0.55);
 	}
 </style>
