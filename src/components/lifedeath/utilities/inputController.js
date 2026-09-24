@@ -40,6 +40,9 @@ export function createInputController({
 	let heightDragging = false;
 	let lastTouchX = null;
 	let lastTouchY = null;
+	// two fingers do what the right-button drag does: move the eye height
+	let heightTouching = false;
+	let lastTouchHeightY = null;
 	// press origin, kept past mouseup for the total drag distance
 	let mouseDownX = null;
 	let mouseDownY = null;
@@ -125,9 +128,28 @@ export function createInputController({
 		event.preventDefault();
 	}
 
+	// the midpoint of a two-finger gesture, so a pinch doesn't also drift it
+	function touchMidY(touches) {
+		return (touches[0].clientY + touches[1].clientY) / 2;
+	}
+
 	function handleTouchStart(event) {
 		// no steering while the walk view is only the topdown preview
 		if (getMode() !== "walk") return;
+		// a second finger switches the gesture to eye height, mid-touch
+		if (event.touches.length >= 2) {
+			if (!onEyeHeightDrag) return;
+			heightTouching = true;
+			lastTouchHeightY = touchMidY(event.touches);
+			// two fingers are never a tap, and never a steer or a walk
+			hasDragged = true;
+			hasDeterminedDirection = false;
+			isSwipingHorizontally = false;
+			isSwipingVertically = false;
+			return;
+		}
+		heightTouching = false;
+		lastTouchHeightY = null;
 		const touch = event.touches[0];
 		if (!touch) return;
 
@@ -155,6 +177,16 @@ export function createInputController({
 
 		// stop the browser scrolling the page instead
 		event.preventDefault();
+
+		// two fingers: the midpoint's travel is the height drag
+		if (heightTouching) {
+			if (event.touches.length < 2) return;
+			const midY = touchMidY(event.touches);
+			const rect = container.getBoundingClientRect();
+			onEyeHeightDrag((midY - lastTouchHeightY) / rect.height);
+			lastTouchHeightY = midY;
+			return;
+		}
 
 		// lock the swipe to an axis
 		if (!hasDeterminedDirection) {
@@ -210,6 +242,8 @@ export function createInputController({
 
 	function handleTouchEnd() {
 		// clear everything when the finger lifts
+		heightTouching = false;
+		lastTouchHeightY = null;
 		lastTouchX = null;
 		lastTouchY = null;
 		startTouchX = null;

@@ -1,0 +1,4225 @@
+{
+	"1": [
+		{
+			"w": "The",
+			"start": 0.1,
+			"end": 0.16
+		},
+		{
+			"w": "thousands",
+			"start": 0.16,
+			"end": 0.48
+		},
+		{
+			"w": "of",
+			"start": 0.48,
+			"end": 0.7
+		},
+		{
+			"w": "people",
+			"start": 0.7,
+			"end": 1.02
+		},
+		{
+			"w": "here",
+			"start": 1.02,
+			"end": 1.12
+		},
+		{
+			"w": "answered",
+			"start": 1.12,
+			"end": 1.54
+		},
+		{
+			"w": "a",
+			"start": 1.54,
+			"end": 1.72
+		},
+		{
+			"w": "question",
+			"start": 1.72,
+			"end": 2.02
+		},
+		{
+			"w": "about",
+			"start": 2.02,
+			"end": 2.3
+		},
+		{
+			"w": "the",
+			"start": 2.3,
+			"end": 2.5
+		},
+		{
+			"w": "afterlife",
+			"start": 2.5,
+			"end": 3.0
+		},
+		{
+			"w": "as",
+			"start": 3.0,
+			"end": 3.42
+		},
+		{
+			"w": "part",
+			"start": 3.42,
+			"end": 3.62
+		},
+		{
+			"w": "of",
+			"start": 3.62,
+			"end": 3.74
+		},
+		{
+			"w": "the",
+			"start": 3.74,
+			"end": 3.94
+		},
+		{
+			"w": "Global",
+			"start": 3.94,
+			"end": 4.14
+		},
+		{
+			"w": "Flourishing",
+			"start": 4.14,
+			"end": 4.72
+		},
+		{
+			"w": "Study.",
+			"start": 4.72,
+			"end": 5.64
+		},
+		{
+			"w": "Keep",
+			"start": 5.64,
+			"end": 5.74
+		},
+		{
+			"w": "walking",
+			"start": 5.74,
+			"end": 6.06
+		},
+		{
+			"w": "toward",
+			"start": 6.06,
+			"end": 6.36
+		},
+		{
+			"w": "the",
+			"start": 6.36,
+			"end": 6.52
+		},
+		{
+			"w": "light!",
+			"start": 6.52,
+			"end": 6.76
+		}
+	],
+	"2": [
+		{
+			"w": "What",
+			"start": 0.16,
+			"end": 0.22
+		},
+		{
+			"w": "we",
+			"start": 0.22,
+			"end": 0.38
+		},
+		{
+			"w": "believe",
+			"start": 0.38,
+			"end": 0.7
+		},
+		{
+			"w": "about",
+			"start": 0.7,
+			"end": 1.06
+		},
+		{
+			"w": "the",
+			"start": 1.06,
+			"end": 1.16
+		},
+		{
+			"w": "afterlife",
+			"start": 1.16,
+			"end": 1.6
+		},
+		{
+			"w": "hints",
+			"start": 1.6,
+			"end": 2.0
+		},
+		{
+			"w": "at",
+			"start": 2.0,
+			"end": 2.3
+		},
+		{
+			"w": "how",
+			"start": 2.3,
+			"end": 2.4
+		},
+		{
+			"w": "we",
+			"start": 2.4,
+			"end": 2.54
+		},
+		{
+			"w": "think",
+			"start": 2.54,
+			"end": 2.78
+		},
+		{
+			"w": "about",
+			"start": 2.78,
+			"end": 3.02
+		},
+		{
+			"w": "the",
+			"start": 3.02,
+			"end": 3.2
+		},
+		{
+			"w": "universe—",
+			"start": 3.2,
+			"end": 3.88
+		},
+		{
+			"w": "and",
+			"start": 3.88,
+			"end": 3.98
+		},
+		{
+			"w": "our",
+			"start": 3.98,
+			"end": 4.12
+		},
+		{
+			"w": "place",
+			"start": 4.12,
+			"end": 4.44
+		},
+		{
+			"w": "in",
+			"start": 4.44,
+			"end": 4.7
+		},
+		{
+			"w": "it.",
+			"start": 4.7,
+			"end": 5.26
+		},
+		{
+			"w": "But",
+			"start": 5.26,
+			"end": 5.34
+		},
+		{
+			"w": "our",
+			"start": 5.34,
+			"end": 5.42
+		},
+		{
+			"w": "beliefs",
+			"start": 5.42,
+			"end": 5.68
+		},
+		{
+			"w": "are",
+			"start": 5.68,
+			"end": 5.9
+		},
+		{
+			"w": "shaped",
+			"start": 5.9,
+			"end": 6.18
+		},
+		{
+			"w": "by",
+			"start": 6.18,
+			"end": 6.42
+		},
+		{
+			"w": "what",
+			"start": 6.42,
+			"end": 6.52
+		},
+		{
+			"w": "we",
+			"start": 6.52,
+			"end": 6.68
+		},
+		{
+			"w": "experience",
+			"start": 6.68,
+			"end": 7.2
+		},
+		{
+			"w": "during",
+			"start": 7.2,
+			"end": 7.7
+		},
+		{
+			"w": "our",
+			"start": 7.7,
+			"end": 7.96
+		},
+		{
+			"w": "lives.",
+			"start": 7.96,
+			"end": 8.84
+		},
+		{
+			"w": "As",
+			"start": 8.84,
+			"end": 8.94
+		},
+		{
+			"w": "that",
+			"start": 8.94,
+			"end": 9.26
+		},
+		{
+			"w": "changes,",
+			"start": 9.26,
+			"end": 10.38
+		},
+		{
+			"w": "so",
+			"start": 10.38,
+			"end": 10.48
+		},
+		{
+			"w": "do",
+			"start": 10.48,
+			"end": 10.62
+		},
+		{
+			"w": "our",
+			"start": 10.62,
+			"end": 10.72
+		},
+		{
+			"w": "beliefs",
+			"start": 10.72,
+			"end": 11.02
+		},
+		{
+			"w": "about",
+			"start": 11.02,
+			"end": 11.28
+		},
+		{
+			"w": "the",
+			"start": 11.28,
+			"end": 11.44
+		},
+		{
+			"w": "afterlife.",
+			"start": 11.44,
+			"end": 11.6
+		}
+	],
+	"3": [
+		{
+			"w": "Here",
+			"start": 0.32,
+			"end": 0.38
+		},
+		{
+			"w": "in",
+			"start": 0.38,
+			"end": 0.58
+		},
+		{
+			"w": "the",
+			"start": 0.58,
+			"end": 0.66
+		},
+		{
+			"w": "front",
+			"start": 0.66,
+			"end": 0.9
+		},
+		{
+			"w": "are",
+			"start": 0.9,
+			"end": 1.22
+		},
+		{
+			"w": "younger",
+			"start": 1.22,
+			"end": 1.46
+		},
+		{
+			"w": "people.",
+			"start": 1.46,
+			"end": 2.38
+		},
+		{
+			"w": "As",
+			"start": 2.38,
+			"end": 2.48
+		},
+		{
+			"w": "you",
+			"start": 2.48,
+			"end": 2.6
+		},
+		{
+			"w": "walk",
+			"start": 2.6,
+			"end": 2.7
+		},
+		{
+			"w": "to",
+			"start": 2.7,
+			"end": 2.84
+		},
+		{
+			"w": "the",
+			"start": 2.84,
+			"end": 2.92
+		},
+		{
+			"w": "back,",
+			"start": 2.92,
+			"end": 3.28
+		},
+		{
+			"w": "you’ll",
+			"start": 3.28,
+			"end": 3.6
+		},
+		{
+			"w": "encounter",
+			"start": 3.6,
+			"end": 3.7
+		},
+		{
+			"w": "older",
+			"start": 3.7,
+			"end": 4.12
+		},
+		{
+			"w": "people.",
+			"start": 4.12,
+			"end": 4.26
+		}
+	],
+	"4": [
+		{
+			"w": "Young",
+			"start": 0.18,
+			"end": 0.24
+		},
+		{
+			"w": "people",
+			"start": 0.24,
+			"end": 0.56
+		},
+		{
+			"w": "are",
+			"start": 0.56,
+			"end": 0.82
+		},
+		{
+			"w": "most",
+			"start": 0.82,
+			"end": 0.96
+		},
+		{
+			"w": "likely",
+			"start": 0.96,
+			"end": 1.32
+		},
+		{
+			"w": "to",
+			"start": 1.32,
+			"end": 1.56
+		},
+		{
+			"w": "have",
+			"start": 1.56,
+			"end": 1.78
+		},
+		{
+			"w": "malleable",
+			"start": 1.78,
+			"end": 2.28
+		},
+		{
+			"w": "beliefs",
+			"start": 2.28,
+			"end": 2.76
+		},
+		{
+			"w": "about",
+			"start": 2.76,
+			"end": 2.88
+		},
+		{
+			"w": "the",
+			"start": 2.88,
+			"end": 3.06
+		},
+		{
+			"w": "afterlife.",
+			"start": 3.06,
+			"end": 3.82
+		},
+		{
+			"w": "Between",
+			"start": 3.82,
+			"end": 4.04
+		},
+		{
+			"w": "the",
+			"start": 4.04,
+			"end": 4.26
+		},
+		{
+			"w": "two",
+			"start": 4.26,
+			"end": 4.48
+		},
+		{
+			"w": "rounds",
+			"start": 4.48,
+			"end": 4.76
+		},
+		{
+			"w": "of",
+			"start": 4.76,
+			"end": 4.92
+		},
+		{
+			"w": "surveys,",
+			"start": 4.92,
+			"end": 5.58
+		},
+		{
+			"w": "18",
+			"start": 5.58,
+			"end": 5.78
+		},
+		{
+			"w": "months",
+			"start": 5.78,
+			"end": 5.94
+		},
+		{
+			"w": "apart,",
+			"start": 5.94,
+			"end": 7.0
+		},
+		{
+			"w": "lots",
+			"start": 7.0,
+			"end": 7.14
+		},
+		{
+			"w": "of",
+			"start": 7.14,
+			"end": 7.4
+		},
+		{
+			"w": "people",
+			"start": 7.4,
+			"end": 7.58
+		},
+		{
+			"w": "in",
+			"start": 7.58,
+			"end": 7.78
+		},
+		{
+			"w": "this",
+			"start": 7.78,
+			"end": 7.94
+		},
+		{
+			"w": "part",
+			"start": 7.94,
+			"end": 8.14
+		},
+		{
+			"w": "of",
+			"start": 8.14,
+			"end": 8.24
+		},
+		{
+			"w": "the",
+			"start": 8.24,
+			"end": 8.3
+		},
+		{
+			"w": "room",
+			"start": 8.3,
+			"end": 8.52
+		},
+		{
+			"w": "changed",
+			"start": 8.52,
+			"end": 9.02
+		},
+		{
+			"w": "their",
+			"start": 9.02,
+			"end": 9.24
+		},
+		{
+			"w": "answer.",
+			"start": 9.24,
+			"end": 9.34
+		}
+	],
+	"5": [
+		{
+			"w": "Here’s",
+			"start": 0.26,
+			"end": 0.44
+		},
+		{
+			"w": "who",
+			"start": 0.44,
+			"end": 0.54
+		},
+		{
+			"w": "changed",
+			"start": 0.54,
+			"end": 0.9
+		},
+		{
+			"w": "their",
+			"start": 0.9,
+			"end": 1.1
+		},
+		{
+			"w": "answer",
+			"start": 1.1,
+			"end": 1.44
+		},
+		{
+			"w": ".",
+			"start": 1.44,
+			"end": 2.06
+		},
+		{
+			"w": "The",
+			"start": 2.06,
+			"end": 2.16
+		},
+		{
+			"w": "most",
+			"start": 2.16,
+			"end": 2.36
+		},
+		{
+			"w": "entrenched",
+			"start": 2.36,
+			"end": 2.96
+		},
+		{
+			"w": "20-somethings",
+			"start": 2.96,
+			"end": 3.82
+		},
+		{
+			"w": "are",
+			"start": 3.82,
+			"end": 3.88
+		},
+		{
+			"w": "people",
+			"start": 3.88,
+			"end": 4.12
+		},
+		{
+			"w": "who",
+			"start": 4.12,
+			"end": 4.34
+		},
+		{
+			"w": "believe",
+			"start": 4.34,
+			"end": 4.7
+		},
+		{
+			"w": "in",
+			"start": 4.7,
+			"end": 4.86
+		},
+		{
+			"w": "an",
+			"start": 4.86,
+			"end": 4.96
+		},
+		{
+			"w": "afterlife—",
+			"start": 4.96,
+			"end": 6.04
+		},
+		{
+			"w": "but",
+			"start": 6.04,
+			"end": 6.14
+		},
+		{
+			"w": "even",
+			"start": 6.14,
+			"end": 6.32
+		},
+		{
+			"w": "a",
+			"start": 6.32,
+			"end": 6.58
+		},
+		{
+			"w": "quarter",
+			"start": 6.58,
+			"end": 6.7
+		},
+		{
+			"w": "of",
+			"start": 6.7,
+			"end": 7.0
+		},
+		{
+			"w": "that",
+			"start": 7.0,
+			"end": 7.14
+		},
+		{
+			"w": "group",
+			"start": 7.14,
+			"end": 7.38
+		},
+		{
+			"w": "moved.",
+			"start": 7.38,
+			"end": 7.74
+		}
+	],
+	"7": [
+		{
+			"w": "As",
+			"start": 0.18,
+			"end": 0.24
+		},
+		{
+			"w": "expected,",
+			"start": 0.24,
+			"end": 1.0
+		},
+		{
+			"w": "belief",
+			"start": 1.0,
+			"end": 1.22
+		},
+		{
+			"w": "in",
+			"start": 1.22,
+			"end": 1.32
+		},
+		{
+			"w": "an",
+			"start": 1.32,
+			"end": 1.42
+		},
+		{
+			"w": "afterlife",
+			"start": 1.42,
+			"end": 1.76
+		},
+		{
+			"w": "is",
+			"start": 1.76,
+			"end": 2.22
+		},
+		{
+			"w": "closely",
+			"start": 2.22,
+			"end": 2.46
+		},
+		{
+			"w": "correlated",
+			"start": 2.46,
+			"end": 3.02
+		},
+		{
+			"w": "to",
+			"start": 3.02,
+			"end": 3.42
+		},
+		{
+			"w": "whether",
+			"start": 3.42,
+			"end": 3.6
+		},
+		{
+			"w": "they’re",
+			"start": 3.6,
+			"end": 3.96
+		},
+		{
+			"w": "affiliated",
+			"start": 3.96,
+			"end": 4.26
+		},
+		{
+			"w": "with",
+			"start": 4.26,
+			"end": 4.64
+		},
+		{
+			"w": "a",
+			"start": 4.64,
+			"end": 4.74
+		},
+		{
+			"w": "religion",
+			"start": 4.74,
+			"end": 5.02
+		},
+		{
+			"w": ".",
+			"start": 5.02,
+			"end": 5.12
+		}
+	],
+	"8": [
+		{
+			"w": "Just",
+			"start": 0.24,
+			"end": 0.3
+		},
+		{
+			"w": "as",
+			"start": 0.3,
+			"end": 0.52
+		},
+		{
+			"w": "strong",
+			"start": 0.52,
+			"end": 0.78
+		},
+		{
+			"w": "of",
+			"start": 0.78,
+			"end": 0.96
+		},
+		{
+			"w": "a",
+			"start": 0.96,
+			"end": 1.04
+		},
+		{
+			"w": "predictor",
+			"start": 1.04,
+			"end": 1.5
+		},
+		{
+			"w": "is",
+			"start": 1.5,
+			"end": 1.66
+		},
+		{
+			"w": "whether",
+			"start": 1.66,
+			"end": 1.84
+		},
+		{
+			"w": "people",
+			"start": 1.84,
+			"end": 2.3
+		},
+		{
+			"w": "say",
+			"start": 2.3,
+			"end": 2.4
+		},
+		{
+			"w": "religion",
+			"start": 2.4,
+			"end": 2.74
+		},
+		{
+			"w": "is",
+			"start": 2.74,
+			"end": 2.96
+		},
+		{
+			"w": "important",
+			"start": 2.96,
+			"end": 3.32
+		},
+		{
+			"w": "in",
+			"start": 3.32,
+			"end": 3.58
+		},
+		{
+			"w": "their",
+			"start": 3.58,
+			"end": 3.7
+		},
+		{
+			"w": "lives.",
+			"start": 3.7,
+			"end": 5.1
+		},
+		{
+			"w": "But",
+			"start": 5.1,
+			"end": 5.2
+		},
+		{
+			"w": "in",
+			"start": 5.2,
+			"end": 5.34
+		},
+		{
+			"w": "Europe",
+			"start": 5.34,
+			"end": 5.56
+		},
+		{
+			"w": "and",
+			"start": 5.56,
+			"end": 5.76
+		},
+		{
+			"w": "the",
+			"start": 5.76,
+			"end": 5.88
+		},
+		{
+			"w": "U.S.,",
+			"start": 5.88,
+			"end": 6.66
+		},
+		{
+			"w": "it’s",
+			"start": 6.66,
+			"end": 6.84
+		},
+		{
+			"w": "quite",
+			"start": 6.84,
+			"end": 6.94
+		},
+		{
+			"w": "common",
+			"start": 6.94,
+			"end": 7.36
+		},
+		{
+			"w": "for",
+			"start": 7.36,
+			"end": 7.6
+		},
+		{
+			"w": "young",
+			"start": 7.6,
+			"end": 7.8
+		},
+		{
+			"w": "people",
+			"start": 7.8,
+			"end": 8.14
+		},
+		{
+			"w": "to",
+			"start": 8.14,
+			"end": 8.42
+		},
+		{
+			"w": "believe",
+			"start": 8.42,
+			"end": 8.62
+		},
+		{
+			"w": "in",
+			"start": 8.62,
+			"end": 8.8
+		},
+		{
+			"w": "an",
+			"start": 8.8,
+			"end": 8.88
+		},
+		{
+			"w": "afterlife",
+			"start": 8.88,
+			"end": 9.3
+		},
+		{
+			"w": "but",
+			"start": 9.3,
+			"end": 9.78
+		},
+		{
+			"w": "say",
+			"start": 9.78,
+			"end": 9.88
+		},
+		{
+			"w": "that",
+			"start": 9.88,
+			"end": 10.02
+		},
+		{
+			"w": "religion",
+			"start": 10.02,
+			"end": 10.3
+		},
+		{
+			"w": "is",
+			"start": 10.3,
+			"end": 10.5
+		},
+		{
+			"w": "not",
+			"start": 10.5,
+			"end": 10.94
+		},
+		{
+			"w": "important",
+			"start": 10.94,
+			"end": 11.08
+		},
+		{
+			"w": ".",
+			"start": 11.08,
+			"end": 11.18
+		}
+	],
+	"11": [
+		{
+			"w": "Scholars",
+			"start": 0.32,
+			"end": 0.38
+		},
+		{
+			"w": "long",
+			"start": 0.38,
+			"end": 0.76
+		},
+		{
+			"w": "believed",
+			"start": 0.76,
+			"end": 1.14
+		},
+		{
+			"w": "that",
+			"start": 1.14,
+			"end": 1.32
+		},
+		{
+			"w": "the",
+			"start": 1.32,
+			"end": 1.42
+		},
+		{
+			"w": "rise",
+			"start": 1.42,
+			"end": 1.64
+		},
+		{
+			"w": "of",
+			"start": 1.64,
+			"end": 1.76
+		},
+		{
+			"w": "science",
+			"start": 1.76,
+			"end": 2.06
+		},
+		{
+			"w": "knowledge",
+			"start": 2.06,
+			"end": 2.42
+		},
+		{
+			"w": "would",
+			"start": 2.42,
+			"end": 2.64
+		},
+		{
+			"w": "create",
+			"start": 2.64,
+			"end": 3.02
+		},
+		{
+			"w": "an",
+			"start": 3.02,
+			"end": 3.24
+		},
+		{
+			"w": "increasingly",
+			"start": 3.24,
+			"end": 3.78
+		},
+		{
+			"w": "secular",
+			"start": 3.78,
+			"end": 4.32
+		},
+		{
+			"w": "world.",
+			"start": 4.32,
+			"end": 5.18
+		},
+		{
+			"w": "But",
+			"start": 5.18,
+			"end": 5.24
+		},
+		{
+			"w": "that",
+			"start": 5.24,
+			"end": 5.36
+		},
+		{
+			"w": "hasn’t",
+			"start": 5.36,
+			"end": 5.6
+		},
+		{
+			"w": "been",
+			"start": 5.6,
+			"end": 5.7
+		},
+		{
+			"w": "the",
+			"start": 5.7,
+			"end": 5.8
+		},
+		{
+			"w": "case.",
+			"start": 5.8,
+			"end": 6.58
+		},
+		{
+			"w": "From",
+			"start": 6.58,
+			"end": 6.66
+		},
+		{
+			"w": "the",
+			"start": 6.66,
+			"end": 6.76
+		},
+		{
+			"w": "1980s",
+			"start": 6.76,
+			"end": 7.56
+		},
+		{
+			"w": "to",
+			"start": 7.56,
+			"end": 7.64
+		},
+		{
+			"w": "mid-2000s,",
+			"start": 7.64,
+			"end": 8.9
+		},
+		{
+			"w": "religion",
+			"start": 8.9,
+			"end": 9.08
+		},
+		{
+			"w": "exploded—",
+			"start": 9.08,
+			"end": 10.46
+		},
+		{
+			"w": "particularly",
+			"start": 10.46,
+			"end": 10.68
+		},
+		{
+			"w": "in",
+			"start": 10.68,
+			"end": 11.1
+		},
+		{
+			"w": "former",
+			"start": 11.1,
+			"end": 11.22
+		},
+		{
+			"w": "Soviet",
+			"start": 11.22,
+			"end": 11.66
+		},
+		{
+			"w": "countries,",
+			"start": 11.66,
+			"end": 12.36
+		},
+		{
+			"w": "as",
+			"start": 12.36,
+			"end": 12.46
+		},
+		{
+			"w": "well",
+			"start": 12.46,
+			"end": 12.66
+		},
+		{
+			"w": "as",
+			"start": 12.66,
+			"end": 12.82
+		},
+		{
+			"w": "China,",
+			"start": 12.82,
+			"end": 13.24
+		},
+		{
+			"w": "Mexico,",
+			"start": 13.24,
+			"end": 13.64
+		},
+		{
+			"w": "Brazil,",
+			"start": 13.64,
+			"end": 14.12
+		},
+		{
+			"w": "and",
+			"start": 14.12,
+			"end": 14.18
+		},
+		{
+			"w": "the",
+			"start": 14.18,
+			"end": 14.28
+		},
+		{
+			"w": "U.S.",
+			"start": 14.28,
+			"end": 14.53
+		}
+	],
+	"12": [
+		{
+			"w": "Since",
+			"start": 0.2,
+			"end": 0.26
+		},
+		{
+			"w": "then,",
+			"start": 0.26,
+			"end": 0.76
+		},
+		{
+			"w": "religious",
+			"start": 0.76,
+			"end": 0.9
+		},
+		{
+			"w": "belief",
+			"start": 0.9,
+			"end": 1.2
+		},
+		{
+			"w": "has",
+			"start": 1.2,
+			"end": 1.48
+		},
+		{
+			"w": "fallen",
+			"start": 1.48,
+			"end": 1.64
+		},
+		{
+			"w": "in",
+			"start": 1.64,
+			"end": 1.82
+		},
+		{
+			"w": "most",
+			"start": 1.82,
+			"end": 2.6
+		},
+		{
+			"w": "countries—",
+			"start": 2.6,
+			"end": 2.7
+		},
+		{
+			"w": "especially",
+			"start": 2.7,
+			"end": 3.04
+		},
+		{
+			"w": "in",
+			"start": 3.04,
+			"end": 3.36
+		},
+		{
+			"w": "the",
+			"start": 3.36,
+			"end": 3.46
+		},
+		{
+			"w": "U.S.,",
+			"start": 3.46,
+			"end": 4.0
+		},
+		{
+			"w": "but",
+			"start": 4.0,
+			"end": 4.06
+		},
+		{
+			"w": "also",
+			"start": 4.06,
+			"end": 4.34
+		},
+		{
+			"w": "other",
+			"start": 4.34,
+			"end": 4.62
+		},
+		{
+			"w": "wealthier",
+			"start": 4.62,
+			"end": 5.02
+		},
+		{
+			"w": "countries.",
+			"start": 5.02,
+			"end": 5.96
+		},
+		{
+			"w": "One",
+			"start": 5.96,
+			"end": 6.08
+		},
+		{
+			"w": "theory",
+			"start": 6.08,
+			"end": 6.34
+		},
+		{
+			"w": "is",
+			"start": 6.34,
+			"end": 6.68
+		},
+		{
+			"w": "that",
+			"start": 6.68,
+			"end": 6.78
+		},
+		{
+			"w": "when",
+			"start": 6.78,
+			"end": 6.9
+		},
+		{
+			"w": "people",
+			"start": 6.9,
+			"end": 7.18
+		},
+		{
+			"w": "face",
+			"start": 7.18,
+			"end": 7.44
+		},
+		{
+			"w": "constant",
+			"start": 7.44,
+			"end": 8.12
+		},
+		{
+			"w": "threats",
+			"start": 8.12,
+			"end": 8.42
+		},
+		{
+			"w": "to",
+			"start": 8.42,
+			"end": 8.62
+		},
+		{
+			"w": "their",
+			"start": 8.62,
+			"end": 8.72
+		},
+		{
+			"w": "lives",
+			"start": 8.72,
+			"end": 9.06
+		},
+		{
+			"w": ",",
+			"start": 9.06,
+			"end": 9.58
+		},
+		{
+			"w": "religion",
+			"start": 9.58,
+			"end": 9.7
+		},
+		{
+			"w": "encourages",
+			"start": 9.7,
+			"end": 10.24
+		},
+		{
+			"w": "them",
+			"start": 10.24,
+			"end": 10.6
+		},
+		{
+			"w": "to",
+			"start": 10.6,
+			"end": 10.74
+		},
+		{
+			"w": "have",
+			"start": 10.74,
+			"end": 10.98
+		},
+		{
+			"w": "more",
+			"start": 10.98,
+			"end": 11.27
+		},
+		{
+			"w": "children",
+			"start": 11.27,
+			"end": 11.8
+		},
+		{
+			"w": "so",
+			"start": 11.8,
+			"end": 11.9
+		},
+		{
+			"w": "their",
+			"start": 11.9,
+			"end": 12.04
+		},
+		{
+			"w": "community",
+			"start": 12.04,
+			"end": 12.44
+		},
+		{
+			"w": "survives.",
+			"start": 12.44,
+			"end": 13.44
+		},
+		{
+			"w": "But",
+			"start": 13.44,
+			"end": 13.54
+		},
+		{
+			"w": "as",
+			"start": 13.54,
+			"end": 13.66
+		},
+		{
+			"w": "life",
+			"start": 13.66,
+			"end": 13.86
+		},
+		{
+			"w": "becomes",
+			"start": 13.86,
+			"end": 14.16
+		},
+		{
+			"w": "safer,",
+			"start": 14.16,
+			"end": 15.18
+		},
+		{
+			"w": "religion",
+			"start": 15.18,
+			"end": 15.36
+		},
+		{
+			"w": "fades",
+			"start": 15.36,
+			"end": 15.74
+		},
+		{
+			"w": "generation",
+			"start": 15.74,
+			"end": 16.36
+		},
+		{
+			"w": "by",
+			"start": 16.36,
+			"end": 16.78
+		},
+		{
+			"w": "generation.",
+			"start": 16.78,
+			"end": 17.32
+		}
+	],
+	"13": [
+		{
+			"w": "Still",
+			"start": 0.28,
+			"end": 0.34
+		},
+		{
+			"w": "today,",
+			"start": 0.34,
+			"end": 1.3
+		},
+		{
+			"w": "people",
+			"start": 1.3,
+			"end": 1.42
+		},
+		{
+			"w": "who",
+			"start": 1.42,
+			"end": 1.52
+		},
+		{
+			"w": "have",
+			"start": 1.52,
+			"end": 1.66
+		},
+		{
+			"w": "faced",
+			"start": 1.66,
+			"end": 1.92
+		},
+		{
+			"w": "a",
+			"start": 1.92,
+			"end": 2.12
+		},
+		{
+			"w": "life-threatening",
+			"start": 2.12,
+			"end": 2.82
+		},
+		{
+			"w": "situation",
+			"start": 2.82,
+			"end": 3.2
+		},
+		{
+			"w": "are",
+			"start": 3.2,
+			"end": 3.48
+		},
+		{
+			"w": "more",
+			"start": 3.48,
+			"end": 3.94
+		},
+		{
+			"w": "likely",
+			"start": 3.94,
+			"end": 4.04
+		},
+		{
+			"w": "to",
+			"start": 4.04,
+			"end": 4.24
+		},
+		{
+			"w": "change",
+			"start": 4.24,
+			"end": 4.5
+		},
+		{
+			"w": "their",
+			"start": 4.5,
+			"end": 4.72
+		},
+		{
+			"w": "afterlife",
+			"start": 4.72,
+			"end": 5.04
+		},
+		{
+			"w": "belief.",
+			"start": 5.04,
+			"end": 6.12
+		},
+		{
+			"w": "To",
+			"start": 6.12,
+			"end": 6.18
+		},
+		{
+			"w": "no",
+			"start": 6.18,
+			"end": 6.32
+		},
+		{
+			"w": "one’s",
+			"start": 6.32,
+			"end": 6.54
+		},
+		{
+			"w": "surprise,",
+			"start": 6.54,
+			"end": 7.34
+		},
+		{
+			"w": "afterlife",
+			"start": 7.34,
+			"end": 7.44
+		},
+		{
+			"w": "belief",
+			"start": 7.44,
+			"end": 7.96
+		},
+		{
+			"w": "helps",
+			"start": 7.96,
+			"end": 8.16
+		},
+		{
+			"w": "some",
+			"start": 8.16,
+			"end": 8.42
+		},
+		{
+			"w": "people",
+			"start": 8.42,
+			"end": 8.68
+		},
+		{
+			"w": "cope",
+			"start": 8.68,
+			"end": 9.0
+		},
+		{
+			"w": "with",
+			"start": 9.0,
+			"end": 9.26
+		},
+		{
+			"w": "the",
+			"start": 9.26,
+			"end": 9.36
+		},
+		{
+			"w": "anxiety",
+			"start": 9.36,
+			"end": 9.64
+		},
+		{
+			"w": "of",
+			"start": 9.64,
+			"end": 9.84
+		},
+		{
+			"w": "death.",
+			"start": 9.84,
+			"end": 9.94
+		}
+	],
+	"15": [
+		{
+			"w": "When",
+			"start": 0.14,
+			"end": 0.2
+		},
+		{
+			"w": "people",
+			"start": 0.2,
+			"end": 0.46
+		},
+		{
+			"w": "hit",
+			"start": 0.46,
+			"end": 0.64
+		},
+		{
+			"w": "their",
+			"start": 0.64,
+			"end": 0.74
+		},
+		{
+			"w": "50s,",
+			"start": 0.74,
+			"end": 1.52
+		},
+		{
+			"w": "their",
+			"start": 1.52,
+			"end": 1.62
+		},
+		{
+			"w": "afterlife",
+			"start": 1.62,
+			"end": 1.94
+		},
+		{
+			"w": "beliefs",
+			"start": 1.94,
+			"end": 2.52
+		},
+		{
+			"w": "start",
+			"start": 2.52,
+			"end": 2.7
+		},
+		{
+			"w": "to",
+			"start": 2.7,
+			"end": 2.86
+		},
+		{
+			"w": "solidify,",
+			"start": 2.86,
+			"end": 3.9
+		},
+		{
+			"w": "especially",
+			"start": 3.9,
+			"end": 4.2
+		},
+		{
+			"w": "for",
+			"start": 4.2,
+			"end": 4.5
+		},
+		{
+			"w": "people",
+			"start": 4.5,
+			"end": 4.86
+		},
+		{
+			"w": "who",
+			"start": 4.86,
+			"end": 4.96
+		},
+		{
+			"w": "regularly",
+			"start": 4.96,
+			"end": 5.38
+		},
+		{
+			"w": "attend",
+			"start": 5.38,
+			"end": 5.72
+		},
+		{
+			"w": "religious",
+			"start": 5.72,
+			"end": 6.1
+		},
+		{
+			"w": "services.",
+			"start": 6.1,
+			"end": 6.85
+		}
+	],
+	"16": [
+		{
+			"w": "People",
+			"start": 0.26,
+			"end": 0.32
+		},
+		{
+			"w": "in",
+			"start": 0.32,
+			"end": 0.48
+		},
+		{
+			"w": "their",
+			"start": 0.48,
+			"end": 0.58
+		},
+		{
+			"w": "50s",
+			"start": 0.58,
+			"end": 1.02
+		},
+		{
+			"w": "who",
+			"start": 1.02,
+			"end": 1.1
+		},
+		{
+			"w": "believe",
+			"start": 1.1,
+			"end": 1.36
+		},
+		{
+			"w": "in",
+			"start": 1.36,
+			"end": 1.54
+		},
+		{
+			"w": "an",
+			"start": 1.54,
+			"end": 1.8
+		},
+		{
+			"w": "afterlife",
+			"start": 1.8,
+			"end": 1.9
+		},
+		{
+			"w": "rarely",
+			"start": 1.9,
+			"end": 2.36
+		},
+		{
+			"w": "change",
+			"start": 2.36,
+			"end": 2.76
+		},
+		{
+			"w": "their",
+			"start": 2.76,
+			"end": 2.94
+		},
+		{
+			"w": "answer",
+			"start": 2.94,
+			"end": 3.24
+		},
+		{
+			"w": "and",
+			"start": 3.24,
+			"end": 3.4
+		},
+		{
+			"w": "cross",
+			"start": 3.4,
+			"end": 3.68
+		},
+		{
+			"w": "into",
+			"start": 3.68,
+			"end": 3.88
+		},
+		{
+			"w": "the",
+			"start": 3.88,
+			"end": 4.06
+		},
+		{
+			"w": "“no”",
+			"start": 4.06,
+			"end": 4.56
+		},
+		{
+			"w": "part",
+			"start": 4.56,
+			"end": 4.62
+		},
+		{
+			"w": "of",
+			"start": 4.62,
+			"end": 4.7
+		},
+		{
+			"w": "the",
+			"start": 4.7,
+			"end": 4.76
+		},
+		{
+			"w": "room.",
+			"start": 4.76,
+			"end": 5.62
+		},
+		{
+			"w": "This",
+			"start": 5.62,
+			"end": 5.72
+		},
+		{
+			"w": "includes",
+			"start": 5.72,
+			"end": 5.98
+		},
+		{
+			"w": "people",
+			"start": 5.98,
+			"end": 6.3
+		},
+		{
+			"w": "who",
+			"start": 6.3,
+			"end": 6.58
+		},
+		{
+			"w": "have",
+			"start": 6.58,
+			"end": 6.68
+		},
+		{
+			"w": "never",
+			"start": 6.68,
+			"end": 6.98
+		},
+		{
+			"w": "set",
+			"start": 6.98,
+			"end": 7.32
+		},
+		{
+			"w": "foot",
+			"start": 7.32,
+			"end": 7.58
+		},
+		{
+			"w": "in",
+			"start": 7.58,
+			"end": 7.8
+		},
+		{
+			"w": "a",
+			"start": 7.8,
+			"end": 7.88
+		},
+		{
+			"w": "religious",
+			"start": 7.88,
+			"end": 8.1
+		},
+		{
+			"w": "service.",
+			"start": 8.1,
+			"end": 8.65
+		}
+	],
+	"17": [
+		{
+			"w": "There",
+			"start": 0.16,
+			"end": 0.22
+		},
+		{
+			"w": "are",
+			"start": 0.22,
+			"end": 0.36
+		},
+		{
+			"w": "some",
+			"start": 0.36,
+			"end": 0.54
+		},
+		{
+			"w": "regional",
+			"start": 0.54,
+			"end": 0.9
+		},
+		{
+			"w": "differences.",
+			"start": 0.9,
+			"end": 2.1
+		},
+		{
+			"w": "In",
+			"start": 2.1,
+			"end": 2.18
+		},
+		{
+			"w": "sub-Saharan",
+			"start": 2.18,
+			"end": 2.7
+		},
+		{
+			"w": "Africa",
+			"start": 2.7,
+			"end": 3.1
+		},
+		{
+			"w": "and",
+			"start": 3.1,
+			"end": 3.4
+		},
+		{
+			"w": "South",
+			"start": 3.4,
+			"end": 3.6
+		},
+		{
+			"w": "Asia,",
+			"start": 3.6,
+			"end": 4.44
+		},
+		{
+			"w": "belief",
+			"start": 4.44,
+			"end": 4.64
+		},
+		{
+			"w": "stays",
+			"start": 4.64,
+			"end": 4.94
+		},
+		{
+			"w": "high",
+			"start": 4.94,
+			"end": 5.3
+		},
+		{
+			"w": "at",
+			"start": 5.3,
+			"end": 5.6
+		},
+		{
+			"w": "every",
+			"start": 5.6,
+			"end": 5.9
+		},
+		{
+			"w": "age",
+			"start": 5.9,
+			"end": 6.26
+		},
+		{
+			"w": "group.",
+			"start": 6.26,
+			"end": 7.2
+		},
+		{
+			"w": "But",
+			"start": 7.2,
+			"end": 7.3
+		},
+		{
+			"w": "in",
+			"start": 7.3,
+			"end": 7.42
+		},
+		{
+			"w": "the",
+			"start": 7.42,
+			"end": 7.5
+		},
+		{
+			"w": "U.S.",
+			"start": 7.5,
+			"end": 7.88
+		},
+		{
+			"w": "and",
+			"start": 7.88,
+			"end": 7.94
+		},
+		{
+			"w": "Europe,",
+			"start": 7.94,
+			"end": 8.6
+		},
+		{
+			"w": "older",
+			"start": 8.6,
+			"end": 8.68
+		},
+		{
+			"w": "believers",
+			"start": 8.68,
+			"end": 9.1
+		},
+		{
+			"w": "get",
+			"start": 9.1,
+			"end": 9.62
+		},
+		{
+			"w": "less",
+			"start": 9.62,
+			"end": 9.8
+		},
+		{
+			"w": "and",
+			"start": 9.8,
+			"end": 10.0
+		},
+		{
+			"w": "less",
+			"start": 10.0,
+			"end": 10.34
+		},
+		{
+			"w": "likely",
+			"start": 10.34,
+			"end": 10.56
+		},
+		{
+			"w": "to",
+			"start": 10.56,
+			"end": 10.72
+		},
+		{
+			"w": "move.",
+			"start": 10.72,
+			"end": 11.04
+		}
+	],
+	"18": [
+		{
+			"w": "People",
+			"start": 0.32,
+			"end": 0.38
+		},
+		{
+			"w": "in",
+			"start": 0.38,
+			"end": 0.56
+		},
+		{
+			"w": "their",
+			"start": 0.56,
+			"end": 0.66
+		},
+		{
+			"w": "60s",
+			"start": 0.66,
+			"end": 1.18
+		},
+		{
+			"w": "who",
+			"start": 1.18,
+			"end": 1.28
+		},
+		{
+			"w": "are",
+			"start": 1.28,
+			"end": 1.36
+		},
+		{
+			"w": "unsure",
+			"start": 1.36,
+			"end": 1.94
+		},
+		{
+			"w": "are",
+			"start": 1.94,
+			"end": 2.54
+		},
+		{
+			"w": "more",
+			"start": 2.54,
+			"end": 2.82
+		},
+		{
+			"w": "likely",
+			"start": 2.82,
+			"end": 3.28
+		},
+		{
+			"w": "to",
+			"start": 3.28,
+			"end": 3.38
+		},
+		{
+			"w": "move",
+			"start": 3.38,
+			"end": 3.56
+		},
+		{
+			"w": "toward",
+			"start": 3.56,
+			"end": 3.74
+		},
+		{
+			"w": "the",
+			"start": 3.74,
+			"end": 3.94
+		},
+		{
+			"w": "belief",
+			"start": 3.94,
+			"end": 4.12
+		},
+		{
+			"w": "that",
+			"start": 4.12,
+			"end": 4.42
+		},
+		{
+			"w": "everyone",
+			"start": 4.42,
+			"end": 4.64
+		},
+		{
+			"w": "around",
+			"start": 4.64,
+			"end": 4.98
+		},
+		{
+			"w": "them",
+			"start": 4.98,
+			"end": 5.14
+		},
+		{
+			"w": "holds.",
+			"start": 5.14,
+			"end": 5.88
+		},
+		{
+			"w": "In",
+			"start": 5.88,
+			"end": 6.08
+		},
+		{
+			"w": "fact,",
+			"start": 6.08,
+			"end": 6.58
+		},
+		{
+			"w": "if",
+			"start": 6.58,
+			"end": 6.64
+		},
+		{
+			"w": "they’re",
+			"start": 6.64,
+			"end": 6.98
+		},
+		{
+			"w": "skeptics",
+			"start": 6.98,
+			"end": 7.44
+		},
+		{
+			"w": "but",
+			"start": 7.44,
+			"end": 7.72
+		},
+		{
+			"w": "a",
+			"start": 7.72,
+			"end": 7.82
+		},
+		{
+			"w": "regular",
+			"start": 7.82,
+			"end": 8.06
+		},
+		{
+			"w": "church",
+			"start": 8.06,
+			"end": 8.36
+		},
+		{
+			"w": "attender,",
+			"start": 8.36,
+			"end": 9.2
+		},
+		{
+			"w": "they",
+			"start": 9.2,
+			"end": 9.3
+		},
+		{
+			"w": "are",
+			"start": 9.3,
+			"end": 9.42
+		},
+		{
+			"w": "far",
+			"start": 9.42,
+			"end": 9.8
+		},
+		{
+			"w": "more",
+			"start": 9.8,
+			"end": 10.0
+		},
+		{
+			"w": "likely",
+			"start": 10.0,
+			"end": 10.3
+		},
+		{
+			"w": "to",
+			"start": 10.3,
+			"end": 10.56
+		},
+		{
+			"w": "move",
+			"start": 10.56,
+			"end": 10.7
+		},
+		{
+			"w": "toward",
+			"start": 10.7,
+			"end": 10.92
+		},
+		{
+			"w": "belief.",
+			"start": 10.92,
+			"end": 11.28
+		}
+	],
+	"19": [
+		{
+			"w": "But",
+			"start": 0.08,
+			"end": 0.14
+		},
+		{
+			"w": "people",
+			"start": 0.14,
+			"end": 0.34
+		},
+		{
+			"w": "who",
+			"start": 0.34,
+			"end": 0.54
+		},
+		{
+			"w": "are",
+			"start": 0.54,
+			"end": 0.64
+		},
+		{
+			"w": "frequently",
+			"start": 0.64,
+			"end": 0.98
+		},
+		{
+			"w": "depressed",
+			"start": 0.98,
+			"end": 1.5
+		},
+		{
+			"w": "continue",
+			"start": 1.5,
+			"end": 2.08
+		},
+		{
+			"w": "to",
+			"start": 2.08,
+			"end": 2.42
+		},
+		{
+			"w": "change",
+			"start": 2.42,
+			"end": 2.58
+		},
+		{
+			"w": "their",
+			"start": 2.58,
+			"end": 2.76
+		},
+		{
+			"w": "answers",
+			"start": 2.76,
+			"end": 3.08
+		},
+		{
+			"w": "at",
+			"start": 3.08,
+			"end": 3.3
+		},
+		{
+			"w": "a",
+			"start": 3.3,
+			"end": 3.36
+		},
+		{
+			"w": "higher",
+			"start": 3.36,
+			"end": 3.54
+		},
+		{
+			"w": "rate,",
+			"start": 3.54,
+			"end": 4.16
+		},
+		{
+			"w": "even",
+			"start": 4.16,
+			"end": 4.3
+		},
+		{
+			"w": "late",
+			"start": 4.3,
+			"end": 4.54
+		},
+		{
+			"w": "in",
+			"start": 4.54,
+			"end": 4.66
+		},
+		{
+			"w": "their",
+			"start": 4.66,
+			"end": 4.8
+		},
+		{
+			"w": "lives.",
+			"start": 4.8,
+			"end": 5.12
+		}
+	],
+	"21": [
+		{
+			"w": "In",
+			"start": 0.32,
+			"end": 0.38
+		},
+		{
+			"w": "younger",
+			"start": 0.38,
+			"end": 0.6
+		},
+		{
+			"w": "cohorts,",
+			"start": 0.6,
+			"end": 1.36
+		},
+		{
+			"w": "being",
+			"start": 1.36,
+			"end": 1.5
+		},
+		{
+			"w": "unsure",
+			"start": 1.5,
+			"end": 2.0
+		},
+		{
+			"w": "is",
+			"start": 2.0,
+			"end": 2.26
+		},
+		{
+			"w": "a",
+			"start": 2.26,
+			"end": 2.4
+		},
+		{
+			"w": "sort",
+			"start": 2.4,
+			"end": 2.5
+		},
+		{
+			"w": "of",
+			"start": 2.5,
+			"end": 2.66
+		},
+		{
+			"w": "“still",
+			"start": 2.66,
+			"end": 2.92
+		},
+		{
+			"w": "exploring”",
+			"start": 2.92,
+			"end": 3.9
+		},
+		{
+			"w": "signal.",
+			"start": 3.9,
+			"end": 4.4
+		},
+		{
+			"w": "But",
+			"start": 4.4,
+			"end": 4.5
+		},
+		{
+			"w": "people",
+			"start": 4.5,
+			"end": 4.74
+		},
+		{
+			"w": "in",
+			"start": 4.74,
+			"end": 4.88
+		},
+		{
+			"w": "their",
+			"start": 4.88,
+			"end": 4.98
+		},
+		{
+			"w": "70s",
+			"start": 4.98,
+			"end": 5.54
+		},
+		{
+			"w": "will",
+			"start": 5.54,
+			"end": 5.72
+		},
+		{
+			"w": "likely",
+			"start": 5.72,
+			"end": 6.06
+		},
+		{
+			"w": "hold",
+			"start": 6.06,
+			"end": 6.42
+		},
+		{
+			"w": "this",
+			"start": 6.42,
+			"end": 6.64
+		},
+		{
+			"w": "uncertainty",
+			"start": 6.64,
+			"end": 7.04
+		},
+		{
+			"w": "for",
+			"start": 7.04,
+			"end": 7.38
+		},
+		{
+			"w": "the",
+			"start": 7.38,
+			"end": 7.48
+		},
+		{
+			"w": "rest",
+			"start": 7.48,
+			"end": 7.64
+		},
+		{
+			"w": "of",
+			"start": 7.64,
+			"end": 7.74
+		},
+		{
+			"w": "their",
+			"start": 7.74,
+			"end": 7.84
+		},
+		{
+			"w": "life.",
+			"start": 7.84,
+			"end": 8.18
+		}
+	],
+	"22": [
+		{
+			"w": "At",
+			"start": 0.12,
+			"end": 0.18
+		},
+		{
+			"w": "this",
+			"start": 0.18,
+			"end": 0.34
+		},
+		{
+			"w": "age,",
+			"start": 0.34,
+			"end": 0.9
+		},
+		{
+			"w": "if",
+			"start": 0.9,
+			"end": 1.02
+		},
+		{
+			"w": "unsure",
+			"start": 1.02,
+			"end": 1.36
+		},
+		{
+			"w": "people",
+			"start": 1.36,
+			"end": 1.66
+		},
+		{
+			"w": "change",
+			"start": 1.66,
+			"end": 2.02
+		},
+		{
+			"w": "their",
+			"start": 2.02,
+			"end": 2.24
+		},
+		{
+			"w": "mind,",
+			"start": 2.24,
+			"end": 2.98
+		},
+		{
+			"w": "they",
+			"start": 2.98,
+			"end": 3.08
+		},
+		{
+			"w": "are",
+			"start": 3.08,
+			"end": 3.2
+		},
+		{
+			"w": "slightly",
+			"start": 3.2,
+			"end": 3.64
+		},
+		{
+			"w": "more",
+			"start": 3.64,
+			"end": 4.12
+		},
+		{
+			"w": "likely",
+			"start": 4.12,
+			"end": 4.22
+		},
+		{
+			"w": "to",
+			"start": 4.22,
+			"end": 4.58
+		},
+		{
+			"w": "settle",
+			"start": 4.58,
+			"end": 4.68
+		},
+		{
+			"w": "on",
+			"start": 4.68,
+			"end": 4.88
+		},
+		{
+			"w": "no",
+			"start": 4.88,
+			"end": 5.1
+		},
+		{
+			"w": "afterlife",
+			"start": 5.1,
+			"end": 5.44
+		},
+		{
+			"w": ".",
+			"start": 5.44,
+			"end": 5.9
+		}
+	],
+	"24": [
+		{
+			"w": "What",
+			"start": 0.12,
+			"end": 0.18
+		},
+		{
+			"w": "we",
+			"start": 0.18,
+			"end": 0.36
+		},
+		{
+			"w": "believe",
+			"start": 0.36,
+			"end": 0.78
+		},
+		{
+			"w": "probably",
+			"start": 0.78,
+			"end": 1.28
+		},
+		{
+			"w": "doesn’t",
+			"start": 1.28,
+			"end": 1.7
+		},
+		{
+			"w": "change",
+			"start": 1.7,
+			"end": 1.94
+		},
+		{
+			"w": "whether",
+			"start": 1.94,
+			"end": 2.26
+		},
+		{
+			"w": "there",
+			"start": 2.26,
+			"end": 2.48
+		},
+		{
+			"w": "is",
+			"start": 2.48,
+			"end": 2.62
+		},
+		{
+			"w": "an",
+			"start": 2.62,
+			"end": 2.74
+		},
+		{
+			"w": "afterlife",
+			"start": 2.74,
+			"end": 3.02
+		},
+		{
+			"w": "or",
+			"start": 3.02,
+			"end": 3.26
+		},
+		{
+			"w": "not.",
+			"start": 3.26,
+			"end": 3.98
+		},
+		{
+			"w": "But",
+			"start": 3.98,
+			"end": 4.06
+		},
+		{
+			"w": "exploring",
+			"start": 4.06,
+			"end": 4.42
+		},
+		{
+			"w": "this",
+			"start": 4.42,
+			"end": 4.68
+		},
+		{
+			"w": "mystery",
+			"start": 4.68,
+			"end": 5.04
+		},
+		{
+			"w": "helps",
+			"start": 5.04,
+			"end": 5.32
+		},
+		{
+			"w": "us",
+			"start": 5.32,
+			"end": 5.52
+		},
+		{
+			"w": "make",
+			"start": 5.52,
+			"end": 5.68
+		},
+		{
+			"w": "sense",
+			"start": 5.68,
+			"end": 5.9
+		},
+		{
+			"w": "of",
+			"start": 5.9,
+			"end": 6.04
+		},
+		{
+			"w": "our",
+			"start": 6.04,
+			"end": 6.19
+		},
+		{
+			"w": "lives—",
+			"start": 6.19,
+			"end": 6.58
+		},
+		{
+			"w": "and",
+			"start": 6.58,
+			"end": 6.68
+		},
+		{
+			"w": "the",
+			"start": 6.68,
+			"end": 6.82
+		},
+		{
+			"w": "anxiety",
+			"start": 6.82,
+			"end": 7.14
+		},
+		{
+			"w": "of",
+			"start": 7.14,
+			"end": 7.36
+		},
+		{
+			"w": "the",
+			"start": 7.36,
+			"end": 7.46
+		},
+		{
+			"w": "fact",
+			"start": 7.46,
+			"end": 7.7
+		},
+		{
+			"w": "that",
+			"start": 7.7,
+			"end": 7.78
+		},
+		{
+			"w": "it",
+			"start": 7.78,
+			"end": 7.84
+		},
+		{
+			"w": "will",
+			"start": 7.84,
+			"end": 7.92
+		},
+		{
+			"w": "end.",
+			"start": 7.92,
+			"end": 8.16
+		}
+	],
+	"25": [
+		{
+			"w": "For",
+			"start": 0.22,
+			"end": 0.28
+		},
+		{
+			"w": "many",
+			"start": 0.28,
+			"end": 0.46
+		},
+		{
+			"w": "of",
+			"start": 0.46,
+			"end": 0.62
+		},
+		{
+			"w": "us,",
+			"start": 0.62,
+			"end": 1.18
+		},
+		{
+			"w": "knowing",
+			"start": 1.18,
+			"end": 1.24
+		},
+		{
+			"w": "that",
+			"start": 1.24,
+			"end": 1.48
+		},
+		{
+			"w": "there",
+			"start": 1.48,
+			"end": 1.6
+		},
+		{
+			"w": "is",
+			"start": 1.6,
+			"end": 1.68
+		},
+		{
+			"w": "something",
+			"start": 1.68,
+			"end": 1.88
+		},
+		{
+			"w": "better",
+			"start": 1.88,
+			"end": 2.24
+		},
+		{
+			"w": "in",
+			"start": 2.24,
+			"end": 2.4
+		},
+		{
+			"w": "the",
+			"start": 2.4,
+			"end": 2.52
+		},
+		{
+			"w": "afterlife",
+			"start": 2.52,
+			"end": 2.92
+		},
+		{
+			"w": "has",
+			"start": 2.92,
+			"end": 3.3
+		},
+		{
+			"w": "helped",
+			"start": 3.3,
+			"end": 3.4
+		},
+		{
+			"w": "us",
+			"start": 3.4,
+			"end": 3.54
+		},
+		{
+			"w": "cope",
+			"start": 3.54,
+			"end": 3.84
+		},
+		{
+			"w": "with",
+			"start": 3.84,
+			"end": 4.06
+		},
+		{
+			"w": "the",
+			"start": 4.06,
+			"end": 4.3
+		},
+		{
+			"w": "brutal",
+			"start": 4.3,
+			"end": 4.48
+		},
+		{
+			"w": "nature",
+			"start": 4.48,
+			"end": 4.86
+		},
+		{
+			"w": "of",
+			"start": 4.86,
+			"end": 5.04
+		},
+		{
+			"w": "our",
+			"start": 5.04,
+			"end": 5.12
+		},
+		{
+			"w": "lives.",
+			"start": 5.12,
+			"end": 5.8
+		},
+		{
+			"w": "We",
+			"start": 5.8,
+			"end": 5.86
+		},
+		{
+			"w": "often",
+			"start": 5.86,
+			"end": 6.12
+		},
+		{
+			"w": "explore",
+			"start": 6.12,
+			"end": 6.52
+		},
+		{
+			"w": "this",
+			"start": 6.52,
+			"end": 6.76
+		},
+		{
+			"w": "belief",
+			"start": 6.76,
+			"end": 6.98
+		},
+		{
+			"w": "together",
+			"start": 6.98,
+			"end": 7.38
+		},
+		{
+			"w": "with",
+			"start": 7.38,
+			"end": 7.78
+		},
+		{
+			"w": "shared",
+			"start": 7.78,
+			"end": 8.04
+		},
+		{
+			"w": "stories",
+			"start": 8.04,
+			"end": 8.52
+		},
+		{
+			"w": "and",
+			"start": 8.52,
+			"end": 8.7
+		},
+		{
+			"w": "rituals.",
+			"start": 8.7,
+			"end": 8.92
+		}
+	],
+	"26": [
+		{
+			"w": "For",
+			"start": 0.18,
+			"end": 0.24
+		},
+		{
+			"w": "many",
+			"start": 0.24,
+			"end": 0.46
+		},
+		{
+			"w": "of",
+			"start": 0.46,
+			"end": 0.6
+		},
+		{
+			"w": "us,",
+			"start": 0.6,
+			"end": 0.88
+		},
+		{
+			"w": "it’s",
+			"start": 0.88,
+			"end": 1.1
+		},
+		{
+			"w": "hard",
+			"start": 1.1,
+			"end": 1.22
+		},
+		{
+			"w": "to",
+			"start": 1.22,
+			"end": 1.4
+		},
+		{
+			"w": "believe",
+			"start": 1.4,
+			"end": 1.6
+		},
+		{
+			"w": "that",
+			"start": 1.6,
+			"end": 1.86
+		},
+		{
+			"w": "there’s",
+			"start": 1.86,
+			"end": 2.02
+		},
+		{
+			"w": "anything",
+			"start": 2.02,
+			"end": 2.28
+		},
+		{
+			"w": "after",
+			"start": 2.28,
+			"end": 2.58
+		},
+		{
+			"w": "the",
+			"start": 2.58,
+			"end": 2.76
+		},
+		{
+			"w": "end—",
+			"start": 2.76,
+			"end": 3.38
+		},
+		{
+			"w": "either",
+			"start": 3.38,
+			"end": 3.54
+		},
+		{
+			"w": "because",
+			"start": 3.54,
+			"end": 3.84
+		},
+		{
+			"w": "there",
+			"start": 3.84,
+			"end": 4.04
+		},
+		{
+			"w": "is",
+			"start": 4.04,
+			"end": 4.2
+		},
+		{
+			"w": "no",
+			"start": 4.2,
+			"end": 4.3
+		},
+		{
+			"w": "evidence",
+			"start": 4.3,
+			"end": 4.68
+		},
+		{
+			"w": "of",
+			"start": 4.68,
+			"end": 4.96
+		},
+		{
+			"w": "it,",
+			"start": 4.96,
+			"end": 5.28
+		},
+		{
+			"w": "or",
+			"start": 5.28,
+			"end": 5.58
+		},
+		{
+			"w": "because",
+			"start": 5.58,
+			"end": 5.68
+		},
+		{
+			"w": "our",
+			"start": 5.68,
+			"end": 5.88
+		},
+		{
+			"w": "experiences",
+			"start": 5.88,
+			"end": 6.44
+		},
+		{
+			"w": "have",
+			"start": 6.44,
+			"end": 6.84
+		},
+		{
+			"w": "nudged",
+			"start": 6.84,
+			"end": 7.3
+		},
+		{
+			"w": "us",
+			"start": 7.3,
+			"end": 7.42
+		},
+		{
+			"w": "to",
+			"start": 7.42,
+			"end": 7.58
+		},
+		{
+			"w": "disbelief.",
+			"start": 7.58,
+			"end": 8.03
+		}
+	],
+	"27": [
+		{
+			"w": "When",
+			"start": 0.06,
+			"end": 0.18
+		},
+		{
+			"w": "we",
+			"start": 0.18,
+			"end": 0.28
+		},
+		{
+			"w": "encounter",
+			"start": 0.28,
+			"end": 0.66
+		},
+		{
+			"w": "people",
+			"start": 0.66,
+			"end": 1.0
+		},
+		{
+			"w": "in",
+			"start": 1.0,
+			"end": 1.38
+		},
+		{
+			"w": "another",
+			"start": 1.38,
+			"end": 1.48
+		},
+		{
+			"w": "part",
+			"start": 1.48,
+			"end": 1.74
+		},
+		{
+			"w": "of",
+			"start": 1.74,
+			"end": 1.84
+		},
+		{
+			"w": "this",
+			"start": 1.84,
+			"end": 1.98
+		},
+		{
+			"w": "room,",
+			"start": 1.98,
+			"end": 2.7
+		},
+		{
+			"w": "we",
+			"start": 2.7,
+			"end": 2.8
+		},
+		{
+			"w": "sometimes",
+			"start": 2.8,
+			"end": 3.12
+		},
+		{
+			"w": "see",
+			"start": 3.12,
+			"end": 3.46
+		},
+		{
+			"w": "them",
+			"start": 3.46,
+			"end": 3.64
+		},
+		{
+			"w": "as",
+			"start": 3.64,
+			"end": 3.86
+		},
+		{
+			"w": "not",
+			"start": 3.86,
+			"end": 4.08
+		},
+		{
+			"w": "one",
+			"start": 4.08,
+			"end": 4.24
+		},
+		{
+			"w": "of",
+			"start": 4.24,
+			"end": 4.36
+		},
+		{
+			"w": "us.",
+			"start": 4.36,
+			"end": 4.98
+		},
+		{
+			"w": "After",
+			"start": 4.98,
+			"end": 5.22
+		},
+		{
+			"w": "all,",
+			"start": 5.22,
+			"end": 5.54
+		},
+		{
+			"w": "if",
+			"start": 5.54,
+			"end": 5.6
+		},
+		{
+			"w": "they",
+			"start": 5.6,
+			"end": 5.7
+		},
+		{
+			"w": "don’t",
+			"start": 5.7,
+			"end": 5.94
+		},
+		{
+			"w": "share",
+			"start": 5.94,
+			"end": 6.12
+		},
+		{
+			"w": "our",
+			"start": 6.12,
+			"end": 6.3
+		},
+		{
+			"w": "beliefs",
+			"start": 6.3,
+			"end": 6.54
+		},
+		{
+			"w": "about",
+			"start": 6.54,
+			"end": 6.86
+		},
+		{
+			"w": "the",
+			"start": 6.86,
+			"end": 6.96
+		},
+		{
+			"w": "afterlife,",
+			"start": 6.96,
+			"end": 7.84
+		},
+		{
+			"w": "doesn’t",
+			"start": 7.84,
+			"end": 8.02
+		},
+		{
+			"w": "that",
+			"start": 8.02,
+			"end": 8.2
+		},
+		{
+			"w": "mean",
+			"start": 8.2,
+			"end": 8.3
+		},
+		{
+			"w": "they",
+			"start": 8.3,
+			"end": 8.48
+		},
+		{
+			"w": "live",
+			"start": 8.48,
+			"end": 8.66
+		},
+		{
+			"w": "in",
+			"start": 8.66,
+			"end": 8.8
+		},
+		{
+			"w": "an",
+			"start": 8.8,
+			"end": 8.9
+		},
+		{
+			"w": "entirely",
+			"start": 8.9,
+			"end": 9.62
+		},
+		{
+			"w": "different",
+			"start": 9.62,
+			"end": 9.72
+		},
+		{
+			"w": "reality",
+			"start": 9.72,
+			"end": 10.16
+		},
+		{
+			"w": "than",
+			"start": 10.16,
+			"end": 10.4
+		},
+		{
+			"w": "we",
+			"start": 10.4,
+			"end": 10.54
+		},
+		{
+			"w": "do?",
+			"start": 10.54,
+			"end": 10.8
+		}
+	],
+	"28": [
+		{
+			"w": "We",
+			"start": 0.18,
+			"end": 0.26
+		},
+		{
+			"w": "come",
+			"start": 0.26,
+			"end": 0.36
+		},
+		{
+			"w": "into",
+			"start": 0.36,
+			"end": 0.52
+		},
+		{
+			"w": "this",
+			"start": 0.52,
+			"end": 0.72
+		},
+		{
+			"w": "world",
+			"start": 0.72,
+			"end": 0.9
+		},
+		{
+			"w": "alone—",
+			"start": 0.9,
+			"end": 1.66
+		},
+		{
+			"w": "and",
+			"start": 1.66,
+			"end": 1.76
+		},
+		{
+			"w": "the",
+			"start": 1.76,
+			"end": 1.9
+		},
+		{
+			"w": "unstoppable",
+			"start": 1.9,
+			"end": 2.56
+		},
+		{
+			"w": "forces",
+			"start": 2.56,
+			"end": 2.96
+		},
+		{
+			"w": "of",
+			"start": 2.96,
+			"end": 3.12
+		},
+		{
+			"w": "time",
+			"start": 3.12,
+			"end": 3.36
+		},
+		{
+			"w": "push",
+			"start": 3.36,
+			"end": 3.74
+		},
+		{
+			"w": "us",
+			"start": 3.74,
+			"end": 3.92
+		},
+		{
+			"w": "forward",
+			"start": 3.92,
+			"end": 4.18
+		},
+		{
+			"w": "in",
+			"start": 4.18,
+			"end": 4.34
+		},
+		{
+			"w": "this",
+			"start": 4.34,
+			"end": 4.48
+		},
+		{
+			"w": "room.",
+			"start": 4.48,
+			"end": 5.52
+		},
+		{
+			"w": "At",
+			"start": 5.52,
+			"end": 5.62
+		},
+		{
+			"w": "the",
+			"start": 5.62,
+			"end": 5.78
+		},
+		{
+			"w": "end,",
+			"start": 5.78,
+			"end": 6.04
+		},
+		{
+			"w": "we",
+			"start": 6.04,
+			"end": 6.1
+		},
+		{
+			"w": "leave",
+			"start": 6.1,
+			"end": 6.34
+		},
+		{
+			"w": "this",
+			"start": 6.34,
+			"end": 6.56
+		},
+		{
+			"w": "world",
+			"start": 6.56,
+			"end": 6.76
+		},
+		{
+			"w": "alone—",
+			"start": 6.76,
+			"end": 7.42
+		},
+		{
+			"w": "and",
+			"start": 7.42,
+			"end": 7.6
+		},
+		{
+			"w": "we’re",
+			"start": 7.6,
+			"end": 8.0
+		},
+		{
+			"w": "cursed",
+			"start": 8.0,
+			"end": 8.5
+		},
+		{
+			"w": "to",
+			"start": 8.5,
+			"end": 8.6
+		},
+		{
+			"w": "never",
+			"start": 8.6,
+			"end": 8.88
+		},
+		{
+			"w": "know",
+			"start": 8.88,
+			"end": 9.1
+		},
+		{
+			"w": "what’s",
+			"start": 9.1,
+			"end": 9.32
+		},
+		{
+			"w": "on",
+			"start": 9.32,
+			"end": 9.42
+		},
+		{
+			"w": "the",
+			"start": 9.42,
+			"end": 9.54
+		},
+		{
+			"w": "other",
+			"start": 9.54,
+			"end": 9.66
+		},
+		{
+			"w": "side.",
+			"start": 9.66,
+			"end": 10.04
+		}
+	],
+	"29": [
+		{
+			"w": "But",
+			"start": 0.12,
+			"end": 0.18
+		},
+		{
+			"w": "when",
+			"start": 0.18,
+			"end": 0.32
+		},
+		{
+			"w": "we’re",
+			"start": 0.32,
+			"end": 0.48
+		},
+		{
+			"w": "here,",
+			"start": 0.48,
+			"end": 1.16
+		},
+		{
+			"w": "we",
+			"start": 1.16,
+			"end": 1.48
+		},
+		{
+			"w": "can",
+			"start": 1.48,
+			"end": 1.58
+		},
+		{
+			"w": "move",
+			"start": 1.58,
+			"end": 1.72
+		},
+		{
+			"w": "side",
+			"start": 1.72,
+			"end": 1.98
+		},
+		{
+			"w": "to",
+			"start": 1.98,
+			"end": 2.12
+		},
+		{
+			"w": "side—",
+			"start": 2.12,
+			"end": 2.74
+		},
+		{
+			"w": "and",
+			"start": 2.74,
+			"end": 2.84
+		},
+		{
+			"w": "explore",
+			"start": 2.84,
+			"end": 3.18
+		},
+		{
+			"w": "this",
+			"start": 3.18,
+			"end": 3.48
+		},
+		{
+			"w": "huge",
+			"start": 3.48,
+			"end": 3.84
+		},
+		{
+			"w": "mystery",
+			"start": 3.84,
+			"end": 4.36
+		},
+		{
+			"w": "together.",
+			"start": 4.36,
+			"end": 5.06
+		}
+	],
+	"no1": [
+		{
+			"w": "You’re",
+			"start": 0.38,
+			"end": 0.44
+		},
+		{
+			"w": "among",
+			"start": 0.44,
+			"end": 0.54
+		},
+		{
+			"w": "people",
+			"start": 0.54,
+			"end": 0.82
+		},
+		{
+			"w": "who",
+			"start": 0.82,
+			"end": 1.2
+		},
+		{
+			"w": "do",
+			"start": 1.2,
+			"end": 1.52
+		},
+		{
+			"w": "not",
+			"start": 1.52,
+			"end": 1.66
+		},
+		{
+			"w": "believe",
+			"start": 1.66,
+			"end": 2.02
+		},
+		{
+			"w": "in",
+			"start": 2.02,
+			"end": 2.2
+		},
+		{
+			"w": "an",
+			"start": 2.2,
+			"end": 2.32
+		},
+		{
+			"w": "afterlife.",
+			"start": 2.32,
+			"end": 3.18
+		},
+		{
+			"w": "You",
+			"start": 3.18,
+			"end": 3.26
+		},
+		{
+			"w": "heretic!",
+			"start": 3.26,
+			"end": 4.54
+		},
+		{
+			"w": "(Just",
+			"start": 4.54,
+			"end": 4.64
+		},
+		{
+			"w": "kidding.)",
+			"start": 4.64,
+			"end": 4.74
+		}
+	],
+	"no2": [
+		{
+			"w": "To",
+			"start": 0.36,
+			"end": 0.42
+		},
+		{
+			"w": "your",
+			"start": 0.42,
+			"end": 0.62
+		},
+		{
+			"w": "immediate",
+			"start": 0.62,
+			"end": 0.94
+		},
+		{
+			"w": "right",
+			"start": 0.94,
+			"end": 1.24
+		},
+		{
+			"w": "are",
+			"start": 1.24,
+			"end": 1.36
+		},
+		{
+			"w": "people",
+			"start": 1.36,
+			"end": 1.6
+		},
+		{
+			"w": "who",
+			"start": 1.6,
+			"end": 1.82
+		},
+		{
+			"w": "are",
+			"start": 1.82,
+			"end": 1.94
+		},
+		{
+			"w": "unsure",
+			"start": 1.94,
+			"end": 2.42
+		},
+		{
+			"w": "there",
+			"start": 2.42,
+			"end": 2.7
+		},
+		{
+			"w": "is",
+			"start": 2.7,
+			"end": 2.86
+		},
+		{
+			"w": "an",
+			"start": 2.86,
+			"end": 2.98
+		},
+		{
+			"w": "afterlife.",
+			"start": 2.98,
+			"end": 3.82
+		},
+		{
+			"w": "On",
+			"start": 3.82,
+			"end": 3.9
+		},
+		{
+			"w": "the",
+			"start": 3.9,
+			"end": 4.02
+		},
+		{
+			"w": "far",
+			"start": 4.02,
+			"end": 4.3
+		},
+		{
+			"w": "right",
+			"start": 4.3,
+			"end": 4.56
+		},
+		{
+			"w": "are",
+			"start": 4.56,
+			"end": 4.72
+		},
+		{
+			"w": "people",
+			"start": 4.72,
+			"end": 5.06
+		},
+		{
+			"w": "who",
+			"start": 5.06,
+			"end": 5.16
+		},
+		{
+			"w": "believe",
+			"start": 5.16,
+			"end": 5.5
+		},
+		{
+			"w": "in",
+			"start": 5.5,
+			"end": 5.68
+		},
+		{
+			"w": "an",
+			"start": 5.68,
+			"end": 5.78
+		},
+		{
+			"w": "afterlife.",
+			"start": 5.78,
+			"end": 6.2
+		}
+	],
+	"unsure1": [
+		{
+			"w": "You’re",
+			"start": 0.2,
+			"end": 0.3
+		},
+		{
+			"w": "among",
+			"start": 0.3,
+			"end": 0.4
+		},
+		{
+			"w": "people",
+			"start": 0.4,
+			"end": 0.72
+		},
+		{
+			"w": "who",
+			"start": 0.72,
+			"end": 0.98
+		},
+		{
+			"w": "are",
+			"start": 0.98,
+			"end": 1.12
+		},
+		{
+			"w": "unsure",
+			"start": 1.12,
+			"end": 1.58
+		},
+		{
+			"w": "if",
+			"start": 1.58,
+			"end": 1.84
+		},
+		{
+			"w": "there’s",
+			"start": 1.84,
+			"end": 2.02
+		},
+		{
+			"w": "an",
+			"start": 2.02,
+			"end": 2.1
+		},
+		{
+			"w": "afterlife.",
+			"start": 2.1,
+			"end": 3.08
+		},
+		{
+			"w": "You",
+			"start": 3.08,
+			"end": 3.18
+		},
+		{
+			"w": "have",
+			"start": 3.18,
+			"end": 3.58
+		},
+		{
+			"w": "plenty",
+			"start": 3.58,
+			"end": 3.7
+		},
+		{
+			"w": "of",
+			"start": 3.7,
+			"end": 4.2
+		},
+		{
+			"w": "fence-sitters",
+			"start": 4.2,
+			"end": 4.36
+		},
+		{
+			"w": "here",
+			"start": 4.36,
+			"end": 4.66
+		},
+		{
+			"w": "with",
+			"start": 4.66,
+			"end": 4.78
+		},
+		{
+			"w": "you.",
+			"start": 4.78,
+			"end": 5.02
+		}
+	],
+	"unsure2": [
+		{
+			"w": "To",
+			"start": 0.1,
+			"end": 0.16
+		},
+		{
+			"w": "your",
+			"start": 0.16,
+			"end": 0.32
+		},
+		{
+			"w": "left",
+			"start": 0.32,
+			"end": 0.52
+		},
+		{
+			"w": "are",
+			"start": 0.52,
+			"end": 0.84
+		},
+		{
+			"w": "people",
+			"start": 0.84,
+			"end": 0.98
+		},
+		{
+			"w": "who",
+			"start": 0.98,
+			"end": 1.2
+		},
+		{
+			"w": "don’t",
+			"start": 1.2,
+			"end": 1.6
+		},
+		{
+			"w": "believe",
+			"start": 1.6,
+			"end": 1.78
+		},
+		{
+			"w": "in",
+			"start": 1.78,
+			"end": 1.94
+		},
+		{
+			"w": "an",
+			"start": 1.94,
+			"end": 2.04
+		},
+		{
+			"w": "afterlife.",
+			"start": 2.04,
+			"end": 3.04
+		},
+		{
+			"w": "To",
+			"start": 3.04,
+			"end": 3.28
+		},
+		{
+			"w": "your",
+			"start": 3.28,
+			"end": 3.44
+		},
+		{
+			"w": "right",
+			"start": 3.44,
+			"end": 3.6
+		},
+		{
+			"w": "are",
+			"start": 3.6,
+			"end": 3.84
+		},
+		{
+			"w": "people",
+			"start": 3.84,
+			"end": 3.98
+		},
+		{
+			"w": "who",
+			"start": 3.98,
+			"end": 4.2
+		},
+		{
+			"w": "do",
+			"start": 4.2,
+			"end": 4.3
+		},
+		{
+			"w": "believe",
+			"start": 4.3,
+			"end": 4.6
+		},
+		{
+			"w": ".",
+			"start": 4.6,
+			"end": 4.7
+		}
+	],
+	"yes1": [
+		{
+			"w": "You’re",
+			"start": 0.1,
+			"end": 0.2
+		},
+		{
+			"w": "among",
+			"start": 0.2,
+			"end": 0.32
+		},
+		{
+			"w": "people",
+			"start": 0.32,
+			"end": 0.64
+		},
+		{
+			"w": "who",
+			"start": 0.64,
+			"end": 0.88
+		},
+		{
+			"w": "believe",
+			"start": 0.88,
+			"end": 1.2
+		},
+		{
+			"w": "there",
+			"start": 1.2,
+			"end": 1.44
+		},
+		{
+			"w": "is",
+			"start": 1.44,
+			"end": 1.54
+		},
+		{
+			"w": "life",
+			"start": 1.54,
+			"end": 1.86
+		},
+		{
+			"w": "after",
+			"start": 1.86,
+			"end": 1.96
+		},
+		{
+			"w": "death.",
+			"start": 1.96,
+			"end": 2.7
+		},
+		{
+			"w": "This",
+			"start": 2.7,
+			"end": 2.86
+		},
+		{
+			"w": "is",
+			"start": 2.86,
+			"end": 3.14
+		},
+		{
+			"w": "the",
+			"start": 3.14,
+			"end": 3.24
+		},
+		{
+			"w": "most",
+			"start": 3.24,
+			"end": 3.4
+		},
+		{
+			"w": "populous",
+			"start": 3.4,
+			"end": 3.94
+		},
+		{
+			"w": "part",
+			"start": 3.94,
+			"end": 4.12
+		},
+		{
+			"w": "of",
+			"start": 4.12,
+			"end": 4.22
+		},
+		{
+			"w": "the",
+			"start": 4.22,
+			"end": 4.28
+		},
+		{
+			"w": "room.",
+			"start": 4.28,
+			"end": 4.56
+		}
+	],
+	"yes2": [
+		{
+			"w": "To",
+			"start": 0.2,
+			"end": 0.26
+		},
+		{
+			"w": "your",
+			"start": 0.26,
+			"end": 0.44
+		},
+		{
+			"w": "immediate",
+			"start": 0.44,
+			"end": 0.74
+		},
+		{
+			"w": "left",
+			"start": 0.74,
+			"end": 1.18
+		},
+		{
+			"w": "are",
+			"start": 1.18,
+			"end": 1.62
+		},
+		{
+			"w": "people",
+			"start": 1.62,
+			"end": 1.72
+		},
+		{
+			"w": "who",
+			"start": 1.72,
+			"end": 1.94
+		},
+		{
+			"w": "are",
+			"start": 1.94,
+			"end": 2.12
+		},
+		{
+			"w": "unsure",
+			"start": 2.12,
+			"end": 2.54
+		},
+		{
+			"w": "if",
+			"start": 2.54,
+			"end": 2.84
+		},
+		{
+			"w": "there",
+			"start": 2.84,
+			"end": 2.94
+		},
+		{
+			"w": "is",
+			"start": 2.94,
+			"end": 3.04
+		},
+		{
+			"w": "an",
+			"start": 3.04,
+			"end": 3.14
+		},
+		{
+			"w": "afterlife.",
+			"start": 3.14,
+			"end": 4.4
+		},
+		{
+			"w": "On",
+			"start": 4.4,
+			"end": 4.5
+		},
+		{
+			"w": "the",
+			"start": 4.5,
+			"end": 4.78
+		},
+		{
+			"w": "far",
+			"start": 4.78,
+			"end": 4.9
+		},
+		{
+			"w": "left",
+			"start": 4.9,
+			"end": 5.32
+		},
+		{
+			"w": "are",
+			"start": 5.32,
+			"end": 5.42
+		},
+		{
+			"w": "people",
+			"start": 5.42,
+			"end": 5.68
+		},
+		{
+			"w": "who",
+			"start": 5.68,
+			"end": 6.06
+		},
+		{
+			"w": "don’t",
+			"start": 6.06,
+			"end": 6.26
+		},
+		{
+			"w": "believe",
+			"start": 6.26,
+			"end": 6.58
+		},
+		{
+			"w": "in",
+			"start": 6.58,
+			"end": 6.68
+		},
+		{
+			"w": "an",
+			"start": 6.68,
+			"end": 6.8
+		},
+		{
+			"w": "afterlife.",
+			"start": 6.8,
+			"end": 6.96
+		}
+	]
+}

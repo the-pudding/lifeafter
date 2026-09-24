@@ -14,7 +14,7 @@ var e={},t={},n=34,r=10,i=13;function a(e){return Function(`d`,`return {`+e.map(
 <div class="hints scroll">Scroll or arrow keys to walk</div>`},{id:`no2`,age:`22`,age_end:`24`,hide_map:`true`,hide_year:`true`,wave:`1`,text:`To your immediate right are people who are <span class=unsure>unsure</span> there is an afterlife. On the far right are people who <span class=belief>believe</span> in an afterlife.\r
 \r
 \r
-<div class="hints pan">Drag or arrow keys to turn</div>`}],unsure:[{id:`unsure1`,age:`18`,age_end:`20`,hide_map:`true`,hide_panel:`true`,hide_year:`true`,wave:`1`,text:`You’re among people who are <span class=unsure>unsure</span> if there’s an afterlife. You have plenty of fence-sitters here with you here.\r
+<div class="hints pan">Drag or arrow keys to turn</div>`}],unsure:[{id:`unsure1`,age:`18`,age_end:`20`,hide_map:`true`,hide_panel:`true`,hide_year:`true`,wave:`1`,text:`You’re among people who are <span class=unsure>unsure</span> if there’s an afterlife. You have plenty of fence-sitters here with you.\r
 \r
 \r
 <div class="hints scroll">Scroll or arrow keys to walk</div>`},{id:`unsure2`,age:`22`,age_end:`24`,hide_map:`true`,hide_year:`true`,wave:`1`,text:`To your left are people who <span class=no_belief>don’t believe</span> in an afterlife. To your right are people who do <span class=belief>believe</span>.\r

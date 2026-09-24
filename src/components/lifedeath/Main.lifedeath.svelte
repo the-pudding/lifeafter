@@ -53,6 +53,7 @@
 	} from "$data/variable_config.js";
 	// story text: "all" shows anywhere, the rest only in their zone
 	import copy from "$data/copy.json";
+	import narrationTimings from "$data/narration_timings.json";
 
 	import signSvg from "$svg/sign.svg?raw";
 	import ControlPanel from "./ControlPanel.svelte";
@@ -312,9 +313,99 @@
 		);
 	}
 
+	// ?screenrecord wants the prose alone: no keycaps, no inline buttons
+	function stripInteractionHints(text) {
+		return text
+			.replace(/<div class="hints[^"]*">[\s\S]*?<\/div>/g, "")
+			.split(STORY_EXPLORE_TOKEN)
+			.join("")
+			.split(STORY_AUDIO_TOKEN)
+			.join("")
+			.trim();
+	}
+
+	// wraps each spoken word in its own span, so the render loop can light it
+	// as the voice arrives. indices follow the aligned word list rather than
+	// the markup: a word the copy splits across a tag — the link's "Study"
+	// and the "." after it — stays one word, and what is never read aloud
+	// (hint keycaps, the inline audio button) is passed over
+	function wrapNarratedWords(html, words) {
+		let out = "";
+		let wordIndex = 0;
+		// how much of the current word previous runs have already covered
+		let consumed = 0;
+		let skipTag = null;
+		let skipDepth = 0;
+
+		function emitText(chunk) {
+			if (!chunk) return;
+			if (skipDepth > 0 || wordIndex >= words.length) {
+				out += chunk;
+				return;
+			}
+			let at = 0;
+			while (at < chunk.length) {
+				if (/\s/.test(chunk[at])) {
+					out += chunk[at];
+					at += 1;
+					continue;
+				}
+				if (wordIndex >= words.length) {
+					out += chunk.slice(at);
+					return;
+				}
+				// a span ends at whitespace, at the end of the chunk, or at the
+				// end of the current word — an em dash joins two spoken words
+				// with no space between them, so one run can carry both
+				const remaining = words[wordIndex].w.length - consumed;
+				let take = 0;
+				while (
+					take < remaining &&
+					at + take < chunk.length &&
+					!/\s/.test(chunk[at + take])
+				) {
+					take += 1;
+				}
+				out += `<span class="nw" data-w="${wordIndex}">${chunk.slice(at, at + take)}</span>`;
+				consumed += take;
+				at += take;
+				if (consumed >= words[wordIndex].w.length) {
+					wordIndex += 1;
+					consumed = 0;
+				}
+			}
+		}
+
+		const tagPattern = /<[^>]+>/g;
+		let cursor = 0;
+		let match;
+		while ((match = tagPattern.exec(html)) !== null) {
+			emitText(html.slice(cursor, match.index));
+			const tag = match[0];
+			const name = /^<\/?([a-z0-9]+)/i.exec(tag)?.[1]?.toLowerCase() ?? "";
+			if (skipDepth > 0) {
+				if (name === skipTag) skipDepth += tag[1] === "/" ? -1 : 1;
+				if (skipDepth === 0) skipTag = null;
+			} else if (/^<div[^>]*class="hints/.test(tag)) {
+				skipTag = "div";
+				skipDepth = 1;
+			} else if (name === "button" && tag[1] !== "/") {
+				skipTag = "button";
+				skipDepth = 1;
+			}
+			out += tag;
+			cursor = tagPattern.lastIndex;
+		}
+		emitText(html.slice(cursor));
+		// anything but an exact fit means the copy and the recording have
+		// drifted apart; the beat then reads as it always did
+		return wordIndex === words.length && consumed === 0 ? out : html;
+	}
+
 	// turns markdown links into anchors, and the tokens into their buttons
-	function renderStoryText(text, playing = false) {
-		return localizeHintVerbs(text)
+	function renderStoryText(text, playing = false, words = null) {
+		if (screenRecordMode) text = stripInteractionHints(text);
+		const html = localizeHintVerbs(text)
 			.replace(
 				/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
 				(_match, label, href) =>
@@ -324,6 +415,7 @@
 			.join(storyAudioButton(playing))
 			.split(STORY_EXPLORE_TOKEN)
 			.join(storyExploreButton());
+		return words?.length ? wrapNarratedWords(html, words) : html;
 	}
 	// a story beat asked to hide the panel or minimap
 	let hidePanel = $state(false);
@@ -500,17 +592,25 @@
 	const REFERENCE_FOV = computeDoorVisibleFovDegrees(REFERENCE_ASPECT);
 	// narrow screens clamp the fov short of the wide view's door margin, so
 	// the spawn slides to where all three doors fit while filling the width
+	// ?screenrecord opens nearer the doors, for a tighter frame
+	const SCREEN_RECORD_START_CLOSER = 0.15; // of the way in from the usual spawn
+	function nudgeStartZ(z) {
+		if (!screenRecordMode) return z;
+		return DOOR_Z + (z - DOOR_Z) * (1 - SCREEN_RECORD_START_CLOSER);
+	}
 	function computeStartZ(aspect) {
 		const halfVerticalRad = THREE.MathUtils.degToRad(
 			computeDoorVisibleFovDegrees(aspect) / 2
 		);
 		const halfHorizontalRad = Math.atan(Math.tan(halfVerticalRad) * aspect);
 		if (halfHorizontalRad >= requiredHalfHorizontalFovRad - 1e-6)
-			return DEFAULT_START_Z;
+			return nudgeStartZ(DEFAULT_START_Z);
 		// a slim margin, so the doors run as wide as the screen allows
 		const FIT_MARGIN = 1.12;
 		const distance = outermostDoorX / Math.tan(halfHorizontalRad / FIT_MARGIN);
-		return DOOR_Z + Math.min(Math.max(distance, 6), MAX_WALK_Z - DOOR_Z);
+		return nudgeStartZ(
+			DOOR_Z + Math.min(Math.max(distance, 6), MAX_WALK_Z - DOOR_Z)
+		);
 	}
 	// capped per surface: a label overruns its door long before the sign does
 	const MAX_DOOR_LABEL_SCALE = 1.25;
@@ -558,8 +658,12 @@
 		}
 	}
 
-	// background music, off until asked for
-	let audioOn = $state(false);
+	// background music, off until asked for — except under ?screenrecord,
+	// where the toggle is hidden, so it starts on and the first door click
+	// is the gesture autoplay rules need
+	let audioOn = $state(screenRecordMode);
+	// whether a gesture has actually let the sound start
+	let audioStarted = $state(false);
 	let sundayEl;
 	let mondayEl;
 	// the overlap when the score changes, long enough to dissolve
@@ -684,23 +788,29 @@
 		}
 	}
 
-	// audioOn is set here, since a crossfade pauses the outgoing track
-	function toggleAudio() {
+	// rolls the score for real; safe to call twice, and a no-op without a gesture
+	function startMusic() {
+		audioStarted = true;
 		const [incoming, outgoing] = trackPair(musicTrack);
 		if (!incoming) return;
-		if (audioOn) {
-			musicFade = null;
-			incoming.pause();
-			outgoing?.pause();
-			audioOn = false;
-			return;
-		}
 		routeMusicThroughAnalyser();
 		musicLevels.set(incoming, 0);
 		incoming.volume = 0;
 		incoming.play().catch(() => {});
 		crossfadeMusic(incoming, outgoing);
+	}
+
+	// audioOn is set here, since a crossfade pauses the outgoing track
+	function toggleAudio() {
+		if (audioOn) {
+			musicFade = null;
+			sundayEl?.pause();
+			mondayEl?.pause();
+			audioOn = false;
+			return;
+		}
 		audioOn = true;
+		startMusic();
 	}
 
 	// narration: a beat's {id}.mp3, played once on entry, over ducked music
@@ -750,6 +860,66 @@
 		narrationFadingOut = true;
 	}
 
+	// the beat's aligned words, only while there is sound to follow
+	const narrationWords = $derived(
+		audioOn && audioStarted && narrationId
+			? (narrationTimings[narrationId] ?? null)
+			: null
+	);
+	// the overlay's word spans, re-collected whenever the beat's text changes
+	let storyOverlayEl = $state(null);
+	let narrationWordEls = [];
+	let litWordIndex = -1;
+	$effect(() => {
+		// re-runs after the overlay's html is in the dom
+		storyTexts;
+		narrationWords;
+		narrationWordEls = storyOverlayEl
+			? [...storyOverlayEl.querySelectorAll(".nw")]
+			: [];
+		litWordIndex = -1;
+	});
+	// the highlight runs ahead of the voice, so the eye reaches a word just
+	// before it is spoken rather than chasing it
+	const NARRATION_HIGHLIGHT_LEAD = 0.25;
+	// lights the word the voice is on. driven from the render loop, so it
+	// follows the audio clock rather than a timer that could drift off it
+	function advanceNarrationHighlight() {
+		if (!narrationWordEls.length) return;
+		const words = narrationWords;
+		let index = -1;
+		if (words && narrationEl && narrationPlaying && !narrationEl.paused) {
+			const elapsed = narrationEl.currentTime;
+			// the lead eases in from the first word's own start. at full lead
+			// from the top the highlight would already be running ahead by the
+			// time the voice arrives, and short opening words got skipped
+			const lead = Math.min(
+				NARRATION_HIGHLIGHT_LEAD,
+				Math.max(0, elapsed - words[0].start)
+			);
+			const time = elapsed + lead;
+			for (let i = 0; i < words.length; i += 1) {
+				if (time >= words[i].start && time < words[i].end) {
+					index = i;
+					break;
+				}
+			}
+			// through a clip's opening silence the first word waits lit, and
+			// past the last window the lead runs out before the voice does
+			if (index === -1) {
+				index = time < words[0].start ? 0 : words.length - 1;
+			}
+		}
+		if (index === litWordIndex) return;
+		litWordIndex = index;
+		for (const el of narrationWordEls) {
+			const wordAt = Number(el.dataset.w);
+			el.classList.toggle("is-spoken", wordAt === index);
+			// everything already read stays up behind the lit word
+			el.classList.toggle("is-said", index >= 0 && wordAt <= index);
+		}
+	}
+
 	function advanceNarrationFade(dt) {
 		if (!narrationEl || !narrationFadingOut) return;
 		narrationEl.volume = Math.max(
@@ -766,7 +936,7 @@
 	// starts and stops with the beat, and only with sound on
 	$effect(() => {
 		const id = narrationId;
-		const soundOn = audioOn;
+		const soundOn = audioOn && audioStarted;
 		if (!narrationEl) return;
 		if (!soundOn || !id) {
 			stopNarration();
@@ -816,7 +986,7 @@
 	// the score follows the mode, once the reader has asked for sound
 	$effect(() => {
 		const track = musicTrack;
-		if (!audioOn) return;
+		if (!audioOn || !audioStarted) return;
 		const [incoming, outgoing] = trackPair(track);
 		if (!incoming) return;
 		if (incoming.paused) {
@@ -1321,6 +1491,8 @@
 				facadeLightLayer: FACADE_LIGHT_LAYER,
 				exteriorGroup
 			});
+			// ?screenrecord: no wordmark over the door, and so no link either
+			if (screenRecordMode) wordmarkLogo.visible = false;
 			buildDoors(scene, DOORS, {
 				doorWidth: DOOR_WIDTH,
 				doorHeight: DOOR_HEIGHT,
@@ -1932,6 +2104,8 @@
 			// sets the walk target through a door: across first, then forward
 			function walkThroughDoor(door) {
 				sceneAnnouncement = `Walking through the ${door.label} door, into the room among the youngest adults.`;
+				// the first door click is the gesture autoplay has been waiting for
+				if (audioOn && !audioStarted) startMusic();
 				playDoorSound();
 				targetWalkX = door.x;
 				pendingDoorWalkZ = AUTO_WALK_INSIDE_Z;
@@ -2018,7 +2192,10 @@
 				doorClickPointer.y =
 					-((event.clientY - rect.top) / rect.height) * 2 + 1;
 				doorRaycaster.setFromCamera(doorClickPointer, camera);
-				const hits = doorRaycaster.intersectObjects([wordmarkLogo, byline], true);
+				const hits = doorRaycaster.intersectObjects(
+					screenRecordMode ? [byline] : [wordmarkLogo, byline],
+					true
+				);
 				if (hits.length === 0) return null;
 				let obj = hits[0].object;
 				while (obj && obj !== wordmarkLogo && obj !== byline) obj = obj.parent;
@@ -2162,7 +2339,9 @@
 			}
 
 			// the keyboard equivalent of hover, outside: tab or arrows cycle
-			const exteriorTargets = [...DOORS, wordmarkLogo, byline];
+			const exteriorTargets = screenRecordMode
+				? [...DOORS, byline]
+				: [...DOORS, wordmarkLogo, byline];
 			let exteriorFocusIndex = -1;
 			function highlightExteriorFocus() {
 				const target = exteriorTargets[exteriorFocusIndex];
@@ -2789,6 +2968,7 @@
 				dust.update(dt, renderWalkX, renderWalkZ, candleGlowX, candleGlowY, musicTremor);
 				drawSpeedLines(dt);
 				advanceNarrationFade(dt);
+				advanceNarrationHighlight();
 				advanceCrowdColors(dt);
 				// mid-flight the fog swallows bodies early; at rest it holds
 				crowdAnimator.setRenderCullDistance(
@@ -2976,6 +3156,7 @@
 
 			// the fov solve covers the doors, not the wordmark, which can crop
 			function ensureWordmarkInView() {
+				if (screenRecordMode) return;
 				const box = new THREE.Box3().setFromObject(wordmarkLogo);
 				const topPoint = new THREE.Vector3(
 					(box.min.x + box.max.x) / 2,
@@ -3129,6 +3310,8 @@
 	{#if storyTexts.length > 0 && !mapView && !screenshotMode}
 		<div
 			class="story-overlay"
+			class:narrating={!!narrationWords?.length && narrationPlaying}
+			bind:this={storyOverlayEl}
 			class:no_map={shouldHideMap}
 			class:key-left-down={heldArrowHint.left}
 			class:key-right-down={heldArrowHint.right}
@@ -3142,8 +3325,11 @@
 		>
 			<!-- keyed on the text, so a new beat replays the flash -->
 			{#key storyTexts.join("\u0000")}
-				{#each storyTexts as text}
-					<p>{@html renderStoryText(text, audioOn)}</p>
+				{#each storyTexts as text, i}
+					<!-- the recording follows the first block; the rest stay plain -->
+					<p>
+						{@html renderStoryText(text, audioOn, i === 0 ? narrationWords : null)}
+					</p>
 				{/each}
 				{#if storyChart}
 					<StoryChart
@@ -3156,7 +3342,7 @@
 			{/key}
 		</div>
 	{/if}
-	{#if keepGoingOn && !screenshotMode}
+	{#if keepGoingOn && !screenshotMode && !screenRecordMode}
 		<!-- turned away from the story: one press faces front and walks on -->
 		<div class="walk-hint" transition:fade>
 			<button class="walk-hint-explore keep-going" onclick={() => keepGoingImpl?.()}>
@@ -3164,7 +3350,7 @@
 			</button>
 		</div>
 	{/if}
-	{#if walkHintOn && !screenshotMode}
+	{#if walkHintOn && !screenshotMode && !screenRecordMode}
 		<!-- between beats: the way onward, spun toward the light -->
 		<div class="walk-hint" transition:fade>
 			<svg
@@ -3218,7 +3404,7 @@
 		>
 			Return to walk mode
 		</button>
-	{:else}
+	{:else if !screenRecordMode}
 		<button
 			class="explore-toggle"
 			class:explore-toggle--hidden={inLight ||
@@ -3314,7 +3500,7 @@
 		loop
 		preload="none"
 	></audio>
-	{#if !screenshotMode}
+	{#if !screenshotMode && !screenRecordMode}
 	<button
 		class="audio-toggle"
 		aria-pressed={audioOn}

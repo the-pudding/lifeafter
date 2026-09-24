@@ -150,6 +150,9 @@ function rawAnswer(person, baseVar, waveKey) {
 	return raw;
 }
 
+// the variables whose own line is the current-religion answer
+const RELIGION_BASE_VARS = new Set(["REL2", "RELIGIOUS_AFFILIATION"]);
+
 // survey wording to reading wording
 export function tidyMarital(raw) {
 	return raw === "Single/Never been married" ? "Single" : raw;
@@ -163,8 +166,11 @@ export function formatNearbyPersonLines(person, waveKey, baseVar) {
 	const topLine = [typeof age === "number" ? age : null, gender, marital && tidyMarital(marital)]
 		.filter(Boolean)
 		.join(", ");
-	// the religion line, as the adherent; skipped when it's the last line
-	const rawReligion = baseVar === "REL2" ? null : rawAnswer(person, "REL2", waveKey);
+	// the religion line, as the adherent; skipped when the selected variable
+	// already reads REL2, or the panel would say the same thing twice
+	const rawReligion = RELIGION_BASE_VARS.has(baseVar)
+		? null
+		: rawAnswer(person, "REL2", waveKey);
 	const religion = rawReligion ? (RELIGION_NOUN[rawReligion] ?? rawReligion) : null;
 	return [
 		topLine,

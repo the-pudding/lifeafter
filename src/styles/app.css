@@ -590,6 +590,34 @@ main, .loading-screen {
         box-shadow: none;
     }
 }
+/* narration: while a recording is running the words ahead of the voice sit
+   back, so the line fills in as it is read. the whole word fades, outline
+   and all, rather than only its text colour */
+.story-overlay.narrating p .nw {
+	opacity: 0.55;
+}
+/* a word the voice has reached stays up, so the line fills in as it is read
+   and stands whole by the last word */
+.story-overlay.narrating p .nw.is-said {
+	opacity: 1;
+}
+.story-overlay p .nw {
+	transition:
+		opacity 90ms linear,
+		color 90ms linear;
+}
+/* the lit word is carried by its colour alone — no glow behind it, so the
+   paragraph's own black outline comes through untouched. scoped to
+   .narrating, so once the recording ends the line is plain white again */
+.story-overlay.narrating p .nw.is-spoken {
+	color: #f6cfec;
+}
+@media (prefers-reduced-motion: reduce) {
+	.story-overlay p .nw {
+		transition: none;
+	}
+}
+
 /* the colored spans get a little breathing room inside their fill */
 .story-overlay p .unsure,
 .story-overlay p .no_belief,
