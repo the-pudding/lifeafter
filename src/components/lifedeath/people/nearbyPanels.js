@@ -336,16 +336,35 @@ export function createNearbyPanels({
 		// build panels for the settled selection when missing or stale
 		for (const index of nearbySelected) {
 			let record = nearbyPanels.get(index);
+			// a beat boundary swaps the colour variable, which restyles every
+			// live panel. a plain teardown would hand the replacement a fresh
+			// fade, replaying the leader line as a stroke sweeping up off the
+			// head with nothing behind it, so the new panel inherits the old
+			// one's progress and only its text changes
+			let carriedFade = null;
 			if (
 				record &&
 				(record.wave !== getPositionMode() ||
 					record.variable !== getSelectedVariable())
 			) {
+				carriedFade = {
+					opacity: record.opacity,
+					lineProgress: record.lineProgress
+				};
 				disposeNearbyPanel(record);
 				record = null;
 			}
 			if (!record) {
 				record = buildNearbyPanel(index);
+				if (carriedFade) {
+					record.opacity = carriedFade.opacity;
+					record.lineProgress = carriedFade.lineProgress;
+					// built at zero, so the carried value has to be pushed through
+					for (const material of record.fadeMaterials) {
+						material.opacity = record.opacity;
+					}
+					record.line.visible = record.lineProgress > 0;
+				}
 				nearbyPanels.set(index, record);
 			}
 			record.fadingOut = false;
