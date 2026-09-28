@@ -157,7 +157,8 @@ main, .loading-screen {
 	text-align: left;
 	/* pointer-events: none; */
 	color: #fff;
-	padding: 5px 5px 16px;
+	/* the extra bottom pad keeps the last line off the viewport edge */
+	padding: 5px 5px 30px;
 }
 
 /* narrower, to leave the minimap's corner clear */
@@ -168,6 +169,8 @@ main, .loading-screen {
 		max-width: calc(100% - 131px);
 		left: 5px;
 		bottom: 0px;
+		/* sits on the edge here, so it carries the whole gap itself */
+		padding-bottom: 34px;
 		transform: translateX(0%);
 	}
 	.story-overlay.no_map {

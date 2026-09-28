@@ -8,6 +8,7 @@ import {
 	NEARBY_PANEL_MAX_APPARENT_SCALE,
 	NEARBY_PANEL_MIN_APPARENT_SCALE,
 	NEARBY_PANEL_MAX_FOV_SCALE,
+	NEARBY_PANEL_MOBILE_SCALE,
 	NEARBY_PANEL_REFERENCE_FOV,
 	NEARBY_PANEL_REFERENCE_DISTANCE,
 	NEARBY_PANEL_WORLD_WIDTH,
@@ -24,6 +25,7 @@ import {
 	NEARBY_PANEL_LINE_WIDTH,
 	NEARBY_SELECTION_REFRESH_INTERVAL
 } from "./peopleConfig.js";
+import { isMobileViewport } from "../room/roomConfig.js";
 
 // info panels above nearby crowd members: picking, building, placing
 export function createNearbyPanels({
@@ -60,7 +62,9 @@ export function createNearbyPanels({
 		);
 		const halfFov = THREE.MathUtils.degToRad(camera.fov / 2);
 		const scale = Math.tan(halfFov) / Math.tan(referenceHalfFov);
-		return Math.min(NEARBY_PANEL_MAX_FOV_SCALE, Math.max(1, scale));
+		const clamped = Math.min(NEARBY_PANEL_MAX_FOV_SCALE, Math.max(1, scale));
+		// applied after the clamp, so phones aren't held at the wide cap
+		return clamped * (isMobileViewport ? NEARBY_PANEL_MOBILE_SCALE : 1);
 	}
 
 	const nearbyVisibilityRaycaster = new THREE.Raycaster();

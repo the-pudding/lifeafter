@@ -458,15 +458,16 @@
 	const CROWD_RECOLOR_TIME = 0.35;
 	// how far past the walk limit the walker can press into the light
 	const LIGHT_NUDGE_DEPTH = 2.8;
-	// where the walker can stand still inside the light
-	const LIGHT_REST_DEPTH = 1.6;
+	// where the walker can stand still inside the light. the wall's inner face
+	// is LIGHT_NUDGE_DEPTH past the limit, so this is most of the way in
+	const LIGHT_REST_DEPTH = 2.3;
 	// how quickly that overshoot eases back; lower is springier
 	const LIGHT_PUSHBACK_TIME = 0.22;
 	// how close to the wall the light counts as entered
 	const LIGHT_MESSAGE_MARGIN = 0.9;
 	// how far past the walk limit counts as having stepped inside
-	const LIGHT_ENTER_DEPTH = 0.6;
-	// how far off the light's direction the view can be, message-wise
+	const LIGHT_ENTER_DEPTH = 0.3;
+	// how far off dead ahead the view can be for the message to first appear
 	const LIGHT_FACING_CONE = 0.9;
 	// true while pressed into the light
 	let inLight = $state(false);
@@ -3046,14 +3047,16 @@
 				}
 				// entered once they're actually pressing into it
 				inLight = renderWalkZ < MIN_WALK_Z + LIGHT_MESSAGE_MARGIN;
-				// the message needs them inside the light and facing it
-				const lightBearing = Math.atan2(
-					0 - renderWalkX,
-					-(MIN_WALK_Z - 4 - renderWalkZ)
-				);
+				// the light is a full-width sheet across the back, so facing it is
+				// simply facing -z. bearing to a point behind the wall swung wide
+				// off-centre once close in, which cost anyone off the centre line
+				// the message exactly where it should have been surest
+				const facingLight = Math.abs(wrapAngle(cameraYaw)) < LIGHT_FACING_CONE;
+				const steppedIntoLight = renderWalkZ < MIN_WALK_Z - LIGHT_ENTER_DEPTH;
+				// a look into the light raises it; only stepping back out lowers it,
+				// so glancing around in there can't snatch it away mid-read
 				lightMessageOn =
-					renderWalkZ < MIN_WALK_Z - LIGHT_ENTER_DEPTH &&
-					Math.abs(wrapAngle(lightBearing - cameraYaw)) < LIGHT_FACING_CONE;
+					steppedIntoLight && (facingLight || lightMessageOn);
 
 				if (debugMode) {
 					debugStats = {
@@ -3344,9 +3347,9 @@
 	{/if}
 	{#if keepGoingOn && !screenshotMode && !screenRecordMode}
 		<!-- turned away from the story: one press faces front and walks on -->
-		<div class="walk-hint" transition:fade>
+		<div class="walk-hint walk-hint--centered" transition:fade>
 			<button class="walk-hint-explore keep-going" onclick={() => keepGoingImpl?.()}>
-				Keep going
+				Continue story
 			</button>
 		</div>
 	{/if}
@@ -3759,6 +3762,15 @@
 			width: calc(100% - 131px);
 			transform: none;
 		}
+	}
+	/* the turn-around offer isn't a nudge toward the floor: it's the one
+	   thing to press, so it sits dead centre at every width */
+	.walk-hint--centered {
+		top: 50%;
+		bottom: auto;
+		left: 50%;
+		width: auto;
+		transform: translate(-50%, -50%);
 	}
 
 	/* the minimap styles itself */

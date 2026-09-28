@@ -151,6 +151,10 @@ export const NEARBY_PANEL_MIN_APPARENT_SCALE = 1;
 
 export const NEARBY_PANEL_MAX_APPARENT_SCALE = 1.4;
 
+// narrow screens: the panels read small next to the phone's type, so the
+// whole quad — text included — comes up a notch
+export const NEARBY_PANEL_MOBILE_SCALE = 1.18;
+
 // panel fade in/out
 export const NEARBY_PANEL_FADE_SECONDS = 0.28;
 
