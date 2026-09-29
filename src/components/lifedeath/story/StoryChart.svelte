@@ -45,11 +45,12 @@
 			]
 		},
 		"CHANGE-THREAT-LINE": {
-			caption: "Who changed their afterlife belief, by life-threatening situations experienced",
+			caption:
+				"Who changed their afterlife belief, by how much life-threatening experiences bothered them",
 			description:
-				"Both groups change their answers less as they age, but people who experienced a lot of life-threatening situations change more at every age — falling from 36% of adults under 30 to 26% at 70 and older, versus 33% to 22% for those who experienced none.",
+				"Both groups change their answers less as they age, but people still bothered a lot by the worst threat to their life change more at every age — falling from 36% of adults under 30 to 26% at 70 and older, versus 33% to 22% for those not bothered at all.",
 			series: [
-				{ name: "Experienced “a lot”", color: "#ffd863", values: [36.0, 34.4, 33.2, 31.5, 30.4, 25.7] },
+				{ name: "Bothered “a lot”", color: "#ffd863", values: [36.0, 34.4, 33.2, 31.5, 30.4, 25.7] },
 				{ name: "“Not at all”", color: "#c964ff", values: [33.1, 30.4, 26.4, 25.2, 21.7, 22.0] }
 			]
 		},

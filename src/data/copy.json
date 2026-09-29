@@ -127,7 +127,7 @@
       "wave": "2",
       "hide_year": "true",
       "show_panels": "true",
-      "text": ">> CHANGE-THREAT-LINE|Who changed their afterlife belief, by life-threatening situations experienced"
+      "text": ">> CHANGE-THREAT-LINE|Who changed their afterlife belief, by how much life-threatening experiences bothered them"
     },
     {
       "id": "15",
@@ -191,7 +191,7 @@
       "wave": "2",
       "hide_year": "true",
       "show_panels": "true",
-      "text": ">> CHANGE-DEPRESSED-LINE|Changing afterlife belief, by depression levels"
+      "text": ">> CHANGE-DEPRESSED-LINE|Changing afterlife belief, by depression levels|Frequent depression includes people who said more than half the days or nearly every day"
     },
     {
       "id": "21",
