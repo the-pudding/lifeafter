@@ -7,7 +7,7 @@ PUDDING_PATH = /year/month/name
 .PHONY: github pudding staging production protect
 
 github:
-	BASE_PATH=/lifedeath npm run build
+	BASE_PATH=/lifeafter npm run build
 	rm -rf docs
 	cp -r build docs
 	touch docs/.nojekyll

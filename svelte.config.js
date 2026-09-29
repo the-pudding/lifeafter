@@ -16,7 +16,8 @@ const config = {
 	kit: {
 		adapter: adapterStatic({ strict: false }),
 		// This app is never actually served from a domain root — GitHub
-		// Pages publishes it as a project page at /lifedeath/, and the
+		// Pages publishes it as a project page at /lifeafter/ (the repo's
+		// own name, which is what Pages keys the path off), and the
 		// eventual pudding.cool deploy (see the Makefile's own PUDDING_PATH)
 		// will be some other /year/month/name subpath — so a single
 		// hardcoded base (or one keyed off NODE_ENV, which is
